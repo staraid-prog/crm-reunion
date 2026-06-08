@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRM Réunion — STAR aid</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <style>
 :root{
   --red:#AB1E2E;--red-dark:#8a1624;--red-light:#fdf0f1;
@@ -674,6 +675,15 @@ body.demo-mode header{background:#b45309 !important;}
           <span style="font-size:11px;color:var(--light);">appareil(s)</span>
         </div>
       </div>
+      <div class="mrow">
+        <label>Remise commerciale</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <input type="number" id="dv-remise-com" min="0" max="500" value="0"
+            style="width:90px;font-size:15px;padding:8px 12px;border:1.5px solid var(--border);border-radius:5px;text-align:center;"
+            oninput="updateDevisCalc()" placeholder="0">
+          <span style="font-size:11px;color:var(--light);">€ de remise sur le total HT</span>
+        </div>
+      </div>
 
       <div class="price-box">
         <div class="price-row">
@@ -683,6 +693,10 @@ body.demo-mode header{background:#b45309 !important;}
         <div class="price-row">
           <span style="color:var(--mid);">Remise volume</span>
           <span id="dv-remise" style="font-weight:700;color:var(--light);">Aucune</span>
+        </div>
+        <div class="price-row" id="dv-remise-com-row" style="display:none;">
+          <span style="color:#16a34a;">Remise commerciale</span>
+          <span id="dv-remise-com-display" style="font-weight:700;color:#16a34a;"></span>
         </div>
         <div style="border-top:1px solid #86efac;padding-top:10px;margin-top:4px;">
           <div class="price-row" style="font-weight:700;">
@@ -706,6 +720,7 @@ body.demo-mode header{background:#b45309 !important;}
     <div class="modal-foot">
       <button class="btn btn-grey" onclick="closeDevisModal()">Annuler</button>
       <button class="btn btn-green" onclick="previewDevis()">👁 Aperçu PDF</button>
+      <button class="btn btn-red" onclick="validerDevis()">✅ Valider le devis</button>
     </div>
   </div>
 </div>
@@ -822,6 +837,13 @@ body.demo-mode header{background:#b45309 !important;}
 <div id="toast"></div>
 
 <script>
+/* ─── EMAILJS / IONOS CONFIG ──────────────────────────────────────── */
+// Remplir avec vos identifiants EmailJS (https://www.emailjs.com)
+const EMAILJS_PUBLIC_KEY  = '';  // Votre Public Key EmailJS
+const EMAILJS_SERVICE_ID  = '';  // Service SMTP IONOS dans EmailJS
+const EMAILJS_TEMPLATE_ID = '';  // ID du template EmailJS
+const EMAIL_FROM          = 'contact@star-aid.re';  // Votre email IONOS
+
 /* ─── SUPABASE REST ─────────────────────────────────────── */
 const SUPA_URL = 'https://obnpzcebhcrkizycuipk.supabase.co/rest/v1';
 const SUPA_KEY = 'sb_publishable_7JlxUtQdYT4OY5JtfGgFTg_A-bnKEd9';
@@ -952,6 +974,7 @@ function toggleDemoMode() {
   searchQ      = '';
   currentSiret = null;
   _currentRecord = null;
+  _docState    = {};
   document.querySelectorAll('.erp-chip').forEach(c => {
     c.classList.remove('on');
     c.querySelector('.ebox').textContent = '';
@@ -1295,6 +1318,7 @@ let _demoDb        = [];
 let currentUser    = null;   // {id, prenom, nom, email, role}
 let filterMine     = false;  // filtre "mes prospects"
 let _callSiret     = null;   // siret en cours dans le modal appel
+let _docState      = {};     // { [siret]: { devis: {...}, contrat: {...} } }
 
 /* ─── SIDEBAR DRAWER ────────────────────────────────────── */
 function toggleSidebar() {
@@ -1713,6 +1737,29 @@ function renderDetail(r) {
          </div>
        </button>`;
 
+  // ── Offre commerciale (devis + contrat validés) ──
+  const docState  = _docState[r.siret] || {};
+  const devisOk   = !isLocked && docState.devis?.validated;
+  const contratOk = !isLocked && docState.contrat?.ready;
+  const offerBtnHtml = isLocked ? '' : `
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:11px;color:${devisOk?'#16a34a':'var(--light)'};">
+          ${devisOk ? '✅' : '⬜'} Devis</span>
+        <span style="font-size:11px;color:${contratOk?'#16a34a':'var(--light)'};">
+          ${contratOk ? '✅' : '⬜'} Contrat</span>
+      </div>
+      ${(devisOk && contratOk) ? `
+        <button onclick="sendOfferEmail()" style="width:100%;padding:12px;border-radius:6px;
+          border:1.5px solid var(--red);background:var(--red);color:#fff;font-size:13px;
+          font-weight:700;cursor:pointer;">
+          📧 Envoyer l'offre commerciale
+        </button>` : `
+        <div style="font-size:11px;color:var(--light);text-align:center;padding:6px 0;">
+          Validez le devis et générez le contrat pour envoyer l'offre
+        </div>`}
+    </div>`;
+
   detail.innerHTML = `
     <!-- EN-TÊTE -->
     <div class="detail-header">
@@ -1788,6 +1835,7 @@ function renderDetail(r) {
         <div class="act-group" style="margin-top:4px;">
           ${actionsHtml}
         </div>
+        ${offerBtnHtml}
       </div>
 
       <!-- SUPPRIMER -->
@@ -2263,6 +2311,8 @@ function openDevisModal() {
   const full = document.getElementById('dv-full');
   if (full) full.checked = true;
   document.getElementById('dv-qty').value = '1';
+  const remiseCom = document.getElementById('dv-remise-com');
+  if (remiseCom) remiseCom.value = '0';
   updateDevisCalc();
   document.getElementById('devisModal').classList.remove('hidden');
 }
@@ -2271,16 +2321,42 @@ function closeDevisModal() {
   document.getElementById('devisModal').classList.add('hidden');
 }
 
+function validerDevis() {
+  const r = _currentRecord;
+  if (!r) return;
+  const qty = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
+  const type = document.querySelector('input[name="dv-type"]:checked')?.value || 'Full automatique';
+  const remiseCom = Math.max(0, parseFloat(document.getElementById('dv-remise-com')?.value) || 0);
+
+  if (!_docState[r.siret]) _docState[r.siret] = {};
+  _docState[r.siret].devis = { qty, type, remiseCom, validated: true };
+
+  closeDevisModal();
+  toast('✅ Devis validé — prêt à envoyer');
+  renderDetail(r);
+}
+
 function updateDevisCalc() {
-  const qty    = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
-  const remise = qty >= 4 ? 20 : qty >= 2 ? 10 : 0;
-  const ht     = (89 - remise) * qty;
-  const tva    = ht * 0.085;
-  const ttc    = ht + tva;
+  const qty        = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
+  const remiseCom  = Math.max(0, parseFloat(document.getElementById('dv-remise-com')?.value) || 0);
+  const remise     = qty >= 4 ? 20 : qty >= 2 ? 10 : 0;
+  const ht         = Math.max(0, (89 - remise) * qty - remiseCom);
+  const tva        = ht * 0.085;
+  const ttc        = ht + tva;
 
   const rem = document.getElementById('dv-remise');
   rem.textContent = remise > 0 ? `-${remise} €/app.` : 'Aucune';
   rem.style.color = remise > 0 ? '#16a34a' : 'var(--light)';
+
+  const comRow = document.getElementById('dv-remise-com-row');
+  const comDisplay = document.getElementById('dv-remise-com-display');
+  if (remiseCom > 0 && comRow && comDisplay) {
+    comRow.style.display = '';
+    comDisplay.textContent = `-${fmtEur(remiseCom)}`;
+  } else if (comRow) {
+    comRow.style.display = 'none';
+  }
+
   document.getElementById('dv-ht').textContent  = fmtEur(ht);
   document.getElementById('dv-tva').textContent = fmtEur(tva);
   document.getElementById('dv-ttc').textContent = fmtEur(ttc);
@@ -2291,7 +2367,8 @@ function previewDevis() {
   if (!r) return;
   const qty  = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
   const type = document.querySelector('input[name="dv-type"]:checked')?.value || 'Full automatique';
-  const doc  = buildDevisPdf(r, qty, type);
+  const remiseCom = Math.max(0, parseFloat(document.getElementById('dv-remise-com')?.value) || 0);
+  const doc  = buildDevisPdf(r, qty, type, remiseCom);
   const url  = doc.output('bloburl');
   _pdfUrl    = url;
   _pdfName   = `Devis_StarAid_${(r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_')}_${dateStr()}.pdf`;
@@ -2335,6 +2412,10 @@ function previewContrat() {
   const ville = document.getElementById('ct-ville').value.trim() || r.commune || '';
   const date  = document.getElementById('ct-date').value.trim() || new Date().toLocaleDateString('fr-FR');
   const doc   = buildContratPdf(r, date, ville);
+
+  if (!_docState[r.siret]) _docState[r.siret] = {};
+  _docState[r.siret].contrat = { ville, date, ready: true };
+
   const url   = doc.output('bloburl');
   _pdfUrl  = url;
   _pdfName = `Contrat_StarAid_${(r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_')}_${dateStr()}.pdf`;
@@ -2343,6 +2424,7 @@ function previewContrat() {
   document.getElementById('pdf-send-btn').onclick = sendContratByGmail;
   document.getElementById('pdfModal').classList.remove('hidden');
   closeContratModal();
+  renderDetail(r);
 }
 
 function sendContratByGmail() {
@@ -2352,6 +2434,76 @@ function sendContratByGmail() {
   const body = `${prenom ? 'Bonjour '+prenom+',' : 'Bonjour,'}\n\nVeuillez trouver en pièce jointe notre contrat de location de défibrillateur DAE.\n\nN'hésitez pas à nous contacter pour toute question.\n\nCordialement,\nSTAR aid`;
   window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(r.email_crm||r.email_contact||'')}&su=${encodeURIComponent('Contrat de location DAE — '+(r.denomination_usuelle||''))}&body=${encodeURIComponent(body)}`, '_blank');
   toast('Gmail ouvert — téléchargez le PDF ci-dessus et joignez-le ✓');
+}
+
+/* ─── ENVOI OFFRE COMMERCIALE ───────────────────────────── */
+async function sendOfferEmail() {
+  const r = _currentRecord;
+  if (!r) return;
+  const docState = _docState[r.siret] || {};
+  const ds = docState.devis;
+  const cs = docState.contrat;
+  if (!ds?.validated || !cs?.ready) { toast('Validez le devis et générez le contrat d\'abord', true); return; }
+
+  const to = r.email_crm || r.email_contact || '';
+  if (!to) { toast('Aucun email pour ce prospect', true); return; }
+
+  // Generate both PDFs
+  const devisDoc   = buildDevisPdf(r, ds.qty, ds.type, ds.remiseCom);
+  const contratDoc = buildContratPdf(r, cs.date, cs.ville);
+
+  // Check if EmailJS is configured
+  if (!EMAILJS_PUBLIC_KEY || !EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID) {
+    openOfferFallbackModal(r, devisDoc, contratDoc);
+    return;
+  }
+
+  // Send via EmailJS
+  try {
+    toast('📤 Envoi en cours…');
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+    const devisB64   = devisDoc.output('datauristring').split(',')[1];
+    const contratB64 = contratDoc.output('datauristring').split(',')[1];
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     to,
+      to_name:      r.signataire || r.denomination_usuelle || '',
+      from_name:    'STAR aid',
+      denomination: r.denomination_usuelle || '',
+      devis_b64:    devisB64,
+      contrat_b64:  contratB64,
+    });
+    toast('✅ Offre commerciale envoyée à ' + to);
+    // Update status to "Relance mail" (5)
+    await dbUpdate('prospects', r.siret, { statut_crm: 5 });
+    if (_currentRecord) { _currentRecord.statut_crm = 5; renderDetail(_currentRecord); renderFilters(); }
+  } catch(e) {
+    toast('Erreur envoi : ' + (e.text || e.message || JSON.stringify(e)), true);
+  }
+}
+
+function openOfferFallbackModal(r, devisDoc, contratDoc) {
+  // Download both PDFs + open Gmail
+  const name = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
+  const ds = devisDoc.output('bloburl');
+  const cs = contratDoc.output('bloburl');
+
+  // Download PDFs
+  const a1 = document.createElement('a');
+  a1.href = ds; a1.download = `Devis_StarAid_${name}.pdf`; a1.click();
+  setTimeout(() => {
+    const a2 = document.createElement('a');
+    a2.href = cs; a2.download = `Contrat_StarAid_${name}.pdf`; a2.click();
+  }, 500);
+
+  // Open Gmail with pre-filled email
+  const to = r.email_crm || r.email_contact || '';
+  const prenom = (r.signataire || '').trim().split(' ')[0];
+  const subject = `Offre commerciale STAR aid — Défibrillateur DAE — ${r.denomination_usuelle || ''}`;
+  const body = `${prenom ? 'Bonjour ' + prenom + ',' : 'Bonjour,'}\n\nVeuillez trouver en pièce jointe notre offre commerciale comprenant :\n- Le devis pour la location de votre défibrillateur DAE\n- Le contrat de location STAR aid\n\nNous restons disponibles pour toute question.\n\nCordialement,\nL'équipe STAR aid\ncontact@star-aid.re`;
+
+  if (to) window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+
+  toast('📂 PDFs téléchargés — joignez-les à l\'email ouvert');
 }
 
 /* ─── MODAL PDF ─────────────────────────────────────────── */
@@ -2371,7 +2523,7 @@ function downloadCurrentPdf() {
 }
 
 /* ─── GÉNÉRATION PDF — DEVIS ────────────────────────────── */
-function buildDevisPdf(r, qty, type) {
+function buildDevisPdf(r, qty, type, remiseCom = 0) {
   const { jsPDF } = window.jspdf;
   const doc  = new jsPDF({ unit: 'mm', format: 'a4' });
   const W    = 210;
@@ -2380,11 +2532,12 @@ function buildDevisPdf(r, qty, type) {
   const GREY = [120, 120, 120];
   const LGREY= [200, 200, 200];
 
-  const remise   = qty >= 4 ? 20 : qty >= 2 ? 10 : 0;
-  const puHT     = 89;
-  const totalHT  = (puHT - remise) * qty;
-  const tva      = totalHT * 0.085;
-  const totalTTC = totalHT + tva;
+  const remise     = qty >= 4 ? 20 : qty >= 2 ? 10 : 0;
+  const puHT       = 89;
+  const subtotalHT = (puHT - remise) * qty;
+  const totalHT    = Math.max(0, subtotalHT - remiseCom);
+  const tva        = totalHT * 0.085;
+  const totalTTC   = totalHT + tva;
   const numDevis = 'D' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + (r.siret||'').slice(-4);
   const date     = new Date().toLocaleDateString('fr-FR', { timeZone: 'Indian/Reunion' });
 
@@ -2451,7 +2604,7 @@ function buildDevisPdf(r, qty, type) {
   doc.text(fmtEur(puHT), 160, rY+7, { align:'center' });
   doc.text(fmtEur(puHT*qty), W-15, rY+7, { align:'right' });
 
-  // Ligne 2 — remise (si applicable)
+  // Ligne 2 — remise volume (si applicable)
   if (remise > 0) {
     rY += 12;
     doc.setFillColor(240,255,244);
@@ -2465,8 +2618,20 @@ function buildDevisPdf(r, qty, type) {
     doc.text('−'+fmtEur(remise*qty), W-15, rY+6.5, { align:'right' });
   }
 
+  // Ligne 3 — remise commerciale (si applicable)
+  if (remiseCom > 0) {
+    rY += (remise > 0 ? 10 : 12);
+    doc.setFillColor(240,255,244);
+    doc.rect(14, rY, W-28, 10, 'F');
+    doc.setTextColor(22,163,74);
+    doc.setFont('helvetica','italic'); doc.setFontSize(10);
+    doc.text('Remise commerciale', 16, rY+6.5);
+    doc.text('−'+fmtEur(remiseCom), W-15, rY+6.5, { align:'right' });
+  }
+
   // ── Totaux ──
-  let totY = rY + (remise > 0 ? 10 : 12) + 6;
+  const lastRowH = remiseCom > 0 ? 10 : (remise > 0 ? 10 : 12);
+  let totY = rY + lastRowH + 6;
   doc.setDrawColor(...LGREY); doc.line(120, totY, W-14, totY);
 
   totY += 6;

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM Réunion — STAR aid</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --red:#AB1E2E;--red-dark:#8a1624;--red-light:#fdf0f1;
+  --grey:#f4f4f4;--dark:#1a1a1a;--mid:#555;--light:#999;
+  --white:#fff;--border:#e2e2e2;--green:#22863a;--orange:#e36209;--danger:#d73a49;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:14px;color:var(--dark);background:#f0f0f0;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* HEADER */
+header{background:var(--red);color:#fff;padding:0 18px;height:50px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.3);z-index:10;}
+.logo{font-size:17px;font-weight:700;letter-spacing:.5px;white-space:nowrap;}
+.logo em{opacity:.6;font-style:normal;font-weight:400;font-size:12px;margin-left:6px;}
+.spacer{flex:1;}
+header input[type=search]{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 12px;border-radius:4px;font-size:13px;width:220px;outline:none;}
+header input[type=search]::placeholder{color:rgba(255,255,255,.5);}
+header input[type=search]:focus{background:rgba(255,255,255,.25);}
+.hbadge{background:rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap;}
+
+/* BUTTONS */
+.btn{padding:6px 13px;border-radius:4px;border:none;cursor:pointer;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap;}
+.btn-white{background:#fff;color:var(--red);}
+.btn-white:hover{background:#f0f0f0;}
+.btn-outline{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);}
+.btn-outline:hover{background:rgba(255,255,255,.1);}
+.btn-red{background:var(--red);color:#fff;}
+.btn-red:hover{background:var(--red-dark);}
+.btn-grey{background:var(--grey);color:var(--dark);border:1px solid var(--border);}
+.btn-grey:hover{background:#e8e8e8;}
+.btn-green{background:#e8f4e8;color:#1a6b1a;border:1px solid #b8ddb8;}
+.btn-green:hover{background:#d0ecd0;}
+.btn-sm{padding:4px 9px;font-size:11px;}
+
+/* LAYOUT */
+.layout{display:flex;flex:1;overflow:hidden;}
+
+/* SIDEBAR */
+#sidebar{width:275px;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+.sidebar-stats{padding:10px 12px;background:var(--grey);border-bottom:1px solid var(--border);flex-shrink:0;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.stat-box{background:#fff;border:1px solid var(--border);border-radius:4px;padding:6px 8px;text-align:center;cursor:pointer;transition:background .15s;}
+.stat-box:hover{background:#fdf0f1;}
+.stat-box .sv{font-size:18px;font-weight:700;color:var(--red);}
+.stat-box .sl{font-size:10px;color:var(--light);text-transform:uppercase;letter-spacing:.3px;}
+
+/* FILTER BUTTONS */
+.sidebar-filters{padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.filter-btn{display:flex;align-items:center;width:100%;text-align:left;padding:6px 10px;border-radius:4px;border:none;background:none;cursor:pointer;font-size:12px;color:var(--mid);margin-bottom:2px;transition:background .12s;}
+.filter-btn:hover{background:var(--grey);}
+.filter-btn.active{background:var(--red-light);color:var(--red);font-weight:700;}
+.filter-btn .dot{width:9px;height:9px;border-radius:50%;margin-right:7px;flex-shrink:0;}
+.filter-btn .fc{flex:1;}
+.filter-btn .cnt{background:var(--grey);border-radius:10px;padding:1px 7px;font-size:10px;}
+.filter-btn.active .cnt{background:var(--red);color:#fff;}
+
+/* TYPE ERP FILTER */
+.erp-filter{border-bottom:1px solid var(--border);flex-shrink:0;}
+.erp-filter-head{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;cursor:pointer;background:var(--grey);font-size:11px;font-weight:700;color:var(--mid);letter-spacing:.3px;text-transform:uppercase;user-select:none;}
+.erp-filter-head:hover{background:#ebebeb;}
+.erp-filter-head .chev{transition:transform .2s;font-size:.65rem;color:var(--light);}
+.erp-filter-head .chev.open{transform:rotate(180deg);}
+.erp-filter-body{display:none;padding:5px 8px 8px;max-height:200px;overflow-y:auto;}
+.erp-filter-body.open{display:block;}
+.erp-chip{display:flex;align-items:center;gap:7px;width:100%;text-align:left;padding:5px 8px;border-radius:4px;border:none;background:none;cursor:pointer;font-size:12px;color:var(--mid);transition:background .12s;}
+.erp-chip:hover{background:var(--grey);}
+.erp-chip.on{background:var(--red-light);color:var(--red);font-weight:700;}
+.erp-chip .ebox{width:13px;height:13px;border-radius:3px;border:1.5px solid #ccc;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:transparent;}
+.erp-chip.on .ebox{background:var(--red);border-color:var(--red);color:#fff;}
+.erp-chip .elabel{flex:1;font-size:11px;line-height:1.3;text-align:left;}
+.erp-filter-body::-webkit-scrollbar{width:4px;}
+.erp-filter-body::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
+
+/* PROSPECT LIST */
+.prospect-list{flex:1;overflow-y:auto;}
+.prospect-item{padding:9px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;border-left:3px solid transparent;}
+.prospect-item:hover{background:#fafafa;}
+.prospect-item.active{background:var(--red-light);border-left-color:var(--red);}
+.pi-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pi-meta{font-size:11px;color:var(--light);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pi-type{font-size:10px;color:#7a8aff;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.list-more{text-align:center;padding:10px;font-size:11px;color:var(--light);border-top:1px solid var(--border);}
+.load-more-btn{width:100%;padding:8px;border:none;background:var(--grey);cursor:pointer;font-size:12px;color:var(--mid);font-weight:600;border-top:1px solid var(--border);}
+.load-more-btn:hover{background:#e8e8e8;}
+.prospect-list::-webkit-scrollbar{width:4px;}
+.prospect-list::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
+
+/* DETAIL PANEL */
+#detail{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#f5f5f5;}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--light);gap:12px;}
+.empty-state .ei{font-size:48px;}
+.empty-state h3{font-size:16px;color:var(--mid);}
+.empty-state p{font-size:13px;}
+
+.detail-header{padding:14px 18px;background:var(--red);color:#fff;flex-shrink:0;}
+.detail-header h2{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.detail-header .sub{font-size:11px;opacity:.7;margin-top:3px;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:#fff;flex-shrink:0;}
+.tab{padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;color:var(--mid);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;}
+.tab:hover{color:var(--dark);}
+.tab.active{color:var(--red);border-bottom-color:var(--red);font-weight:700;}
+
+.detail-body{flex:1;overflow-y:auto;}
+.detail-body::-webkit-scrollbar{width:4px;}
+.detail-body::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
+
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* SECTIONS */
+.dsec{padding:14px 18px;border-bottom:1px solid var(--border);background:#fff;margin-bottom:6px;}
+.dsec h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--light);margin-bottom:10px;}
+.frow{display:flex;gap:8px;margin-bottom:7px;align-items:flex-start;}
+.frow label{font-size:11px;color:var(--mid);width:110px;flex-shrink:0;padding-top:3px;}
+.frow .fval{flex:1;font-size:13px;color:var(--dark);line-height:1.5;}
+.frow input,.frow select,.frow textarea{flex:1;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-family:Arial;}
+.frow textarea{min-height:130px;resize:vertical;}
+.frow input:focus,.frow select:focus,.frow textarea:focus{outline:none;border-color:var(--red);}
+
+/* PHONE */
+.phone-big{display:inline-flex;align-items:center;gap:8px;background:#eafff2;color:#1a7a45;font-size:16px;font-weight:700;padding:10px 18px;border-radius:6px;text-decoration:none;border:1.5px solid #a8e6c0;transition:background .15s;}
+.phone-big:hover{background:#d0f5e3;}
+.google-btn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--red);font-size:12px;font-weight:700;padding:9px 14px;border-radius:6px;text-decoration:none;border:1.5px solid #f5c0c5;margin-left:8px;transition:background .15s;}
+.google-btn:hover{background:var(--red-light);}
+.call-log-txt{font-size:11px;color:var(--light);margin-top:7px;}
+.call-log-txt span{color:var(--green);font-weight:700;}
+
+/* STATUS TUNNEL */
+.tunnel-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.tun-btn{padding:8px 6px;border-radius:5px;border:2px solid transparent;cursor:pointer;font-size:11px;font-weight:700;text-align:center;transition:all .15s;opacity:.65;}
+.tun-btn:hover{opacity:.9;}
+.tun-btn.sel{border-color:currentColor;opacity:1;}
+
+/* ARGUMENT */
+.arg-box{background:#fffbf0;border:1.5px solid #ffe8a0;border-radius:6px;padding:12px 14px;font-size:13px;color:#5a4500;line-height:1.6;}
+
+/* ACTIONS */
+.action-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:6px;font-size:13px;font-weight:700;border:1.5px solid;cursor:not-allowed;opacity:.5;}
+.action-btn.info{background:#f0f6ff;color:#3a7bd5;border-color:#b0d0f0;}
+.action-btn.devis{background:#f0fff4;color:#2e7d52;border-color:#a0e0b8;}
+.action-btn.contrat{background:#fff4f0;color:#c0440a;border-color:#f0c0a0;}
+.soon{font-size:10px;background:#e0e0e0;color:#666;padding:1px 5px;border-radius:4px;}
+
+/* SAVE BAR */
+.save-bar{padding:10px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;align-items:center;background:#fff;flex-shrink:0;gap:8px;}
+.save-feedback{font-size:12px;color:var(--green);font-weight:700;margin-right:auto;display:none;}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;background:#22863a;color:#fff;padding:10px 16px;border-radius:6px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;}
+#toast.show{opacity:1;}
+
+/* STATUS BADGE */
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+.sc-0{color:#6366f1;background:#eef2ff;}
+.sc-1{color:#0ea5e9;background:#e0f2fe;}
+.sc-2{color:#f59e0b;background:#fffbeb;}
+.sc-3{color:#16a34a;background:#f0fdf4;}
+.sc-4{color:#94a3b8;background:#f8fafc;}
+
+/* SPINNER */
+.spinner-wrap{display:flex;align-items:center;justify-content:center;padding:30px;}
+.spinner{width:22px;height:22px;border:2px solid #ddd;border-top-color:var(--red);border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">CRM Réunion <em>STAR aid</em></div>
+  <div class="spacer"></div>
+  <input type="search" id="searchInput" placeholder="🔍 Rechercher un prospect..." oninput="onSearch()">
+  <span class="hbadge" id="totalBadge">…</span>
+</header>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <div id="sidebar">
+
+    <!-- Stats -->
+    <div class="sidebar-stats">
+      <div class="stat-grid" id="statsGrid">
+        <div class="stat-box"><div class="sv" id="st-total">…</div><div class="sl">Total</div></div>
+        <div class="stat-box"><div class="sv" id="st-contacte" style="color:#0ea5e9">…</div><div class="sl">Contactés</div></div>
+        <div class="stat-box"><div class="sv" id="st-devis" style="color:#f59e0b">…</div><div class="sl">Devis</div></div>
+        <div class="stat-box"><div class="sv" id="st-signe" style="color:var(--green)">…</div><div class="sl">Signés</div></div>
+      </div>
+    </div>
+
+    <!-- Filtres statut -->
+    <div class="sidebar-filters" id="filterButtons"></div>
+
+    <!-- Filtre type ERP -->
+    <div class="erp-filter">
+      <div class="erp-filter-head" onclick="toggleErpPanel()">
+        <span>🏢 Type d'établissement <span id="erp-active-badge" style="display:none;background:var(--red);color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:4px;"></span></span>
+        <span class="chev open" id="erp-chev">▼</span>
+      </div>
+      <div class="erp-filter-body open" id="erp-filter-body">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Liste -->
+    <div class="prospect-list" id="prospectList"></div>
+
+  </div>
+
+  <!-- ── DETAIL ── -->
+  <div id="detail">
+    <div class="empty-state" id="emptyState">
+      <div class="ei">👥</div>
+      <h3>Sélectionnez un prospect</h3>
+      <p>Cliquez sur un nom dans la liste pour voir sa fiche</p>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ─── SUPABASE ──────────────────────────────────────────── */
+const { createClient } = supabase;
+const sb = createClient(
+  'https://obnpzcebhcrkizycuipk.supabase.co',
+  'sb_publishable_7JlxUtQdYT4OY5JtfGgFTg_A-bnKEd9'
+);
+
+/* ─── CONSTANTES ────────────────────────────────────────── */
+const STATUTS = [
+  {id:0, label:'À contacter',  cls:'sc-0', dot:'#6366f1'},
+  {id:1, label:'Contacté',     cls:'sc-1', dot:'#0ea5e9'},
+  {id:2, label:'Devis envoyé', cls:'sc-2', dot:'#f59e0b'},
+  {id:3, label:'Signé',        cls:'sc-3', dot:'#16a34a'},
+  {id:4, label:'Perdu',        cls:'sc-4', dot:'#94a3b8'},
+];
+
+const PAGE = 80;
+
+/* ─── ÉTAT ──────────────────────────────────────────────── */
+let filterStatut = -1;
+let filterType   = '';
+let searchQ      = '';
+let currentSiret = null;
+let offset       = 0;
+let totalCount   = 0;
+let searching    = false;
+
+/* ─── INIT ──────────────────────────────────────────────── */
+async function init() {
+  await Promise.all([loadStats(), loadErpTypes()]);
+  renderFilters();
+  await loadList(true);
+}
+
+/* ─── STATS ─────────────────────────────────────────────── */
+async function loadStats() {
+  const queries = [
+    sb.from('prospects').select('*', {count:'exact',head:true}),
+    sb.from('prospects').select('*', {count:'exact',head:true}).eq('statut_crm',1),
+    sb.from('prospects').select('*', {count:'exact',head:true}).eq('statut_crm',2),
+    sb.from('prospects').select('*', {count:'exact',head:true}).eq('statut_crm',3),
+  ];
+  const [tot, cont, dev, sig] = await Promise.all(queries);
+  const total = tot.count || 0;
+  totalCount = total;
+  document.getElementById('st-total').textContent   = fmt(total);
+  document.getElementById('st-contacte').textContent= fmt(cont.count||0);
+  document.getElementById('st-devis').textContent   = fmt(dev.count||0);
+  document.getElementById('st-signe').textContent   = fmt(sig.count||0);
+  document.getElementById('totalBadge').textContent = fmt(total) + ' prospects';
+}
+
+/* ─── FILTRES STATUT ────────────────────────────────────── */
+function renderFilters() {
+  let html = `<button class="filter-btn ${filterStatut===-1?'active':''}" onclick="setFilter(-1)">
+    <span class="dot" style="background:#ccc"></span><span class="fc">Tous</span>
+    <span class="cnt" id="cnt-all">${fmt(totalCount)}</span></button>`;
+  STATUTS.forEach(s => {
+    html += `<button class="filter-btn ${filterStatut===s.id?'active':''}" onclick="setFilter(${s.id})">
+      <span class="dot" style="background:${s.dot}"></span>
+      <span class="fc">${s.label}</span>
+      <span class="cnt" id="cnt-${s.id}">…</span></button>`;
+  });
+  document.getElementById('filterButtons').innerHTML = html;
+  // Mettre à jour les compteurs
+  STATUTS.forEach(async s => {
+    let q = sb.from('prospects').select('*',{count:'exact',head:true}).eq('statut_crm',s.id);
+    if (filterType) q = q.eq('libelle_type_erp', filterType);
+    if (searchQ) q = q.or(`denomination_usuelle.ilike.%${searchQ}%,commune.ilike.%${searchQ}%`);
+    const { count } = await q;
+    const el = document.getElementById(`cnt-${s.id}`);
+    if (el) el.textContent = fmt(count||0);
+  });
+}
+
+function setFilter(id) {
+  filterStatut = id;
+  renderFilters();
+  loadList(true);
+}
+
+/* ─── TYPE ERP ──────────────────────────────────────────── */
+const ERP_TYPES = [
+  'Restaurants, cafés, débits de boissons',
+  'Commerce de détail, magasins, centres commerciaux',
+  'Établissements de santé (cliniques, cabinets médicaux)',
+  'Enseignement (écoles, universités, formation)',
+  'Coiffure, soins, bien-être, petits commerces services',
+  'Salles de sport, clubs, piscines, gymnases',
+  'Administrations publiques, banques, assurances, bureaux recevant du public',
+  'Services sociaux, aide à domicile, accueil enfants',
+  'Salles de spectacles, cinémas, salles de conférences',
+  'Hôtels, pensions, résidences de tourisme',
+  'Loisirs, escape games, salles de jeux, bowling',
+  'Entrepôts, logistique, transport aérien et fret',
+  'Lieux de culte (églises, mosquées, synagogues)',
+  'Distribution d\'eau, assainissement, gestion des déchets',
+  'Pompes funèbres, crématoriums, chambres funéraires',
+  'EHPAD, structures d\'accueil pour personnes âgées/handicapées',
+  'Salles d\'exposition, galeries d\'art, parcs d\'attractions',
+  'Bibliothèques, archives, musées, monuments',
+];
+
+async function loadErpTypes() {
+  const body = document.getElementById('erp-filter-body');
+  body.innerHTML = ERP_TYPES.map(t => `
+    <button class="erp-chip ${filterType===t?'on':''}" onclick="setErpFilter(${JSON.stringify(t)}, this)" title="${esc(t)}">
+      <div class="ebox">${filterType===t?'✓':''}</div>
+      <span class="elabel">${esc(t)}</span>
+    </button>`).join('');
+}
+
+function setErpFilter(type, btn) {
+  if (filterType === type) {
+    // Désélectionner
+    filterType = '';
+    document.querySelectorAll('.erp-chip').forEach(c => { c.classList.remove('on'); c.querySelector('.ebox').textContent = ''; });
+    document.getElementById('erp-active-badge').style.display = 'none';
+  } else {
+    filterType = type;
+    document.querySelectorAll('.erp-chip').forEach(c => { c.classList.remove('on'); c.querySelector('.ebox').textContent = ''; });
+    btn.classList.add('on');
+    btn.querySelector('.ebox').textContent = '✓';
+    const badge = document.getElementById('erp-active-badge');
+    badge.textContent = '1 filtre';
+    badge.style.display = 'inline';
+  }
+  renderFilters();
+  loadList(true);
+}
+
+function toggleErpPanel() {
+  const body = document.getElementById('erp-filter-body');
+  const chev = document.getElementById('erp-chev');
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+/* ─── LISTE ─────────────────────────────────────────────── */
+async function buildQuery(forCount = false) {
+  let q = sb.from('prospects').select(
+    forCount ? '*' : 'siret,denomination_usuelle,commune,libelle_type_erp,statut_crm',
+    forCount ? {count:'exact',head:true} : {}
+  );
+  if (filterStatut !== -1) q = q.eq('statut_crm', filterStatut);
+  if (filterType)          q = q.eq('libelle_type_erp', filterType);
+  if (searchQ)             q = q.or(`denomination_usuelle.ilike.%${searchQ}%,commune.ilike.%${searchQ}%,siret.ilike.%${searchQ}%`);
+  return q;
+}
+
+async function loadList(reset = false) {
+  if (reset) { offset = 0; }
+  const container = document.getElementById('prospectList');
+  if (reset) container.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+
+  const q = await buildQuery();
+  const { data, error } = await q.order('denomination_usuelle').range(offset, offset + PAGE - 1);
+
+  const { count } = await (await buildQuery(true));
+  document.getElementById('cnt-all').textContent = fmt(count || 0);
+
+  if (reset) container.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    if (reset) container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--light);font-size:12px;">Aucun résultat</div>';
+    return;
+  }
+
+  data.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'prospect-item' + (r.siret === currentSiret ? ' active' : '');
+    div.innerHTML = `
+      <div class="pi-name">${esc(r.denomination_usuelle)}</div>
+      <div class="pi-meta">${esc(r.commune||'—')}</div>
+      <div class="pi-type">${esc(r.libelle_type_erp||'')}</div>`;
+    div.onclick = () => selectProspect(r.siret, div);
+    container.appendChild(div);
+  });
+
+  offset += data.length;
+
+  // Bouton "Charger plus"
+  const existing = container.querySelector('.load-more-btn');
+  if (existing) existing.remove();
+
+  if (offset < (count || 0)) {
+    const btn = document.createElement('button');
+    btn.className = 'load-more-btn';
+    btn.textContent = `Charger plus (${fmt((count||0) - offset)} restants)`;
+    btn.onclick = () => loadList(false);
+    container.appendChild(btn);
+  }
+}
+
+/* ─── SEARCH ────────────────────────────────────────────── */
+let searchTimer;
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    searchQ = document.getElementById('searchInput').value.trim();
+    renderFilters();
+    loadList(true);
+  }, 300);
+}
+
+/* ─── SELECT PROSPECT ───────────────────────────────────── */
+async function selectProspect(siret, el) {
+  currentSiret = siret;
+  document.querySelectorAll('.prospect-item').forEach(e => e.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  const detail = document.getElementById('detail');
+  detail.innerHTML = '<div class="spinner-wrap" style="flex:1"><div class="spinner"></div></div>';
+
+  const { data, error } = await sb.from('prospects').select('*').eq('siret', siret).single();
+  if (error || !data) { toast('Erreur chargement', true); return; }
+  renderDetail(data);
+}
+
+/* ─── DETAIL ────────────────────────────────────────────── */
+function renderDetail(r) {
+  const detail = document.getElementById('detail');
+  const statut = STATUTS[r.statut_crm] || STATUTS[0];
+  const googleUrl = r.fiche_google_url || '#';
+  const callLog = r.date_heure_appel
+    ? `<div class="call-log-txt">📞 Dernier appel&nbsp;: <span>${esc(r.date_heure_appel)}</span></div>`
+    : `<div class="call-log-txt">📞 Aucun appel enregistré</div>`;
+
+  const tunnelBtns = STATUTS.map(s => `
+    <button class="tun-btn ${s.cls} ${r.statut_crm===s.id?'sel':''}"
+            onclick="updateStatut('${r.siret}', ${s.id}, this)">
+      ${s.label}
+    </button>`).join('');
+
+  detail.innerHTML = `
+    <!-- En-tête rouge -->
+    <div class="detail-header">
+      <h2>${esc(r.denomination_usuelle)}</h2>
+      <div class="sub">${esc(r.libelle_type_erp||'')} — ${esc(r.commune||'')} ${esc(r.code_postal||'')}</div>
+    </div>
+
+    <!-- Onglets -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('fiche',this)">📋 Fiche</button>
+      <button class="tab" onclick="switchTab('notes',this)">📝 Notes</button>
+      <button class="tab" onclick="switchTab('actions',this)">⚡ Actions</button>
+    </div>
+
+    <div class="detail-body">
+
+      <!-- FICHE -->
+      <div class="tab-pane active" id="tab-fiche">
+        <div class="dsec">
+          <h3>Coordonnées</h3>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            <a class="phone-big" href="tel:${esc(r.telephone_google)}" onclick="logCall('${r.siret}')">
+              📞 ${esc(r.telephone_google)}
+            </a>
+            <a class="google-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener">
+              🔍 Fiche Google
+            </a>
+          </div>
+          ${callLog}
+        </div>
+
+        <div class="dsec">
+          <h3>Informations</h3>
+          <div class="frow"><label>SIRET</label><div class="fval">${esc(r.siret)}</div></div>
+          <div class="frow"><label>Commune</label><div class="fval">${esc(r.commune||'—')} ${esc(r.code_postal||'')}</div></div>
+          <div class="frow"><label>Adresse</label><div class="fval">${esc(r.adresse_voie||'—')}</div></div>
+          <div class="frow"><label>Type ERP</label><div class="fval">${esc(r.type_erp||'—')}</div></div>
+          <div class="frow"><label>Urgence DAE</label><div class="fval">${esc(r.niveau_urgence||'—')}</div></div>
+          ${r.note_google ? `<div class="frow"><label>Note Google</label><div class="fval">⭐ ${esc(r.note_google)} (${esc(r.nb_avis_google||'0')} avis)</div></div>` : ''}
+        </div>
+
+        ${r.argument_commercial ? `
+        <div class="dsec">
+          <h3>💡 Argument commercial</h3>
+          <div class="arg-box">${esc(r.argument_commercial)}</div>
+        </div>` : ''}
+      </div>
+
+      <!-- NOTES -->
+      <div class="tab-pane" id="tab-notes">
+        <div class="dsec" style="border:none;">
+          <h3>📝 Vos notes</h3>
+          <div class="frow" style="flex-direction:column;gap:6px;">
+            <textarea id="notesArea" style="width:100%;min-height:200px;font-size:13px;padding:10px;border:1.5px solid var(--border);border-radius:6px;font-family:Arial;resize:vertical;outline:none;" placeholder="Objections, remarques, points clés...">${esc(r.notes||'')}</textarea>
+          </div>
+          <div class="frow">
+            <label>Prochaine action</label>
+            <input type="date" id="dateRelance" value="${esc(r.date_relance||'')}">
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="tab-pane" id="tab-actions">
+        <div class="dsec">
+          <h3>Tunnel de vente</h3>
+          <div class="tunnel-grid">${tunnelBtns}</div>
+        </div>
+        <div class="dsec">
+          <h3>Actions commerciales</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="action-btn info">✉️ Envoyer informations <span class="soon">Bientôt</span></button>
+            <button class="action-btn devis">📄 Envoyer devis <span class="soon">Bientôt</span></button>
+            <button class="action-btn contrat">✅ Envoyer contrat & devis <span class="soon">Bientôt</span></button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /detail-body -->
+
+    <!-- SAVE BAR -->
+    <div class="save-bar">
+      <span class="save-feedback" id="saveFeedback">✅ Enregistré !</span>
+      <button class="btn btn-grey btn-sm" onclick="openInMaps('${r.siret}')">📍 Maps</button>
+      <button class="btn btn-red" onclick="saveRecord('${r.siret}')">✔ Enregistrer</button>
+    </div>
+  `;
+}
+
+/* ─── TABS ──────────────────────────────────────────────── */
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+/* ─── STATUT ────────────────────────────────────────────── */
+async function updateStatut(siret, newStatut, btn) {
+  document.querySelectorAll('.tun-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const { error } = await sb.from('prospects').update({ statut_crm: newStatut, updated_at: new Date().toISOString() }).eq('siret', siret);
+  if (!error) {
+    toast('Statut mis à jour');
+    loadStats();
+    renderFilters();
+    // Rafraîchir l'item dans la liste
+    const items = document.querySelectorAll('.prospect-item.active .pi-meta');
+  } else { toast('Erreur mise à jour', true); }
+}
+
+/* ─── LOG CALL ──────────────────────────────────────────── */
+async function logCall(siret) {
+  const now = new Date().toLocaleString('fr-FR', {
+    timeZone: 'Indian/Reunion',
+    day:'2-digit', month:'2-digit', year:'numeric',
+    hour:'2-digit', minute:'2-digit'
+  });
+  const { error } = await sb.from('prospects').update({ date_heure_appel: now, updated_at: new Date().toISOString() }).eq('siret', siret);
+  if (!error) {
+    const el = document.querySelector('.call-log-txt');
+    if (el) el.innerHTML = `📞 Dernier appel&nbsp;: <span>${now}</span>`;
+    toast('Appel enregistré — ' + now);
+  }
+}
+
+/* ─── SAVE ──────────────────────────────────────────────── */
+async function saveRecord(siret) {
+  const notes       = document.getElementById('notesArea')?.value || '';
+  const date_relance= document.getElementById('dateRelance')?.value || '';
+  const { error } = await sb.from('prospects').update({
+    notes, date_relance, updated_at: new Date().toISOString()
+  }).eq('siret', siret);
+  if (!error) {
+    const fb = document.getElementById('saveFeedback');
+    if (fb) { fb.style.display = 'block'; setTimeout(() => fb.style.display = 'none', 2500); }
+    toast('Notes sauvegardées');
+  } else { toast('Erreur sauvegarde', true); }
+}
+
+/* ─── MAPS ──────────────────────────────────────────────── */
+async function openInMaps(siret) {
+  const { data } = await sb.from('prospects').select('adresse_voie,commune,code_postal').eq('siret', siret).single();
+  if (data) {
+    const q = [data.adresse_voie, data.commune, data.code_postal, 'Réunion'].filter(Boolean).join(' ');
+    window.open('https://www.google.com/maps/search/' + encodeURIComponent(q), '_blank');
+  }
+}
+
+/* ─── HELPERS ───────────────────────────────────────────── */
+function fmt(n) { return Number(n).toLocaleString('fr-FR'); }
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg, err = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = err ? '#d73a49' : '#22863a';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ─── GO ────────────────────────────────────────────────── */
+init();
+</script>
+</body>
+</html>

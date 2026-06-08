@@ -2214,7 +2214,60 @@ function toggleRecipient(idx) {
   if (_mailRecipients[idx]) {
     _mailRecipients[idx].selected = !_mailRecipients[idx].selected;
     renderMailRecipients();
+    // Mettre à jour la salutation dans le corps du mail
+    const firstSel = _mailRecipients.find(c => c.selected);
+    const name = firstSel ? firstSel.name.trim() : '';
+    const bodyEl = document.getElementById('mail-body');
+    if (bodyEl) {
+      bodyEl.value = bodyEl.value.replace(/^Bonjour[^,\n]*,/, name ? `Bonjour ${name},` : 'Bonjour,');
+    }
   }
+}
+
+function buildMailBody(contactName) {
+  const salut = contactName ? `Bonjour ${contactName},` : 'Bonjour,';
+  return `${salut}
+
+Suite à notre échange téléphonique, je reviens vers vous afin de vous apporter quelques précisions concernant notre offre de location de défibrillateur.
+
+STAR Aid vous propose une solution clé en main comprenant :
+
+• Un défibrillateur avec électrodes adulte/enfant ;
+• Une batterie lithium ;
+• Un kit de préparation à la RCP ;
+• Une notice d'utilisation en français ;
+• La maintenance préventive annuelle ;
+• La maintenance curative sur appel ;
+• Le remplacement des batteries et électrodes lorsqu'ils arrivent à échéance ;
+• Un matériel de prêt en cas d'immobilisation pour SAV ;
+• Une formation dématérialisée à l'utilisation du défibrillateur ;
+• Une vidéo d'initiation ;
+• Un e-book accompagné d'un QCM d'évaluation.
+
+Nous assurons également la déclaration de votre appareil sur la plateforme Géo'DAE dès sa mise en service, ainsi que les mises à jour nécessaires afin de garantir sa conformité réglementaire.
+
+Notre engagement est simple : vous garantir un défibrillateur fonctionnel, conforme et opérationnel en permanence, sans frais imprévus ni contraintes de gestion.
+
+À l'inverse, dans le cadre d'un achat classique d'un défibrillateur, le propriétaire reste responsable du suivi de son équipement. Cela implique notamment :
+
+• La souscription d'un contrat de maintenance ;
+• Le remplacement des électrodes et de la batterie ;
+• La déclaration et la mise à jour de l'appareil sur la plateforme Géo'DAE ;
+• Le contrôle régulier du bon fonctionnement du matériel.
+
+Ces obligations génèrent des coûts complémentaires ainsi qu'un suivi administratif et technique régulier afin de garantir la conformité et la disponibilité permanente du défibrillateur.
+
+Avec notre offre de location, l'ensemble de ces obligations est pris en charge par STAR Aid. Vous bénéficiez ainsi d'un équipement toujours conforme, opérationnel et prêt à l'emploi, tout en vous concentrant pleinement sur votre activité.
+
+Vous pouvez découvrir l'ensemble de nos services sur notre site internet : https://star-aid.fr/
+
+Afin de vous accompagner dans votre réflexion, vous trouverez en pièces jointes notre proposition commerciale ainsi qu'un exemplaire de contrat de location.
+
+En cas d'accord, notre équipe technique peut intervenir sous 72 heures ouvrées pour procéder à l'installation de votre défibrillateur et assurer une mise en service rapide de votre équipement.
+
+Je reste à votre disposition pour répondre à vos questions.
+
+Bien cordialement,`;
 }
 
 function updateMailToField() {
@@ -2238,41 +2291,12 @@ function openMailModal() {
   _mailRecipients = buildMailRecipients(r);
   renderMailRecipients();
 
-  // Corps du mail — salutation avec le premier signataire sélectionné
+  // Corps du mail — salutation avec le nom complet du premier destinataire sélectionné
   const firstSel = _mailRecipients.find(c => c.selected);
-  const prenom   = firstSel ? firstSel.name.trim().split(' ')[0] : '';
-  const civilite = prenom ? `Bonjour ${prenom},` : 'Bonjour,';
+  const fullName = firstSel ? firstSel.name.trim() : '';
+  const body     = buildMailBody(fullName);
 
-  const body =
-`${civilite}
-
-Suite à notre entretien téléphonique, je me permets de vous adresser notre proposition commerciale pour la mise à disposition d'un défibrillateur automatique externe (DAE) certifié dans votre établissement ${r.denomination_usuelle || ''}.
-
-En tant qu'établissement recevant du public (ERP${r.type_erp ? ' de type ' + r.type_erp : ''}), vous êtes concerné par la réglementation en vigueur imposant la présence d'un défibrillateur homologué et entretenu.
-
-Notre offre STAR aid comprend :
-✓ Location d'un défibrillateur full automatique à 89 € HT/mois (96,57 € TTC)
-✓ Maintenance préventive et curative incluse
-✓ Formation dématérialisée de votre personnel
-✓ Attestation administrative de démarche immédiate
-✓ Assistance 7j/7 par email — Dépannage sous 48h
-
-Sans caution exigée. Résiliable à tout moment après le premier mois.
-
-En pièce jointe, vous trouverez notre devis et notre contrat de location.
-
-Je reste à votre disposition pour tout complément d'information.
-
-Cordialement,
-
----
-STAR aid — Groupe STAR
-📞 +262 692 XX XX XX
-📧 contact@star-aid.re
-🌐 www.star-aid.fr
-4 allée des Primevères, 97490 Sainte-Clotilde (Réunion)`;
-
-  document.getElementById('mail-subject').value = `Défibrillateur DAE — ${r.denomination_usuelle || ''}`;
+  document.getElementById('mail-subject').value = `Proposition commerciale — Location défibrillateur DAE — ${r.denomination_usuelle || ''}`;
   document.getElementById('mail-body').value    = body;
   document.getElementById('mailModal').classList.remove('hidden');
 }

@@ -234,13 +234,14 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 
 /* STATUS BADGE */
 .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
-.sc-0{color:#6366f1;background:#eef2ff;}
-.sc-1{color:#0ea5e9;background:#e0f2fe;}
-.sc-2{color:#f59e0b;background:#fffbeb;}
-.sc-3{color:#16a34a;background:#f0fdf4;}
-.sc-4{color:#94a3b8;background:#f8fafc;}
-.sc-5{color:#6b7280;background:#f3f4f6;}
-.sc-6{color:#dc2626;background:#fef2f2;}
+.sc-0{color:#f59e0b;background:#fffbeb;}   /* À relancer messagerie */
+.sc-1{color:#0ea5e9;background:#e0f2fe;}   /* Prospect pris en charge */
+.sc-2{color:#06b6d4;background:#ecfeff;}   /* Relance J+2 */
+.sc-3{color:#8b5cf6;background:#f5f3ff;}   /* Relance J+5 */
+.sc-4{color:#f97316;background:#fff7ed;}   /* Relance J+10 */
+.sc-5{color:#6366f1;background:#eef2ff;}   /* Relance mail */
+.sc-6{color:#16a34a;background:#f0fdf4;}   /* Prospect signé */
+.sc-7{color:#dc2626;background:#fef2f2;}   /* Prospect perdu */
 
 /* BANNIÈRE MODE DÉMO */
 #demo-banner{display:none;background:#b45309;color:#fff;font-size:12px;font-weight:700;
@@ -415,9 +416,9 @@ body.demo-mode header{background:#b45309 !important;}
     <div class="sidebar-stats">
       <div class="stat-grid" id="statsGrid">
         <div class="stat-box"><div class="sv" id="st-total">…</div><div class="sl">Total</div></div>
-        <div class="stat-box"><div class="sv" id="st-contacte" style="color:#0ea5e9">…</div><div class="sl">Contactés</div></div>
-        <div class="stat-box"><div class="sv" id="st-devis" style="color:#f59e0b">…</div><div class="sl">Devis</div></div>
-        <div class="stat-box"><div class="sv" id="st-signe" style="color:var(--green)">…</div><div class="sl">Signés</div></div>
+        <div class="stat-box"><div class="sv" id="st-contacte" style="color:#0ea5e9">…</div><div class="sl">Pris en charge</div></div>
+        <div class="stat-box"><div class="sv" id="st-devis" style="color:#16a34a">…</div><div class="sl">Signés</div></div>
+        <div class="stat-box"><div class="sv" id="st-signe" style="color:#dc2626">…</div><div class="sl">Perdus</div></div>
       </div>
     </div>
 
@@ -1140,13 +1141,14 @@ function deleteUser(id, name) {
 
 /* ─── CONSTANTES ────────────────────────────────────────── */
 const STATUTS = [
-  {id:0, label:'À contacter',          cls:'sc-0', dot:'#6366f1'},
-  {id:1, label:'Contacté',             cls:'sc-1', dot:'#0ea5e9'},
-  {id:2, label:'Devis envoyé',         cls:'sc-2', dot:'#f59e0b'},
-  {id:3, label:'Signé',                cls:'sc-3', dot:'#16a34a'},
-  {id:4, label:'Perdu',                cls:'sc-4', dot:'#94a3b8'},
-  {id:5, label:'Non identifié',        cls:'sc-5', dot:'#6b7280'},
-  {id:6, label:'Pas du tout intéressé',cls:'sc-6', dot:'#dc2626'},
+  {id:0, label:'À relancer messagerie',   cls:'sc-0', dot:'#f59e0b'},
+  {id:1, label:'Prospect pris en charge', cls:'sc-1', dot:'#0ea5e9'},
+  {id:2, label:'Relance J+2',             cls:'sc-2', dot:'#06b6d4'},
+  {id:3, label:'Relance J+5',             cls:'sc-3', dot:'#8b5cf6'},
+  {id:4, label:'Relance J+10',            cls:'sc-4', dot:'#f97316'},
+  {id:5, label:'Relance mail',            cls:'sc-5', dot:'#6366f1'},
+  {id:6, label:'Prospect signé',          cls:'sc-6', dot:'#16a34a'},
+  {id:7, label:'Prospect perdu',          cls:'sc-7', dot:'#dc2626'},
 ];
 
 const PAGE = 80;
@@ -1155,12 +1157,12 @@ const PAGE = 80;
 const DEMO_DATA = [
   {siret:'97400001000012',siren:'974000010',denomination_usuelle:'Restaurant Le Lagon Bleu',commune:'Saint-Denis',code_postal:'97400',adresse_voie:'12 rue de la Victoire',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'2',dae_obligatoire:'Oui',statut_geodae:'Non équipé',score_confiance_erp:'85',commercial:'',telephone_crm:'0692 12 34 56',email_crm:'contact@lelagonbleu.re',argument_commercial:'ERP de type N — obligation légale DAE depuis 2020',telephone_google:'0262 12 34 56',fiche_google_url:'https://maps.google.com',note_google:'4.2',nb_avis_google:'87',adresse_google:'12 rue de la Victoire, 97400 Saint-Denis',notes:'Client curieux — rappeler en semaine',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'Jean-Paul Rivière',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
   {siret:'97410002000024',siren:'974100020',denomination_usuelle:'Hôtel Les Alizés',commune:'Saint-Pierre',code_postal:'97410',adresse_voie:'45 boulevard Hubert-Delisle',type_erp:'O',libelle_type_erp:'Hôtels, pensions, résidences de tourisme',niveau_urgence:'1',dae_obligatoire:'Oui',statut_geodae:'Non équipé',score_confiance_erp:'92',commercial:'',telephone_crm:'0692 23 45 67',email_crm:'direction@hotellealizes.re',argument_commercial:'Hôtel 3★ — réglementation DAE applicable (ERP de type O)',telephone_google:'0262 23 45 67',fiche_google_url:'https://maps.google.com',note_google:'4.5',nb_avis_google:'234',adresse_google:'45 bd Hubert-Delisle, 97410 Saint-Pierre',notes:'RDV téléphonique la semaine prochaine',date_heure_appel:'08/06/2026 09:30',statut_crm:1,date_relance:'',signataire:'Marie Hoarau',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
-  {siret:'97430003000036',siren:'974300030',denomination_usuelle:'Coiffure Tendance Tropicale',commune:'Le Tampon',code_postal:'97430',adresse_voie:'8 rue du Commerce',type_erp:'N',libelle_type_erp:'Coiffure, soins, bien-être, petits commerces services',niveau_urgence:'3',dae_obligatoire:'Non',statut_geodae:'',score_confiance_erp:'70',commercial:'',telephone_crm:'0692 34 56 78',email_crm:'tendancetropicale@gmail.com',argument_commercial:'Salon de coiffure fréquenté — sensibilisation DAE recommandée',telephone_google:'0262 34 56 78',fiche_google_url:'https://maps.google.com',note_google:'4.1',nb_avis_google:'45',adresse_google:'8 rue du Commerce, 97430 Le Tampon',notes:'Devis envoyé par mail le 07/06',date_heure_appel:'05/06/2026 14:00',statut_crm:2,date_relance:'',signataire:'Sylvie Grondin',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
-  {siret:'97439004000048',siren:'974390040',denomination_usuelle:'Clinique Sainte-Rose',commune:'Sainte-Rose',code_postal:'97439',adresse_voie:'22 chemin de la Plaine',type_erp:'U',libelle_type_erp:'Établissements de santé (cliniques, cabinets médicaux)',niveau_urgence:'1',dae_obligatoire:'Oui',statut_geodae:'Équipé',score_confiance_erp:'98',commercial:'',telephone_crm:'0262 45 67 89',email_crm:'admin@clinique-sr.re',argument_commercial:'Clinique — contrat de maintenance à proposer',telephone_google:'0262 45 67 89',fiche_google_url:'https://maps.google.com',note_google:'4.7',nb_avis_google:'156',adresse_google:'22 chemin de la Plaine, 97439 Sainte-Rose',notes:'Contrat signé ✓ — livraison prévue le 20/06',date_heure_appel:'01/06/2026 11:00',statut_crm:3,date_relance:'',signataire:'Dr. Antoine Payet',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
+  {siret:'97430003000036',siren:'974300030',denomination_usuelle:'Coiffure Tendance Tropicale',commune:'Le Tampon',code_postal:'97430',adresse_voie:'8 rue du Commerce',type_erp:'N',libelle_type_erp:'Coiffure, soins, bien-être, petits commerces services',niveau_urgence:'3',dae_obligatoire:'Non',statut_geodae:'',score_confiance_erp:'70',commercial:'',telephone_crm:'0692 34 56 78',email_crm:'tendancetropicale@gmail.com',argument_commercial:'Salon de coiffure fréquenté — sensibilisation DAE recommandée',telephone_google:'0262 34 56 78',fiche_google_url:'https://maps.google.com',note_google:'4.1',nb_avis_google:'45',adresse_google:'8 rue du Commerce, 97430 Le Tampon',notes:'Devis envoyé par mail le 07/06 — relance prévue',date_heure_appel:'05/06/2026 14:00',statut_crm:5,date_relance:'',signataire:'Sylvie Grondin',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
+  {siret:'97439004000048',siren:'974390040',denomination_usuelle:'Clinique Sainte-Rose',commune:'Sainte-Rose',code_postal:'97439',adresse_voie:'22 chemin de la Plaine',type_erp:'U',libelle_type_erp:'Établissements de santé (cliniques, cabinets médicaux)',niveau_urgence:'1',dae_obligatoire:'Oui',statut_geodae:'Équipé',score_confiance_erp:'98',commercial:'',telephone_crm:'0262 45 67 89',email_crm:'admin@clinique-sr.re',argument_commercial:'Clinique — contrat de maintenance à proposer',telephone_google:'0262 45 67 89',fiche_google_url:'https://maps.google.com',note_google:'4.7',nb_avis_google:'156',adresse_google:'22 chemin de la Plaine, 97439 Sainte-Rose',notes:'Contrat signé ✓ — livraison prévue le 20/06',date_heure_appel:'01/06/2026 11:00',statut_crm:6,date_relance:'',signataire:'Dr. Antoine Payet',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
   {siret:'97436005000060',siren:'974360050',denomination_usuelle:'Salle Omnisports de Saint-Leu',commune:'Saint-Leu',code_postal:'97436',adresse_voie:'Allée des Sports',type_erp:'X',libelle_type_erp:'Salles de sport, clubs, piscines, gymnases',niveau_urgence:'1',dae_obligatoire:'Oui',statut_geodae:'Non équipé',score_confiance_erp:'88',commercial:'',telephone_crm:'0692 56 78 90',email_crm:'contact@sallesports-saintleu.re',argument_commercial:'Salle de sport — risque cardiaque élevé — DAE obligatoire (ERP type X)',telephone_google:'0262 56 78 90',fiche_google_url:'https://maps.google.com',note_google:'4.3',nb_avis_google:'72',adresse_google:'Allée des Sports, 97436 Saint-Leu',notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
-  {siret:'97440006000072',siren:'974400060',denomination_usuelle:'Épicerie Tardivel',commune:'Saint-André',code_postal:'97440',adresse_voie:'14 rue Marcel Goulain',type_erp:'M',libelle_type_erp:'Commerce de détail, magasins, centres commerciaux',niveau_urgence:'2',dae_obligatoire:'Non',statut_geodae:'',score_confiance_erp:'65',commercial:'',telephone_crm:'',email_crm:'',argument_commercial:'Magasin >300 m² — DAE fortement recommandé',telephone_google:'0262 67 89 01',fiche_google_url:'https://maps.google.com',note_google:'3.8',nb_avis_google:'29',adresse_google:'14 rue Marcel Goulain, 97440 Saint-André',notes:'',date_heure_appel:'',statut_crm:5,date_relance:'',signataire:'',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
+  {siret:'97440006000072',siren:'974400060',denomination_usuelle:'Épicerie Tardivel',commune:'Saint-André',code_postal:'97440',adresse_voie:'14 rue Marcel Goulain',type_erp:'M',libelle_type_erp:'Commerce de détail, magasins, centres commerciaux',niveau_urgence:'2',dae_obligatoire:'Non',statut_geodae:'',score_confiance_erp:'65',commercial:'',telephone_crm:'',email_crm:'',argument_commercial:'Magasin >300 m² — DAE fortement recommandé',telephone_google:'0262 67 89 01',fiche_google_url:'https://maps.google.com',note_google:'3.8',nb_avis_google:'29',adresse_google:'14 rue Marcel Goulain, 97440 Saint-André',notes:'Numéro incorrect — à vérifier',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
   {siret:'97460007000084',siren:'974600070',denomination_usuelle:'EHPAD Les Flamboyants',commune:'Saint-Paul',code_postal:'97460',adresse_voie:'3 impasse des Flamboyants',type_erp:'J',libelle_type_erp:'EHPAD, structures d\'accueil pour personnes âgées/handicapées',niveau_urgence:'1',dae_obligatoire:'Oui',statut_geodae:'Non équipé',score_confiance_erp:'96',commercial:'',telephone_crm:'0692 78 90 12',email_crm:'direction@ehpad-flamboyants.re',argument_commercial:'EHPAD — obligation légale absolue — population vulnérable',telephone_google:'0262 78 90 12',fiche_google_url:'https://maps.google.com',note_google:'4.6',nb_avis_google:'43',adresse_google:'3 impasse des Flamboyants, 97460 Saint-Paul',notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'Françoise Maillot',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
-  {siret:'97470008000096',siren:'974700080',denomination_usuelle:'Bar-Brasserie Le Grand Bleu',commune:'Saint-Benoît',code_postal:'97470',adresse_voie:'2 place du Marché',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'2',dae_obligatoire:'Oui',statut_geodae:'Non équipé',score_confiance_erp:'75',commercial:'',telephone_crm:'0692 89 01 23',email_crm:'legrandbleu@yahoo.fr',argument_commercial:'Bar-brasserie — ERP de type N — obligation légale',telephone_google:'0262 89 01 23',fiche_google_url:'https://maps.google.com',note_google:'3.9',nb_avis_google:'112',adresse_google:'2 place du Marché, 97470 Saint-Benoît',notes:'Refus définitif — ne pas rappeler',date_heure_appel:'03/06/2026 16:30',statut_crm:6,date_relance:'',signataire:'Bernard Técher',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
+  {siret:'97470008000096',siren:'974700080',denomination_usuelle:'Bar-Brasserie Le Grand Bleu',commune:'Saint-Benoît',code_postal:'97470',adresse_voie:'2 place du Marché',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'2',dae_obligatoire:'Oui',statut_geodae:'Non équipé',score_confiance_erp:'75',commercial:'',telephone_crm:'0692 89 01 23',email_crm:'legrandbleu@yahoo.fr',argument_commercial:'Bar-brasserie — ERP de type N — obligation légale',telephone_google:'0262 89 01 23',fiche_google_url:'https://maps.google.com',note_google:'3.9',nb_avis_google:'112',adresse_google:'2 place du Marché, 97470 Saint-Benoît',notes:'Refus définitif — ne pas rappeler',date_heure_appel:'03/06/2026 16:30',statut_crm:7,date_relance:'',signataire:'Bernard Técher',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
   {siret:'97480009000108',siren:'974800090',denomination_usuelle:'Lycée Polyvalent de Bras-Panon',commune:'Bras-Panon',code_postal:'97412',adresse_voie:'Rue de l\'Enseignement',type_erp:'R',libelle_type_erp:'Enseignement (écoles, universités, formation)',niveau_urgence:'1',dae_obligatoire:'Oui',statut_geodae:'Non équipé',score_confiance_erp:'94',commercial:'',telephone_crm:'0692 90 12 34',email_crm:'direction@lycee-braspanon.re',argument_commercial:'Lycée 800 élèves — ERP type R — DAE obligatoire',telephone_google:'0262 90 12 34',fiche_google_url:'https://maps.google.com',note_google:'4.0',nb_avis_google:'18',adresse_google:'Rue de l\'Enseignement, 97412 Bras-Panon',notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'Directeur Célestin Morel',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
   {siret:'97490010000120',siren:'974900100',denomination_usuelle:'Bowling Star de Sainte-Clotilde',commune:'Sainte-Clotilde',code_postal:'97490',adresse_voie:'ZAC des Camélias',type_erp:'T',libelle_type_erp:'Loisirs, escape games, salles de jeux, bowling',niveau_urgence:'2',dae_obligatoire:'Oui',statut_geodae:'Non équipé',score_confiance_erp:'80',commercial:'',telephone_crm:'0692 01 23 45',email_crm:'bowling.star@hotmail.fr',argument_commercial:'Bowling — lieu de loisirs ERP type T — fort passage public',telephone_google:'0262 01 23 45',fiche_google_url:'https://maps.google.com',note_google:'4.4',nb_avis_google:'203',adresse_google:'ZAC des Camélias, 97490 Sainte-Clotilde',notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'',email_contact:'',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-01-15T08:00:00Z',contacts_json:'[]'},
 ];
@@ -1219,17 +1221,17 @@ async function init() {
 
 /* ─── STATS ─────────────────────────────────────────────── */
 async function loadStats() {
-  const [tot, cont, dev, sig] = await Promise.all([
+  const [tot, pc, sig, perdu] = await Promise.all([
     dbSelect('prospects', { countOnly: true }),
     dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.1'] }),
-    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.2'] }),
-    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.3'] }),
+    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.6'] }),
+    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.7'] }),
   ]);
   totalCount = tot.count;
   document.getElementById('st-total').textContent    = fmt(tot.count);
-  document.getElementById('st-contacte').textContent = fmt(cont.count);
-  document.getElementById('st-devis').textContent    = fmt(dev.count);
-  document.getElementById('st-signe').textContent    = fmt(sig.count);
+  document.getElementById('st-contacte').textContent = fmt(pc.count);
+  document.getElementById('st-devis').textContent    = fmt(sig.count);
+  document.getElementById('st-signe').textContent    = fmt(perdu.count);
   document.getElementById('totalBadge').textContent  = fmt(tot.count) + ' prospects';
 }
 
@@ -1463,7 +1465,7 @@ function renderDetail(r) {
   const googleUrl = r.fiche_google_url || '#';
   const statut   = r.statut_crm ?? 0;
   const sInfo    = STATUTS[statut] || STATUTS[0];
-  const isLocked = statut >= 5;
+  const isLocked = statut >= 6;
 
   // ── Contacts supplémentaires ──
   let extraContacts = [];
@@ -1488,14 +1490,16 @@ function renderDetail(r) {
        </div>`
     : '';
 
-  // ── Tunnel statut (seulement 0-4) ──
-  const tunnelHtml = STATUTS.slice(0, 5).map(s => {
-    const sel = statut === s.id;
-    return `<button class="tun-btn${sel ? ' sel' : ''}"
-              style="color:${s.dot};background:${sel ? s.dot + '22' : '#f5f5f5'};border-color:${sel ? s.dot : 'transparent'};"
-              onclick="changeStatut(${s.id})"
-              ${isLocked ? 'disabled title="Statut verrouillé"' : ''}>${s.label}</button>`;
-  }).join('');
+  // ── Tunnel statut (étapes 0 à 5 — grille 3 colonnes) ──
+  const tunnelHtml = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
+    ${STATUTS.slice(0, 6).map(s => {
+      const sel = statut === s.id;
+      return `<button class="tun-btn${sel ? ' sel' : ''}"
+                style="color:${s.dot};background:${sel ? s.dot + '22' : '#f5f5f5'};border-color:${sel ? s.dot : 'transparent'};"
+                onclick="changeStatut(${s.id})"
+                ${isLocked ? 'disabled title="Statut verrouillé"' : ''}>${s.label}</button>`;
+    }).join('')}
+  </div>`;
 
   const lockedBadge = isLocked
     ? `<div style="margin-top:8px;"><span class="tag ${sInfo.cls}" style="padding:5px 12px;font-size:12px;">🔒 ${sInfo.label}</span></div>`
@@ -1503,10 +1507,13 @@ function renderDetail(r) {
 
   // ── Boutons actions ──
   const actionsHtml = isLocked
-    ? `<div style="padding:16px;background:#fef2f2;border-radius:8px;text-align:center;border:1.5px solid #fca5a5;">
-         <div style="font-size:24px;margin-bottom:6px;">🔒</div>
-         <div style="font-size:13px;font-weight:700;color:#dc2626;">${sInfo.label}</div>
-         <div style="font-size:11px;color:#999;margin-top:4px;">Aucune action commerciale disponible</div>
+    ? `<div style="padding:16px;${statut===6
+          ? 'background:#f0fdf4;border:1.5px solid #86efac;'
+          : 'background:#fef2f2;border:1.5px solid #fca5a5;'}
+         border-radius:8px;text-align:center;">
+         <div style="font-size:28px;margin-bottom:6px;">${statut===6?'✅':'❌'}</div>
+         <div style="font-size:13px;font-weight:700;color:${statut===6?'#16a34a':'#dc2626'};">${sInfo.label}</div>
+         <div style="font-size:11px;color:#999;margin-top:4px;">${statut===6?'Contrat signé — félicitations !':'Prospect archivé — aucune action possible'}</div>
        </div>`
     : `<button class="act-btn act-mail" onclick="openMailModal()">
          <span class="act-icon">✉️</span>
@@ -1533,17 +1540,18 @@ function renderDetail(r) {
          <span class="act-arr">›</span>
        </button>
        <div class="act-sep"></div>
-       <button class="act-btn act-nonid" onclick="setNonIdentifie()">
-         <span class="act-icon">🔍</span>
+       <button class="act-btn" onclick="setProspectSigne()"
+               style="background:#f0fdf4;color:#16a34a;border-color:#86efac;">
+         <span class="act-icon">✅</span>
          <div class="act-body">
-           <div>Non identifié</div>
-           <div class="act-sub">Établissement non conforme, inexistant ou numéro erroné</div>
+           <div>Prospect signé</div>
+           <div class="act-sub">Contrat signé — verrouille définitivement la fiche</div>
          </div>
        </button>
-       <button class="act-btn act-perdu" onclick="setPasDuToutInteresse()">
+       <button class="act-btn act-perdu" onclick="setProspectPerdu()">
          <span class="act-icon">❌</span>
          <div class="act-body">
-           <div>Pas du tout intéressé</div>
+           <div>Prospect perdu</div>
            <div class="act-sub">Refus définitif — action irréversible</div>
          </div>
        </button>`;
@@ -1869,34 +1877,33 @@ function cancelConfirm() {
   _confirmCb = null;
 }
 
-/* ─── NON IDENTIFIÉ / PAS DU TOUT INTÉRESSÉ ───────────── */
-function setNonIdentifie() {
+/* ─── STATUTS TERMINAUX (confirmation requise) ─────────── */
+function setProspectSigne() {
   const r = _currentRecord;
   if (!r) return;
   confirmAction(
-    '🔍 Non identifié',
-    `<p>Marquer <strong>${esc(r.denomination_usuelle)}</strong> comme <strong>Non identifié</strong> ?<br>
-     <span style="font-size:12px;color:var(--mid);">(Établissement non conforme, inexistant ou numéro erroné)</span></p>
-     <div style="margin-top:12px;padding:10px 14px;background:#fef2f2;border-radius:6px;font-size:12px;color:#dc2626;border:1px solid #fca5a5;">
-       ⚠️ Cette action est <strong>irréversible</strong>. Le prospect sera archivé.
+    '✅ Prospect signé',
+    `<p>Marquer <strong>${esc(r.denomination_usuelle)}</strong> comme <strong>Prospect signé</strong> ?</p>
+     <div style="margin-top:12px;padding:10px 14px;background:#f0fdf4;border-radius:6px;font-size:12px;color:#16a34a;border:1px solid #86efac;">
+       ✅ Contrat signé — la fiche sera verrouillée.
      </div>`,
-    () => changeStatut(5),
-    '🔒 Confirmer'
+    () => changeStatut(6),
+    '✅ Confirmer'
   );
 }
 
-function setPasDuToutInteresse() {
+function setProspectPerdu() {
   const r = _currentRecord;
   if (!r) return;
   confirmAction(
-    '❌ Pas du tout intéressé',
-    `<p>Marquer <strong>${esc(r.denomination_usuelle)}</strong> comme <strong>Pas du tout intéressé</strong> ?<br>
-     <span style="font-size:12px;color:var(--mid);">(Refus définitif, ne plus contacter)</span></p>
+    '❌ Prospect perdu',
+    `<p>Marquer <strong>${esc(r.denomination_usuelle)}</strong> comme <strong>Prospect perdu</strong> ?<br>
+     <span style="font-size:12px;color:var(--mid);">(Refus définitif — ne plus contacter)</span></p>
      <div style="margin-top:12px;padding:10px 14px;background:#fef2f2;border-radius:6px;font-size:12px;color:#dc2626;border:1px solid #fca5a5;">
        ⚠️ Cette action est <strong>irréversible</strong>. Le prospect sera archivé.
      </div>`,
-    () => changeStatut(6),
-    '🔒 Confirmer'
+    () => changeStatut(7),
+    '❌ Confirmer'
   );
 }
 

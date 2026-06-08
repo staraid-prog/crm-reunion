@@ -1980,8 +1980,8 @@ function _updateCallLog(dateStr, isMessagerie) {
 }
 
 async function logAppel() {
+  const siret = _callSiret;  // sauvegarder avant closeCallModal (qui remet _callSiret à null)
   closeCallModal();
-  const siret = _callSiret;
   if (!siret) return;
   const now = _nowReunion();
   const updates = { date_heure_appel: now };
@@ -2007,8 +2007,8 @@ async function logAppel() {
 }
 
 async function logMessagerie() {
+  const siret = _callSiret;  // sauvegarder avant closeCallModal (qui remet _callSiret à null)
   closeCallModal();
-  const siret = _callSiret;
   if (!siret) return;
   const now = _nowReunion();
   const stored = 'MSG:' + now;

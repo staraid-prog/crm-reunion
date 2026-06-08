@@ -222,6 +222,15 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 /* HINT BOX */
 .hint-box{background:#fff8e8;border:1px solid #f5d58a;border-radius:6px;padding:10px 14px;font-size:12px;color:#7a5a00;margin-top:8px;line-height:1.5;}
 
+/* CONTACTS SUPPLÉMENTAIRES */
+.contact-card{background:#f8f9fa;border:1.5px solid var(--border);border-radius:8px;padding:14px 14px 12px;margin-bottom:10px;position:relative;}
+.contact-card:last-child{margin-bottom:0;}
+.contact-card-del{position:absolute;top:9px;right:11px;background:none;border:none;cursor:pointer;color:var(--light);font-size:19px;line-height:1;padding:0;transition:color .12s;}
+.contact-card-del:hover{color:var(--danger);}
+.contacts-sep{border-top:1.5px solid var(--border);margin:18px 0 14px;display:flex;align-items:center;gap:10px;}
+.contacts-sep-label{font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+.contacts-empty{text-align:center;padding:10px 0;font-size:12px;color:var(--light);font-style:italic;}
+
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 </style>
@@ -299,12 +308,17 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
      MODAL — CONTACT
 ════════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden" id="contactModal">
-  <div class="modal-box">
+  <div class="modal-box" style="width:560px;">
     <div class="modal-head">
       <h3>👤 Fiche contact</h3>
       <button class="cls" onclick="closeContact()">✕</button>
     </div>
     <div class="modal-body">
+
+      <!-- Contact principal -->
+      <div style="font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.3px;margin-bottom:12px;">
+        📋 Contact principal
+      </div>
       <div class="mrow">
         <label>Dénomination sociale</label>
         <input id="m-denomination" type="text" placeholder="Raison sociale">
@@ -345,6 +359,16 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
         <label>SIRET <span style="font-size:10px;color:var(--light);font-weight:400;">(non modifiable)</span></label>
         <div class="mval" id="m-siret" style="font-family:monospace;letter-spacing:.5px;color:var(--light);font-size:12px;"></div>
       </div>
+
+      <!-- Contacts supplémentaires -->
+      <div class="contacts-sep">
+        <span class="contacts-sep-label">👥 Contacts supplémentaires</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <button class="btn btn-grey btn-sm" onclick="addContact()" type="button"
+                style="font-size:13px;font-weight:700;padding:4px 12px;">＋ Ajouter</button>
+      </div>
+      <div id="contacts-list"></div>
+
     </div>
     <div class="modal-foot">
       <button class="btn btn-grey" onclick="closeContact()">Fermer</button>
@@ -822,6 +846,29 @@ function renderDetail(r) {
   const sInfo    = STATUTS[statut] || STATUTS[0];
   const isLocked = statut >= 5;
 
+  // ── Contacts supplémentaires ──
+  let extraContacts = [];
+  try {
+    extraContacts = JSON.parse(r.contacts_json || '[]');
+    if (!Array.isArray(extraContacts)) extraContacts = [];
+  } catch { extraContacts = []; }
+
+  const extraBadge = extraContacts.length > 0
+    ? `<span id="contact-extra-badge" style="background:var(--red);color:#fff;border-radius:8px;padding:1px 7px;font-size:10px;margin-left:4px;">+${extraContacts.length}</span>`
+    : `<span id="contact-extra-badge" style="display:none;background:var(--red);color:#fff;border-radius:8px;padding:1px 7px;font-size:10px;margin-left:4px;"></span>`;
+
+  const extraContactsHtml = extraContacts.length > 0
+    ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
+         ${extraContacts.map(c => `
+           <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mid);background:#f8f9fa;border-radius:5px;padding:5px 10px;">
+             <span style="font-weight:700;color:var(--dark);">${esc((c.prenom||'')+' '+(c.nom||'')).trim() || '—'}</span>
+             ${c.fonction ? `<span style="color:var(--light);">· ${esc(c.fonction)}</span>` : ''}
+             ${c.telephone ? `<a href="tel:${esc(c.telephone)}" style="margin-left:auto;color:#1a7a45;font-weight:700;text-decoration:none;">📞 ${esc(c.telephone)}</a>` : ''}
+             ${c.mail ? `<a href="mailto:${esc(c.mail)}" style="color:var(--red);font-weight:700;text-decoration:none;${c.telephone?'':'margin-left:auto'}">✉️</a>` : ''}
+           </div>`).join('')}
+       </div>`
+    : '';
+
   // ── Tunnel statut (seulement 0-4) ──
   const tunnelHtml = STATUTS.slice(0, 5).map(s => {
     const sel = statut === s.id;
@@ -899,13 +946,17 @@ function renderDetail(r) {
             📞 ${esc(r.telephone_google || '—')}
           </a>
           <a class="google-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener">🔍 Fiche Google</a>
-          <button class="btn-contact" onclick="openContact()">👤 Contact</button>
+          <button class="btn-contact" onclick="openContact()">
+            👤 Contact
+            ${extraBadge}
+          </button>
         </div>
         <div class="call-log-txt" id="call-log-txt">${
           r.date_heure_appel
             ? `📞 Dernier appel&nbsp;: <span>${esc(r.date_heure_appel)}</span>`
             : 'Aucun appel enregistré'
         }</div>
+        ${extraContactsHtml}
       </div>
 
       <!-- STATUT COMMERCIAL -->
@@ -968,7 +1019,13 @@ function openContact() {
   document.getElementById('m-telephone').value    = r.telephone_crm        || '';
   document.getElementById('m-email').value        = r.email_crm            || '';
   document.getElementById('m-siret').textContent  = r.siret                || '—';
+  // Charger les contacts supplémentaires
+  try {
+    _additionalContacts = JSON.parse(r.contacts_json || '[]');
+    if (!Array.isArray(_additionalContacts)) _additionalContacts = [];
+  } catch { _additionalContacts = []; }
   document.getElementById('contactModal').classList.remove('hidden');
+  renderAdditionalContacts();
   const first = ['m-signataire','m-fonction','m-telephone','m-email'].find(id => !document.getElementById(id).value);
   if (first) setTimeout(() => document.getElementById(first).focus(), 50);
 }
@@ -978,6 +1035,11 @@ function closeContact() {
 }
 
 async function saveContact() {
+  // Nettoyage des contacts vides avant sauvegarde
+  const cleanedContacts = _additionalContacts.filter(c =>
+    (c.prenom||'').trim() || (c.nom||'').trim() || (c.mail||'').trim() || (c.telephone||'').trim()
+  );
+
   const updates = {
     denomination_usuelle: document.getElementById('m-denomination').value.trim(),
     signataire:           document.getElementById('m-signataire').value.trim(),
@@ -987,6 +1049,7 @@ async function saveContact() {
     commune:              document.getElementById('m-ville').value.trim(),
     telephone_crm:        document.getElementById('m-telephone').value.trim(),
     email_crm:            document.getElementById('m-email').value.trim(),
+    contacts_json:        JSON.stringify(cleanedContacts),
   };
   const btn = document.querySelector('#contactModal .btn-red');
   btn.textContent = '…'; btn.disabled = true;
@@ -994,14 +1057,99 @@ async function saveContact() {
   btn.textContent = '✔ Enregistrer'; btn.disabled = false;
   if (ok) {
     if (_currentRecord) Object.assign(_currentRecord, updates);
+    _additionalContacts = cleanedContacts;
     const h2 = document.querySelector('.detail-header h2');
     if (h2) h2.textContent = updates.denomination_usuelle;
-    toast('Contact enregistré ✓');
+    // Mettre à jour le badge dans la fiche
+    const badge = document.getElementById('contact-extra-badge');
+    if (badge) {
+      if (cleanedContacts.length > 0) {
+        badge.textContent = '+' + cleanedContacts.length;
+        badge.style.display = 'inline';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    toast(`Contact enregistré ✓${cleanedContacts.length > 0 ? ' — ' + cleanedContacts.length + ' contact(s) supp.' : ''}`);
     closeContact();
   } else {
     toast('Erreur sauvegarde', true);
   }
 }
+
+/* ─── CONTACTS SUPPLÉMENTAIRES ─────────────────────────── */
+let _additionalContacts = [];
+
+function renderAdditionalContacts() {
+  const container = document.getElementById('contacts-list');
+  if (!container) return;
+  if (_additionalContacts.length === 0) {
+    container.innerHTML = '<p class="contacts-empty">Aucun contact supplémentaire — cliquez sur ＋ pour en ajouter</p>';
+    return;
+  }
+  container.innerHTML = _additionalContacts.map((c, i) => `
+    <div class="contact-card">
+      <button class="contact-card-del" onclick="removeContact(${i})" title="Supprimer ce contact">✕</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div class="mrow" style="margin-bottom:0;">
+          <label>Prénom</label>
+          <input type="text" class="xci" data-ci="${i}" data-cf="prenom"
+                 value="${esc(c.prenom||'')}" placeholder="Prénom">
+        </div>
+        <div class="mrow" style="margin-bottom:0;">
+          <label>Nom</label>
+          <input type="text" class="xci" data-ci="${i}" data-cf="nom"
+                 value="${esc(c.nom||'')}" placeholder="Nom">
+        </div>
+      </div>
+      <div class="mrow" style="margin-bottom:8px;">
+        <label>Fonction</label>
+        <input type="text" class="xci" data-ci="${i}" data-cf="fonction"
+               value="${esc(c.fonction||'')}" placeholder="Gérant, Responsable, Directeur...">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="mrow" style="margin-bottom:0;">
+          <label>Téléphone</label>
+          <input type="tel" class="xci" data-ci="${i}" data-cf="telephone"
+                 value="${esc(c.telephone||'')}" placeholder="06 xx xx xx xx">
+        </div>
+        <div class="mrow" style="margin-bottom:0;">
+          <label>Mail</label>
+          <input type="email" class="xci" data-ci="${i}" data-cf="mail"
+                 value="${esc(c.mail||'')}" placeholder="contact@...">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function addContact() {
+  _additionalContacts.push({ prenom:'', nom:'', mail:'', telephone:'', fonction:'' });
+  renderAdditionalContacts();
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.contact-card');
+    if (cards.length) {
+      cards[cards.length-1].scrollIntoView({ behavior:'smooth', block:'nearest' });
+      const inp = cards[cards.length-1].querySelector('input');
+      if (inp) inp.focus();
+    }
+  }, 60);
+}
+
+function removeContact(idx) {
+  _additionalContacts.splice(idx, 1);
+  renderAdditionalContacts();
+}
+
+// Event delegation — mise à jour du tableau en mémoire à chaque frappe
+document.addEventListener('input', e => {
+  if (e.target.classList.contains('xci')) {
+    const idx   = parseInt(e.target.dataset.ci);
+    const field = e.target.dataset.cf;
+    if (!isNaN(idx) && field && _additionalContacts[idx] !== undefined) {
+      _additionalContacts[idx][field] = e.target.value;
+    }
+  }
+});
 
 /* ─── LOG CALL ──────────────────────────────────────────── */
 async function logCall(siret) {

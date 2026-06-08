@@ -760,7 +760,8 @@ body.demo-mode header{background:#b45309 !important;}
     </div>
     <div class="modal-foot">
       <button class="btn btn-grey" onclick="closeContratModal()">Annuler</button>
-      <button class="btn btn-red" onclick="previewContrat()">👁 Aperçu PDF</button>
+      <button class="btn btn-green" onclick="previewContrat()">👁 Aperçu PDF</button>
+      <button class="btn btn-red" onclick="validerContrat()">✅ Valider le contrat</button>
     </div>
   </div>
 </div>
@@ -2404,6 +2405,20 @@ function openContratModal() {
 
 function closeContratModal() {
   document.getElementById('contratModal').classList.add('hidden');
+}
+
+function validerContrat() {
+  const r = _currentRecord;
+  if (!r) return;
+  const ville = document.getElementById('ct-ville').value.trim() || r.commune || '';
+  const date  = document.getElementById('ct-date').value.trim() || new Date().toLocaleDateString('fr-FR');
+
+  if (!_docState[r.siret]) _docState[r.siret] = {};
+  _docState[r.siret].contrat = { ville, date, ready: true };
+
+  closeContratModal();
+  toast('✅ Contrat validé — prêt à envoyer');
+  renderDetail(r);
 }
 
 function previewContrat() {

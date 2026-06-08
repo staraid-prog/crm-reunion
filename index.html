@@ -540,6 +540,50 @@ body.demo-mode header{background:#b45309 !important;}
 </div>
 
 <!-- ═══════════════════════════════════════════════════
+     MODAL — APPEL / MESSAGERIE
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="callModal">
+  <div class="modal-box" style="width:340px;">
+    <div class="modal-head">
+      <h3>📞 Que s'est-il passé ?</h3>
+      <button class="cls" onclick="closeCallModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 18px;">
+      <p style="font-size:13px;color:var(--mid);margin-bottom:18px;text-align:center;">
+        Enregistrez le résultat de votre appel
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="logAppel()"
+          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #86efac;
+                 background:#f0fdf4;color:#16a34a;font-size:13px;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;gap:10px;transition:background .15s;"
+          onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+          <span style="font-size:20px;">✅</span>
+          <div style="text-align:left;">
+            <div>Prospect pris en charge</div>
+            <div style="font-size:11px;font-weight:400;color:#15803d;margin-top:2px;">Joint — prospect assigné à vous</div>
+          </div>
+        </button>
+        <button onclick="logMessagerie()"
+          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #fcd34d;
+                 background:#fffbeb;color:#b45309;font-size:13px;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;gap:10px;transition:background .15s;"
+          onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='#fffbeb'">
+          <span style="font-size:20px;">📵</span>
+          <div style="text-align:left;">
+            <div>Messagerie</div>
+            <div style="font-size:11px;font-weight:400;color:#92400e;margin-top:2px;">Message laissé — à relancer</div>
+          </div>
+        </button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-grey" onclick="closeCallModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
      MODAL — CONFIRMATION (irréversible)
 ════════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden" id="confirmModal">
@@ -1242,6 +1286,7 @@ let DEMO_MODE      = false;
 let _demoDb        = [];
 let currentUser    = null;   // {id, prenom, nom, email, role}
 let filterMine     = false;  // filtre "mes prospects"
+let _callSiret     = null;   // siret en cours dans le modal appel
 
 /* ─── SIDEBAR DRAWER ────────────────────────────────────── */
 function toggleSidebar() {
@@ -1653,7 +1698,7 @@ function renderDetail(r) {
       <!-- TÉLÉPHONE + GOOGLE -->
       <div class="dsec">
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-          <a class="phone-big" href="tel:${esc(r.telephone_google)}" onclick="logCall('${r.siret}')">
+          <a class="phone-big" href="tel:${esc(r.telephone_google)}" onclick="openCallModal('${r.siret}')">
             📞 ${esc(r.telephone_google || '—')}
           </a>
           <a class="google-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener">🔍 Fiche Google</a>
@@ -1664,7 +1709,9 @@ function renderDetail(r) {
         </div>
         <div class="call-log-txt" id="call-log-txt">${
           r.date_heure_appel
-            ? `📞 Dernier appel&nbsp;: <span>${esc(r.date_heure_appel)}</span>`
+            ? r.date_heure_appel.startsWith('MSG:')
+              ? `📵 Messagerie&nbsp;: <span>${esc(r.date_heure_appel.slice(4))}</span>`
+              : `📞 Dernier appel&nbsp;: <span>${esc(r.date_heure_appel)}</span>`
             : 'Aucun appel enregistré'
         }</div>
         ${r.commercial
@@ -1879,29 +1926,79 @@ document.addEventListener('input', e => {
   }
 });
 
-/* ─── LOG CALL ──────────────────────────────────────────── */
-async function logCall(siret) {
-  const now = new Date().toLocaleString('fr-FR', {
+/* ─── MODAL APPEL / MESSAGERIE ──────────────────────────── */
+function openCallModal(siret) {
+  _callSiret = siret;
+  document.getElementById('callModal').classList.remove('hidden');
+}
+function closeCallModal() {
+  document.getElementById('callModal').classList.add('hidden');
+  _callSiret = null;
+}
+
+function _nowReunion() {
+  return new Date().toLocaleString('fr-FR', {
     timeZone:'Indian/Reunion', day:'2-digit', month:'2-digit',
     year:'numeric', hour:'2-digit', minute:'2-digit'
   });
+}
+
+function _updateCallLog(dateStr, isMessagerie) {
+  const el = document.getElementById('call-log-txt');
+  if (!el) return;
+  el.innerHTML = isMessagerie
+    ? `📵 Messagerie&nbsp;: <span>${dateStr}</span>`
+    : `📞 Dernier appel&nbsp;: <span>${dateStr}</span>`;
+}
+
+async function logAppel() {
+  closeCallModal();
+  const siret = _callSiret;
+  if (!siret) return;
+  const now = _nowReunion();
   const updates = { date_heure_appel: now };
-  // Assigner le prospect au commercial connecté
   if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
   const ok = await dbUpdate('prospects', siret, updates);
   if (ok) {
-    const el = document.getElementById('call-log-txt');
-    if (el) el.innerHTML = `📞 Dernier appel&nbsp;: <span>${now}</span>`;
-    toast('Appel enregistré — ' + now);
+    _updateCallLog(now, false);
+    toast('📞 Appel enregistré — ' + now);
     if (_currentRecord) {
       _currentRecord.date_heure_appel = now;
       if (currentUser) _currentRecord.commercial = updates.commercial;
     }
-    // Auto-passer en "Prospect pris en charge" si pas encore de statut ou statut 0
-    if (_currentRecord && (_currentRecord.statut_crm == null || _currentRecord.statut_crm === 0)) {
+    // Basculer en "Prospect pris en charge" (statut 1)
+    if (_currentRecord) {
       const upd = await dbUpdate('prospects', siret, { statut_crm: 1 });
       if (upd && _currentRecord) {
         _currentRecord.statut_crm = 1;
+        renderDetail(_currentRecord);
+        renderFilters();
+      }
+    }
+  }
+}
+
+async function logMessagerie() {
+  closeCallModal();
+  const siret = _callSiret;
+  if (!siret) return;
+  const now = _nowReunion();
+  const stored = 'MSG:' + now;
+  const updates = { date_heure_appel: stored };
+  if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
+  const ok = await dbUpdate('prospects', siret, updates);
+  if (ok) {
+    _updateCallLog(now, true);
+    toast('📵 Messagerie enregistrée — ' + now);
+    if (_currentRecord) {
+      _currentRecord.date_heure_appel = stored;
+      if (currentUser) _currentRecord.commercial = updates.commercial;
+    }
+    // Basculer en "À relancer messagerie" (statut 0)
+    if (_currentRecord) {
+      const upd = await dbUpdate('prospects', siret, { statut_crm: 0 });
+      if (upd && _currentRecord) {
+        _currentRecord.statut_crm = 0;
         renderDetail(_currentRecord);
         renderFilters();
       }
@@ -2794,6 +2891,7 @@ function toast(msg, err = false) {
 /* ─── FERMETURE MODALS SUR OVERLAY ─────────────────────── */
 document.addEventListener('click', e => {
   const modals = [
+    { id:'callModal',     close: closeCallModal    },
     { id:'contactModal',  close: closeContact      },
     { id:'confirmModal',  close: cancelConfirm     },
     { id:'mailModal',     close: closeMailModal    },

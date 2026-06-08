@@ -2214,19 +2214,11 @@ function toggleRecipient(idx) {
   if (_mailRecipients[idx]) {
     _mailRecipients[idx].selected = !_mailRecipients[idx].selected;
     renderMailRecipients();
-    // Mettre à jour la salutation dans le corps du mail
-    const firstSel = _mailRecipients.find(c => c.selected);
-    const name = firstSel ? firstSel.name.trim() : '';
-    const bodyEl = document.getElementById('mail-body');
-    if (bodyEl) {
-      bodyEl.value = bodyEl.value.replace(/^Bonjour[^,\n]*,/, name ? `Bonjour ${name},` : 'Bonjour,');
-    }
   }
 }
 
 function buildMailBody(contactName) {
-  const salut = contactName ? `Bonjour ${contactName},` : 'Bonjour,';
-  return `${salut}
+  return `Bonjour,
 
 Suite à notre échange téléphonique, je reviens vers vous afin de vous apporter quelques précisions concernant notre offre de location de défibrillateur.
 

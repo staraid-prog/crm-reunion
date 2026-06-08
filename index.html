@@ -1538,9 +1538,9 @@ async function selectProspect(siret, el) {
 function renderDetail(r) {
   const detail   = document.getElementById('detail');
   const googleUrl = r.fiche_google_url || '#';
-  const statut   = r.statut_crm ?? 0;
-  const sInfo    = STATUTS[statut] || STATUTS[0];
-  const isLocked = statut >= 6;
+  const statut   = r.statut_crm ?? null;
+  const sInfo    = (statut !== null && STATUTS[statut]) || STATUTS[0];
+  const isLocked = statut !== null && statut >= 6;
 
   // ── Contacts supplémentaires ──
   let extraContacts = [];
@@ -1888,8 +1888,8 @@ async function logCall(siret) {
       _currentRecord.date_heure_appel = now;
       if (currentUser) _currentRecord.commercial = updates.commercial;
     }
-    // Auto-passer en "Contacté" si encore "À contacter"
-    if (_currentRecord && (_currentRecord.statut_crm ?? 0) === 0) {
+    // Auto-passer en "Prospect pris en charge" si pas encore de statut ou statut 0
+    if (_currentRecord && (_currentRecord.statut_crm == null || _currentRecord.statut_crm === 0)) {
       const upd = await dbUpdate('prospects', siret, { statut_crm: 1 });
       if (upd && _currentRecord) {
         _currentRecord.statut_crm = 1;
@@ -1919,7 +1919,7 @@ async function saveRecord(siret) {
 async function changeStatut(id) {
   const r = _currentRecord;
   if (!r) return;
-  if ((r.statut_crm ?? 0) === id) return;
+  if (r.statut_crm === id) return;
   const ok = await dbUpdate('prospects', r.siret, { statut_crm: id });
   if (ok) {
     _currentRecord.statut_crm = id;
@@ -2119,7 +2119,7 @@ function sendMail() {
   closeMailModal();
   toast('Gmail ouvert ✓');
   // Auto-passer en "Devis envoyé" si mail envoyé depuis le CRM
-  if (_currentRecord && (_currentRecord.statut_crm ?? 0) <= 1) {
+  if (_currentRecord && (_currentRecord.statut_crm == null || _currentRecord.statut_crm <= 1)) {
     changeStatut(2);
   }
 }

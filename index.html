@@ -275,9 +275,105 @@ body.demo-mode header{background:#b45309 !important;}
 
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
+
+/* ──────────────── ÉCRAN DE CONNEXION ──────────────── */
+#loginScreen{position:fixed;inset:0;background:var(--red);display:flex;align-items:center;
+  justify-content:center;z-index:9999;flex-direction:column;gap:20px;}
+#loginScreen.hidden{display:none;}
+.login-box{background:#fff;border-radius:12px;padding:36px 40px;width:390px;
+  box-shadow:0 24px 80px rgba(0,0,0,.45);}
+.login-logo{font-size:22px;font-weight:700;color:var(--red);letter-spacing:.5px;
+  text-align:center;margin-bottom:6px;}
+.login-logo em{opacity:.5;font-style:normal;font-weight:400;font-size:13px;margin-left:6px;}
+.login-sub{text-align:center;font-size:12px;color:var(--light);margin-bottom:28px;}
+.login-err{color:#dc2626;font-size:12px;min-height:16px;text-align:center;
+  margin:-4px 0 8px;}
+
+/* ──────────────── BADGE UTILISATEUR (header) ──────── */
+.user-badge{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:5px 10px;
+  font-size:12px;color:#fff;white-space:nowrap;}
+.ub-role{font-size:9px;background:rgba(255,255,255,.2);border-radius:3px;
+  padding:1px 5px;text-transform:uppercase;letter-spacing:.3px;}
+
+/* ──────────────── PANEL ADMIN — lignes utilisateur ─ */
+.user-row{display:flex;align-items:center;gap:12px;padding:10px 14px;
+  border-radius:7px;border:1.5px solid var(--border);background:#f9fafb;margin-bottom:7px;}
+.user-row:last-child{margin-bottom:0;}
+.ur-avatar{width:34px;height:34px;border-radius:50%;background:var(--red);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+  font-weight:700;flex-shrink:0;}
+.ur-info{flex:1;}
+.ur-name{font-size:13px;font-weight:700;color:var(--dark);}
+.ur-meta{font-size:11px;color:var(--light);margin-top:1px;}
+.ur-role-tag{font-size:10px;font-weight:700;background:#eef2ff;color:#4f46e5;
+  border-radius:4px;padding:2px 7px;border:1px solid #c7d2fe;}
+.is-admin .ur-role-tag{background:#fef3c7;color:#b45309;border-color:#fde68a;}
+.ur-del{background:none;border:none;cursor:pointer;color:#ccc;font-size:19px;
+  line-height:1;padding:0;transition:color .12s;flex-shrink:0;}
+.ur-del:hover{color:var(--danger);}
+.user-row.me{border-color:var(--red);background:var(--red-light);}
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════
+     ÉCRAN DE CONNEXION
+════════════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">CRM Réunion <em>STAR aid</em></div>
+    <div class="login-sub" id="loginBoxSub">Identifiez-vous pour accéder au CRM</div>
+
+    <!-- FORMULAIRE CONNEXION -->
+    <div id="loginForm">
+      <div class="mrow">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="votre@email.re" autocomplete="email"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="mrow">
+        <label>Mot de passe</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-err" id="login-error"></div>
+      <button class="btn btn-red" id="loginBtn" onclick="doLogin()"
+              style="width:100%;padding:11px;font-size:14px;justify-content:center;">
+        Se connecter →
+      </button>
+    </div>
+
+    <!-- PREMIER ACCÈS (affiché si 0 comptes existent) -->
+    <div id="firstSetupForm" style="display:none;">
+      <div style="background:#fff8e8;border:1px solid #fde68a;border-radius:6px;
+                  padding:10px 14px;font-size:12px;color:#7a5a00;margin-bottom:16px;">
+        🔑 Première utilisation — créez le compte <strong>administrateur</strong>.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mrow" style="margin-bottom:0;"><label>Prénom</label>
+          <input id="fs-prenom" type="text" placeholder="Prénom"></div>
+        <div class="mrow" style="margin-bottom:0;"><label>Nom</label>
+          <input id="fs-nom" type="text" placeholder="Nom"></div>
+      </div>
+      <div class="mrow">
+        <label>Email</label>
+        <input id="fs-email" type="email" placeholder="admin@star-aid.re">
+      </div>
+      <div class="mrow">
+        <label>Mot de passe</label>
+        <input id="fs-password" type="password" placeholder="Choisissez un mot de passe sécurisé"
+               onkeydown="if(event.key==='Enter')doFirstSetup()">
+      </div>
+      <div class="login-err" id="fs-error"></div>
+      <button class="btn btn-red" onclick="doFirstSetup()"
+              style="width:100%;padding:11px;font-size:14px;justify-content:center;">
+        Créer le compte administrateur →
+      </button>
+    </div>
+  </div>
+  <div style="color:rgba(255,255,255,.4);font-size:11px;">STAR aid — CRM commercial interne</div>
+</div>
 
 <!-- BANNIÈRE DÉMO -->
 <div id="demo-banner">🧪 MODE DÉMO — Données fictives — Aucun impact sur Supabase</div>
@@ -289,6 +385,14 @@ body.demo-mode header{background:#b45309 !important;}
   <div class="spacer"></div>
   <input type="search" id="searchInput" placeholder="🔍 Rechercher un prospect..." oninput="onSearch()">
   <span class="hbadge" id="totalBadge">…</span>
+  <div id="userBadge" class="user-badge" style="display:none;">
+    <span>👤</span>
+    <span id="ub-name">—</span>
+    <span class="ub-role" id="ub-role">—</span>
+  </div>
+  <button id="teamBtn" class="btn btn-outline btn-sm" onclick="openUsersModal()"
+          title="Gérer l'équipe" style="display:none;">⚙️ Équipe</button>
+  <button class="btn btn-outline btn-sm" onclick="doLogout()" title="Se déconnecter">🚪</button>
   <button class="btn btn-white btn-sm" onclick="toggleDemoMode()" id="demoBtn" title="Tester sans impacter la base">🧪 Démo</button>
 </header>
 
@@ -614,6 +718,53 @@ body.demo-mode header{background:#b45309 !important;}
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════
+     MODAL — GESTION ÉQUIPE (admin)
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="usersModal">
+  <div class="modal-box" style="width:560px;">
+    <div class="modal-head">
+      <h3>⚙️ Gestion de l'équipe</h3>
+      <button class="cls" onclick="closeUsersModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Liste des comptes -->
+      <div id="users-list"></div>
+
+      <!-- Formulaire ajout -->
+      <div style="border-top:1.5px solid var(--border);margin:18px 0 14px;
+                  display:flex;align-items:center;gap:10px;">
+        <span style="font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;
+                     letter-spacing:.3px;white-space:nowrap;">＋ Nouveau compte</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="mrow" style="margin-bottom:0;"><label>Prénom</label>
+          <input id="nu-prenom" type="text" placeholder="Prénom"></div>
+        <div class="mrow" style="margin-bottom:0;"><label>Nom</label>
+          <input id="nu-nom" type="text" placeholder="Nom"></div>
+        <div class="mrow" style="margin-bottom:0;"><label>Email</label>
+          <input id="nu-email" type="email" placeholder="email@star-aid.re"></div>
+        <div class="mrow" style="margin-bottom:0;">
+          <label>Rôle</label>
+          <select id="nu-role">
+            <option value="commercial">Commercial</option>
+            <option value="admin">Administrateur</option>
+          </select>
+        </div>
+      </div>
+      <div class="mrow" style="margin-top:12px;">
+        <label>Mot de passe initial</label>
+        <input id="nu-password" type="password" placeholder="Minimum 6 caractères">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-grey" onclick="closeUsersModal()">Fermer</button>
+      <button class="btn btn-red" onclick="addUser()">＋ Créer le compte</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -682,6 +833,9 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
     // siret=eq.XXX
     const mSiret = f.match(/^siret=eq\.(.+)$/);
     if (mSiret)  { const s = decodeURIComponent(mSiret[1]); rows = rows.filter(r => r.siret === s); return; }
+    // commercial=eq.XXX
+    const mComm = f.match(/^commercial=eq\.(.+)$/);
+    if (mComm)   { const c = decodeURIComponent(mComm[1]); rows = rows.filter(r => r.commercial === c); return; }
     // or=(denomination_usuelle.ilike.%25XXX%25,commune.ilike.%25XXX%25)
     const mSearch = f.match(/^or=\(denomination_usuelle\.ilike\.%25(.+?)%25,commune/);
     if (mSearch) {
@@ -745,6 +899,237 @@ function toggleDemoMode() {
   init();
 }
 
+/* ─── AUTHENTIFICATION ──────────────────────────────────── */
+
+// Hachage SHA-256 via Web Crypto (natif navigateur)
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// Session localStorage (8 heures)
+function checkSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('crm_session') || 'null');
+    if (s && s.expires > Date.now()) { currentUser = s.user; return true; }
+  } catch {}
+  return false;
+}
+function saveSession(user) {
+  localStorage.setItem('crm_session', JSON.stringify({
+    user, expires: Date.now() + 8 * 60 * 60 * 1000
+  }));
+}
+function clearSession() {
+  localStorage.removeItem('crm_session');
+  currentUser = null;
+}
+
+// Affichage du badge utilisateur dans le header
+function renderUserBadge() {
+  if (!currentUser) return;
+  document.getElementById('ub-name').textContent  = currentUser.prenom + ' ' + currentUser.nom;
+  document.getElementById('ub-role').textContent  = currentUser.role === 'admin' ? 'Admin' : 'Commercial';
+  document.getElementById('userBadge').style.display = '';
+  document.getElementById('teamBtn').style.display   = currentUser.role === 'admin' ? '' : 'none';
+}
+
+// Afficher l'écran de connexion ou de premier accès
+function showLoginScreen(mode = 'login') {
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginForm').style.display       = mode === 'setup' ? 'none' : '';
+  document.getElementById('firstSetupForm').style.display  = mode === 'setup' ? '' : 'none';
+  document.getElementById('loginBoxSub').textContent       = mode === 'setup'
+    ? 'Configuration initiale — créer le premier compte'
+    : 'Identifiez-vous pour accéder au CRM';
+  if (mode === 'setup') setTimeout(() => document.getElementById('fs-prenom').focus(), 60);
+  else setTimeout(() => document.getElementById('login-email').focus(), 60);
+}
+function hideLoginScreen() {
+  document.getElementById('loginScreen').classList.add('hidden');
+}
+
+// Connexion
+async function doLogin() {
+  const email    = (document.getElementById('login-email').value    || '').trim().toLowerCase();
+  const password =  document.getElementById('login-password').value || '';
+  const errEl    =  document.getElementById('login-error');
+  const btn      =  document.getElementById('loginBtn');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Email et mot de passe requis.'; return; }
+  btn.textContent = '…'; btn.disabled = true;
+  try {
+    const hash = await sha256(password);
+    const { data } = await dbSelect('crm_users', {
+      cols:    'id,prenom,nom,email,role',
+      filters: [`email=eq.${encodeURIComponent(email)}`, `password_hash=eq.${hash}`, 'actif=eq.true'],
+      limit: 1
+    });
+    if (!data || !data[0]) {
+      errEl.textContent = 'Email ou mot de passe incorrect.';
+    } else {
+      currentUser = data[0];
+      saveSession(currentUser);
+      hideLoginScreen();
+      renderUserBadge();
+      init();
+    }
+  } catch(e) {
+    errEl.textContent = 'Erreur de connexion : ' + (e.message || e);
+  }
+  btn.textContent = 'Se connecter →'; btn.disabled = false;
+}
+
+// Premier accès — création du compte admin
+async function doFirstSetup() {
+  const prenom   = document.getElementById('fs-prenom').value.trim();
+  const nom      = document.getElementById('fs-nom').value.trim();
+  const email    = document.getElementById('fs-email').value.trim().toLowerCase();
+  const password = document.getElementById('fs-password').value;
+  const errEl    = document.getElementById('fs-error');
+  errEl.textContent = '';
+  if (!prenom || !nom || !email || !password) { errEl.textContent = 'Tous les champs sont requis.'; return; }
+  if (password.length < 6) { errEl.textContent = 'Mot de passe : 6 caractères minimum.'; return; }
+  try {
+    const hash = await sha256(password);
+    const res = await fetch(`${SUPA_URL}/crm_users`, {
+      method:  'POST',
+      headers: { ...H, 'Prefer': 'return=representation' },
+      body:    JSON.stringify({ prenom, nom, email, password_hash: hash, role: 'admin', actif: true })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    currentUser = rows[0] || { prenom, nom, email, role: 'admin' };
+    saveSession(currentUser);
+    hideLoginScreen();
+    renderUserBadge();
+    init();
+    toast('✅ Compte administrateur créé — bienvenue ' + prenom + ' !');
+  } catch(e) {
+    errEl.textContent = 'Erreur : ' + (e.message || '').slice(0, 120);
+  }
+}
+
+// Déconnexion
+function doLogout() {
+  clearSession();
+  DEMO_MODE     = false;
+  filterMine    = false;
+  filterType    = '';
+  filterStatut  = -1;
+  searchQ       = '';
+  currentSiret  = null;
+  _currentRecord = null;
+  document.body.classList.remove('demo-mode');
+  document.getElementById('demo-banner').classList.remove('show');
+  document.getElementById('demoBtn').textContent  = '🧪 Démo';
+  document.getElementById('userBadge').style.display = 'none';
+  document.getElementById('teamBtn').style.display   = 'none';
+  closeSidebar();
+  showLoginScreen('login');
+}
+
+// Point d'entrée — vérifie session ou affiche login
+async function startup() {
+  if (checkSession()) {
+    hideLoginScreen();
+    renderUserBadge();
+    init();
+    return;
+  }
+  try {
+    const { count } = await dbSelect('crm_users', { countOnly: true });
+    showLoginScreen(count === 0 ? 'setup' : 'login');
+  } catch {
+    showLoginScreen('setup'); // table pas encore créée
+  }
+}
+
+/* ─── GESTION UTILISATEURS (admin) ─────────────────────── */
+function openUsersModal() {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  document.getElementById('usersModal').classList.remove('hidden');
+  loadUsers();
+}
+function closeUsersModal() {
+  document.getElementById('usersModal').classList.add('hidden');
+}
+
+async function loadUsers() {
+  const { data } = await dbSelect('crm_users', {
+    cols: 'id,prenom,nom,email,role,actif,created_at',
+    order: 'created_at', limit: 50
+  });
+  renderUsers(data || []);
+}
+
+function renderUsers(users) {
+  const el = document.getElementById('users-list');
+  if (!users.length) {
+    el.innerHTML = '<p style="font-size:12px;color:var(--light);font-style:italic;">Aucun utilisateur.</p>';
+    return;
+  }
+  el.innerHTML = users.map(u => {
+    const isMe     = u.id === currentUser?.id;
+    const initials = ((u.prenom||'')[0]||'') + ((u.nom||'')[0]||'');
+    return `
+      <div class="user-row${isMe?' me':''}${u.role==='admin'?' is-admin':''}">
+        <div class="ur-avatar">${esc(initials.toUpperCase())}</div>
+        <div class="ur-info">
+          <div class="ur-name">${esc(u.prenom)} ${esc(u.nom)}
+            ${isMe?'<span style="font-size:10px;color:var(--red);margin-left:4px;">(vous)</span>':''}
+          </div>
+          <div class="ur-meta">${esc(u.email)}</div>
+        </div>
+        <span class="ur-role-tag">${u.role==='admin'?'Admin':'Commercial'}</span>
+        ${!isMe
+          ? `<button class="ur-del" onclick="deleteUser(${u.id},'${esc(u.prenom+' '+u.nom)}')" title="Supprimer ce compte">✕</button>`
+          : '<span style="width:19px;display:inline-block;"></span>'}
+      </div>`;
+  }).join('');
+}
+
+async function addUser() {
+  const prenom   = document.getElementById('nu-prenom').value.trim();
+  const nom      = document.getElementById('nu-nom').value.trim();
+  const email    = document.getElementById('nu-email').value.trim().toLowerCase();
+  const role     = document.getElementById('nu-role').value;
+  const password = document.getElementById('nu-password').value;
+  if (!prenom || !nom || !email || !password) { toast('Renseignez tous les champs', true); return; }
+  if (password.length < 6) { toast('Mot de passe : 6 caractères minimum', true); return; }
+  const hash = await sha256(password);
+  const res = await fetch(`${SUPA_URL}/crm_users`, {
+    method:  'POST',
+    headers: { ...H, 'Prefer': 'return=minimal' },
+    body:    JSON.stringify({ prenom, nom, email, password_hash: hash, role, actif: true })
+  });
+  if (res.ok) {
+    ['nu-prenom','nu-nom','nu-email','nu-password'].forEach(id => document.getElementById(id).value='');
+    toast(`Compte créé — ${prenom} ${nom} peut maintenant se connecter ✓`);
+    loadUsers();
+  } else {
+    const txt = await res.text();
+    toast('Erreur : ' + (txt.includes('duplicate') ? 'Email déjà utilisé' : txt.slice(0,80)), true);
+  }
+}
+
+function deleteUser(id, name) {
+  confirmAction(
+    '🗑️ Supprimer le compte',
+    `<p>Supprimer le compte de <strong>${esc(name)}</strong> ?<br>
+     <span style="font-size:12px;color:var(--mid);">Cette personne ne pourra plus se connecter.</span></p>`,
+    async () => {
+      const res = await fetch(`${SUPA_URL}/crm_users?id=eq.${id}`, {
+        method:  'DELETE',
+        headers: { ...H, 'Prefer': 'return=minimal' }
+      });
+      if (res.ok) { toast('Compte supprimé ✓'); loadUsers(); }
+      else toast('Erreur suppression', true);
+    },
+    '🗑️ Supprimer'
+  );
+}
+
 /* ─── CONSTANTES ────────────────────────────────────────── */
 const STATUTS = [
   {id:0, label:'À contacter',          cls:'sc-0', dot:'#6366f1'},
@@ -782,6 +1167,8 @@ let offset         = 0;
 let totalCount     = 0;
 let DEMO_MODE      = false;
 let _demoDb        = [];
+let currentUser    = null;   // {id, prenom, nom, email, role}
+let filterMine     = false;  // filtre "mes prospects"
 
 /* ─── SIDEBAR DRAWER ────────────────────────────────────── */
 function toggleSidebar() {
@@ -840,7 +1227,16 @@ async function loadStats() {
 
 /* ─── FILTRES STATUT ────────────────────────────────────── */
 function renderFilters() {
-  let html = `<button class="filter-btn ${filterStatut===-1?'active':''}" onclick="setFilter(-1)">
+  let html = '';
+  // Bouton "Mes prospects"
+  if (currentUser) {
+    html += `<button class="filter-btn ${filterMine?'active':''}" onclick="toggleFilterMine()"
+               style="border-top:1px solid var(--border);margin-bottom:4px;padding-bottom:8px;">
+      <span class="dot" style="background:var(--red)"></span>
+      <span class="fc">👤 Mes prospects</span>
+      <span class="cnt" id="cnt-mine">…</span></button>`;
+  }
+  html += `<button class="filter-btn ${filterStatut===-1?'active':''}" onclick="setFilter(-1)">
     <span class="dot" style="background:#ccc"></span><span class="fc">Tous</span>
     <span class="cnt" id="cnt-all">—</span></button>`;
   STATUTS.forEach(s => {
@@ -850,12 +1246,26 @@ function renderFilters() {
       <span class="cnt" id="cnt-${s.id}">…</span></button>`;
   });
   document.getElementById('filterButtons').innerHTML = html;
+  // Compte "mes prospects"
+  if (currentUser) {
+    const myF = [`commercial=eq.${encodeURIComponent(currentUser.prenom+' '+currentUser.nom)}`];
+    dbSelect('prospects', { countOnly: true, filters: myF }).then(({ count }) => {
+      const el = document.getElementById('cnt-mine');
+      if (el) el.textContent = fmt(count);
+    });
+  }
   STATUTS.forEach(async s => {
     const filters = buildFilters(s.id);
     const { count } = await dbSelect('prospects', { countOnly: true, filters });
     const el = document.getElementById(`cnt-${s.id}`);
     if (el) el.textContent = fmt(count);
   });
+}
+
+function toggleFilterMine() {
+  filterMine = !filterMine;
+  renderFilters();
+  loadList(true);
 }
 
 function setFilter(id) {
@@ -943,6 +1353,9 @@ function buildFilters(statut = filterStatut) {
   const f = [];
   if (statut !== -1)  f.push(`statut_crm=eq.${statut}`);
   if (filterType)     f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
+  if (filterMine && currentUser) {
+    f.push(`commercial=eq.${encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom)}`);
+  }
   if (searchQ)        f.push(`or=(denomination_usuelle.ilike.%25${encodeURIComponent(searchQ)}%25,commune.ilike.%25${encodeURIComponent(searchQ)}%25)`);
   return f;
 }
@@ -1154,6 +1567,11 @@ function renderDetail(r) {
             ? `📞 Dernier appel&nbsp;: <span>${esc(r.date_heure_appel)}</span>`
             : 'Aucun appel enregistré'
         }</div>
+        ${r.commercial
+          ? `<div style="font-size:11px;color:var(--mid);margin-top:5px;">
+               👤 Assigné à : <strong style="color:var(--dark);">${esc(r.commercial)}</strong>
+             </div>`
+          : ''}
         ${extraContactsHtml}
       </div>
 
@@ -1367,12 +1785,18 @@ async function logCall(siret) {
     timeZone:'Indian/Reunion', day:'2-digit', month:'2-digit',
     year:'numeric', hour:'2-digit', minute:'2-digit'
   });
-  const ok = await dbUpdate('prospects', siret, { date_heure_appel: now });
+  const updates = { date_heure_appel: now };
+  // Assigner le prospect au commercial connecté
+  if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
+  const ok = await dbUpdate('prospects', siret, updates);
   if (ok) {
     const el = document.getElementById('call-log-txt');
     if (el) el.innerHTML = `📞 Dernier appel&nbsp;: <span>${now}</span>`;
     toast('Appel enregistré — ' + now);
-    if (_currentRecord) _currentRecord.date_heure_appel = now;
+    if (_currentRecord) {
+      _currentRecord.date_heure_appel = now;
+      if (currentUser) _currentRecord.commercial = updates.commercial;
+    }
     // Auto-passer en "Contacté" si encore "À contacter"
     if (_currentRecord && (_currentRecord.statut_crm ?? 0) === 0) {
       const upd = await dbUpdate('prospects', siret, { statut_crm: 1 });
@@ -2277,6 +2701,7 @@ document.addEventListener('click', e => {
     { id:'devisModal',    close: closeDevisModal   },
     { id:'contratModal',  close: closeContratModal },
     { id:'pdfModal',      close: closePdfModal     },
+    { id:'usersModal',    close: closeUsersModal   },
   ];
   modals.forEach(({ id, close }) => {
     const el = document.getElementById(id);
@@ -2284,8 +2709,8 @@ document.addEventListener('click', e => {
   });
 });
 
-/* ─── GO ────────────────────────────────────────────────── */
-init();
+/* ─── DÉMARRAGE ─────────────────────────────────────────── */
+startup();
 </script>
 </body>
 </html>

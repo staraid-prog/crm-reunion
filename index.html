@@ -1676,15 +1676,7 @@ function renderDetail(r) {
          <div style="font-size:13px;font-weight:700;color:${statut===6?'#16a34a':'#dc2626'};">${sInfo.label}</div>
          <div style="font-size:11px;color:#999;margin-top:4px;">${statut===6?'Contrat signé — félicitations !':'Prospect archivé — aucune action possible'}</div>
        </div>`
-    : `<button class="act-btn act-mail" onclick="openMailModal()">
-         <span class="act-icon">✉️</span>
-         <div class="act-body">
-           <div>Envoyer un mail</div>
-           <div class="act-sub">Email personnalisé avec modèle pré-rempli</div>
-         </div>
-         <span class="act-arr">›</span>
-       </button>
-       <button class="act-btn act-devis" onclick="openDevisModal()">
+    : `<button class="act-btn act-devis" onclick="openDevisModal()">
          <span class="act-icon">📄</span>
          <div class="act-body">
            <div>Générer le devis</div>
@@ -1700,22 +1692,37 @@ function renderDetail(r) {
          </div>
          <span class="act-arr">›</span>
        </button>
-       <div class="act-sep"></div>
-       <button class="act-btn" onclick="setProspectSigne()"
-               style="background:#f0fdf4;color:#16a34a;border-color:#86efac;">
-         <span class="act-icon">✅</span>
+       <button class="act-btn act-mail" onclick="openMailModal()">
+         <span class="act-icon">✉️</span>
          <div class="act-body">
-           <div>Prospect signé</div>
-           <div class="act-sub">Contrat signé — verrouille définitivement la fiche</div>
+           <div>Envoyer un mail</div>
+           <div class="act-sub">Email personnalisé avec modèle pré-rempli</div>
          </div>
-       </button>
-       <button class="act-btn act-perdu" onclick="setProspectPerdu()">
-         <span class="act-icon">❌</span>
-         <div class="act-body">
-           <div>Prospect perdu</div>
-           <div class="act-sub">Refus définitif — action irréversible</div>
-         </div>
+         <span class="act-arr">›</span>
        </button>`;
+
+  // ── Suivi commercial (Signé / Perdu) ──
+  const suiviHtml = isLocked ? '' :
+    `<div class="dsec" style="border:none;padding-top:4px;">
+       <h3>📊 Suivi commercial</h3>
+       <div class="act-group" style="margin-top:4px;">
+         <button class="act-btn" onclick="setProspectSigne()"
+                 style="background:#f0fdf4;color:#16a34a;border-color:#86efac;">
+           <span class="act-icon">✅</span>
+           <div class="act-body">
+             <div>Signé</div>
+             <div class="act-sub">Contrat signé — verrouille définitivement la fiche</div>
+           </div>
+         </button>
+         <button class="act-btn act-perdu" onclick="setProspectPerdu()">
+           <span class="act-icon">❌</span>
+           <div class="act-body">
+             <div>Perdu</div>
+             <div class="act-sub">Refus définitif — action irréversible</div>
+           </div>
+         </button>
+       </div>
+     </div>`;
 
   // ── Offre commerciale (devis + contrat validés) ──
   const docState  = _docState[r.siret] || {};
@@ -1817,6 +1824,8 @@ function renderDetail(r) {
         </div>
         ${offerBtnHtml}
       </div>
+
+      ${suiviHtml}
 
       <!-- SUPPRIMER -->
       <div class="dsec" style="border:none;padding-top:0;padding-bottom:18px;">

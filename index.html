@@ -890,7 +890,15 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
     // commercial=eq.XXX
     const mComm = f.match(/^commercial=eq\.(.+)$/);
     if (mComm)   { const c = decodeURIComponent(mComm[1]); rows = rows.filter(r => r.commercial === c); return; }
-    // or=(commercial.is.null,commercial.eq.NAME) — pool non assigné + les miens
+    // or=(commercial.eq.NAME,and(commercial.is.null,libelle_type_erp.eq.TYPE)) — mes prospects + pool du type
+    const mCommAndType = f.match(/^or=\(commercial\.eq\.(.+?),and\(commercial\.is\.null,libelle_type_erp\.eq\.(.+)\)\)$/);
+    if (mCommAndType) {
+      const name = decodeURIComponent(mCommAndType[1]);
+      const type = decodeURIComponent(mCommAndType[2]);
+      rows = rows.filter(r => r.commercial === name || (!r.commercial && r.libelle_type_erp === type));
+      return;
+    }
+    // commercial=eq.NAME — uniquement les miens (sans type sélectionné)
     const mCommOr = f.match(/^or=\(commercial\.is\.null,commercial\.eq\.(.+)\)$/);
     if (mCommOr) {
       const name = decodeURIComponent(mCommOr[1]);
@@ -1315,6 +1323,11 @@ async function init() {
   try {
     await Promise.all([loadStats(), loadErpTypes()]);
     renderFilters();
+    // Commercial : afficher la liste tout de suite (prospects assignés visibles sans choisir un type)
+    if (currentUser && currentUser.role !== 'admin') {
+      document.getElementById('mainEmpty').style.display    = 'none';
+      document.getElementById('prospectList').style.display = 'flex';
+    }
     loadList(true);
   } catch(e) {
     document.getElementById('detail').innerHTML =
@@ -1449,12 +1462,19 @@ function clearErpFilter() {
   document.querySelectorAll('.erp-chip').forEach(c => { c.classList.remove('on'); c.querySelector('.ebox').textContent = ''; });
   document.getElementById('erp-active-badge').style.display = 'none';
   document.getElementById('mainToolbar').style.display      = 'none';
-  document.getElementById('mainEmpty').style.display        = 'flex';
-  document.getElementById('prospectList').style.display     = 'none';
-  document.getElementById('prospectList').innerHTML         = '';
   document.getElementById('detail').classList.add('hidden');
-  document.getElementById('main').classList.remove('narrow'); // pleine largeur
+  document.getElementById('main').classList.remove('narrow');
   currentSiret = null;
+  if (currentUser && currentUser.role !== 'admin') {
+    // Commercial : garder la liste visible (ses prospects restent affichés)
+    document.getElementById('mainEmpty').style.display    = 'none';
+    document.getElementById('prospectList').style.display = 'flex';
+  } else {
+    // Admin : revenir à l'état "choisissez un type"
+    document.getElementById('mainEmpty').style.display    = 'flex';
+    document.getElementById('prospectList').style.display = 'none';
+    document.getElementById('prospectList').innerHTML     = '';
+  }
   _currentRecord = null;
   renderFilters();
 }
@@ -1470,21 +1490,26 @@ function toggleErpPanel() {
 function buildFilters(statut = filterStatut) {
   const f = [];
   if (statut !== -1) f.push(`statut_crm=eq.${statut}`);
-  if (filterType)    f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
 
   if (currentUser && currentUser.role !== 'admin') {
-    const myName = currentUser.prenom + ' ' + currentUser.nom;
+    // ── Commercial ──────────────────────────────────────────
+    const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
     if (filterMine) {
-      // "Mes prospects" — seulement les miens
-      f.push(`commercial=eq.${encodeURIComponent(myName)}`);
+      // "Mes prospects" : uniquement les miens
+      f.push(`commercial=eq.${myName}`);
+    } else if (filterType) {
+      // Type sélectionné : mes prospects + pool non assigné de ce type
+      f.push(`or=(commercial.eq.${myName},and(commercial.is.null,libelle_type_erp.eq.${encodeURIComponent(filterType)}))`);
     } else {
-      // Vue par défaut — pool non assigné + les miens
-      // Note: on utilise not.commercial.like.* pour attraper null/vide, puis on ajoute les miens
-      f.push(`or=(commercial.is.null,commercial.eq.${encodeURIComponent(myName)})`);
+      // Aucun type : uniquement mes prospects assignés
+      f.push(`commercial=eq.${myName}`);
     }
-  } else if (filterMine && currentUser) {
-    // Admin avec filtre "Mes prospects"
-    f.push(`commercial=eq.${encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom)}`);
+  } else {
+    // ── Admin ────────────────────────────────────────────────
+    if (filterType) f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
+    if (filterMine && currentUser) {
+      f.push(`commercial=eq.${encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom)}`);
+    }
   }
 
   if (searchQ) f.push(`or=(denomination_usuelle.ilike.%25${encodeURIComponent(searchQ)}%25,commune.ilike.%25${encodeURIComponent(searchQ)}%25)`);
@@ -1495,7 +1520,9 @@ async function loadList(reset = false) {
   if (reset) { offset = 0; }
   const container = document.getElementById('prospectList');
 
-  if (!filterType) {
+  const isCommercial = currentUser && currentUser.role !== 'admin';
+  if (!filterType && !isCommercial) {
+    // Admin sans type sélectionné → message d'invite
     container.innerHTML = `
       <div style="padding:24px 14px;text-align:center;color:var(--light);">
         <div style="font-size:28px;margin-bottom:10px;">🏢</div>

@@ -736,6 +736,8 @@ body.demo-mode header{background:#b45309 !important;}
       <button class="cls" onclick="closeUsersModal()">✕</button>
     </div>
     <div class="modal-body">
+      <!-- Stats par commercial (admin only) -->
+      <div id="commercial-stats"></div>
       <!-- Liste des comptes -->
       <div id="users-list"></div>
 
@@ -844,6 +846,13 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
     // commercial=eq.XXX
     const mComm = f.match(/^commercial=eq\.(.+)$/);
     if (mComm)   { const c = decodeURIComponent(mComm[1]); rows = rows.filter(r => r.commercial === c); return; }
+    // or=(commercial.is.null,commercial.eq.,commercial.eq.NAME) — pool non assigné + les miens
+    const mCommOr = f.match(/^or=\(commercial\.is\.null,commercial\.eq\.,commercial\.eq\.(.+)\)$/);
+    if (mCommOr) {
+      const name = decodeURIComponent(mCommOr[1]);
+      rows = rows.filter(r => !r.commercial || r.commercial === '' || r.commercial === name);
+      return;
+    }
     // or=(denomination_usuelle.ilike.%25XXX%25,commune.ilike.%25XXX%25)
     const mSearch = f.match(/^or=\(denomination_usuelle\.ilike\.%25(.+?)%25,commune/);
     if (mSearch) {
@@ -1058,6 +1067,7 @@ async function startup() {
 function openUsersModal() {
   if (!currentUser || currentUser.role !== 'admin') return;
   document.getElementById('usersModal').classList.remove('hidden');
+  loadCommercialStats();
   loadUsers();
 }
 function closeUsersModal() {
@@ -1115,6 +1125,7 @@ async function addUser() {
   if (res.ok) {
     ['nu-prenom','nu-nom','nu-email','nu-password'].forEach(id => document.getElementById(id).value='');
     toast(`Compte créé — ${prenom} ${nom} peut maintenant se connecter ✓`);
+    loadCommercialStats();
     loadUsers();
   } else {
     const txt = await res.text();
@@ -1132,11 +1143,63 @@ function deleteUser(id, name) {
         method:  'DELETE',
         headers: { ...H, 'Prefer': 'return=minimal' }
       });
-      if (res.ok) { toast('Compte supprimé ✓'); loadUsers(); }
+      if (res.ok) { toast('Compte supprimé ✓'); loadCommercialStats(); loadUsers(); }
       else toast('Erreur suppression', true);
     },
     '🗑️ Supprimer'
   );
+}
+
+/* ─── STATISTIQUES COMMERCIAUX (admin) ──────────────────── */
+async function loadCommercialStats() {
+  const el = document.getElementById('commercial-stats');
+  if (!el) return;
+
+  // 1. Récupérer tous les commerciaux (sauf admins)
+  const { data: users } = await dbSelect('crm_users', {
+    cols: 'id,prenom,nom,role', order: 'id', limit: 50
+  });
+  const commercials = (users || []).filter(u => u.role === 'commercial');
+  if (!commercials.length) { el.innerHTML = ''; return; }
+
+  // 2. Pour chaque commercial, compter ses prospects assignés
+  const stats = await Promise.all(commercials.map(async u => {
+    const name = u.prenom + ' ' + u.nom;
+    if (DEMO_MODE) {
+      const count = _demoDb.filter(p => p.commercial === name).length;
+      return { name, count };
+    }
+    try {
+      const { count } = await dbSelect('prospects', {
+        filters: [`commercial=eq.${encodeURIComponent(name)}`],
+        countOnly: true
+      });
+      return { name, count: count || 0 };
+    } catch { return { name, count: 0 }; }
+  }));
+
+  // 3. Trier par nombre décroissant
+  stats.sort((a, b) => b.count - a.count);
+  const maxCount = Math.max(...stats.map(s => s.count), 1);
+
+  // 4. Rendre
+  el.innerHTML = `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;
+                  letter-spacing:.4px;margin-bottom:10px;">📊 Prospects assignés par commercial</div>
+      ${stats.map(s => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div style="width:130px;font-size:12px;color:var(--dark);white-space:nowrap;overflow:hidden;
+                      text-overflow:ellipsis;flex-shrink:0;">${esc(s.name)}</div>
+          <div style="flex:1;background:#f0f0f0;border-radius:4px;height:14px;overflow:hidden;">
+            <div style="width:${Math.round((s.count/maxCount)*100)}%;height:100%;
+                        background:var(--red);border-radius:4px;transition:width .4s;"></div>
+          </div>
+          <div style="width:28px;text-align:right;font-size:12px;font-weight:700;
+                      color:${s.count>0?'var(--red)':'var(--light)'};">${s.count}</div>
+        </div>`).join('')}
+    </div>
+    <div style="height:1px;background:var(--border);margin:14px 0;"></div>`;
 }
 
 /* ─── CONSTANTES ────────────────────────────────────────── */
@@ -1361,12 +1424,24 @@ function toggleErpPanel() {
 /* ─── LISTE ─────────────────────────────────────────────── */
 function buildFilters(statut = filterStatut) {
   const f = [];
-  if (statut !== -1)  f.push(`statut_crm=eq.${statut}`);
-  if (filterType)     f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
-  if (filterMine && currentUser) {
+  if (statut !== -1) f.push(`statut_crm=eq.${statut}`);
+  if (filterType)    f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
+
+  if (currentUser && currentUser.role !== 'admin') {
+    const myName = currentUser.prenom + ' ' + currentUser.nom;
+    if (filterMine) {
+      // "Mes prospects" — seulement les miens
+      f.push(`commercial=eq.${encodeURIComponent(myName)}`);
+    } else {
+      // Vue par défaut — pool non assigné + les miens
+      f.push(`or=(commercial.is.null,commercial.eq.,commercial.eq.${encodeURIComponent(myName)})`);
+    }
+  } else if (filterMine && currentUser) {
+    // Admin avec filtre "Mes prospects"
     f.push(`commercial=eq.${encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom)}`);
   }
-  if (searchQ)        f.push(`or=(denomination_usuelle.ilike.%25${encodeURIComponent(searchQ)}%25,commune.ilike.%25${encodeURIComponent(searchQ)}%25)`);
+
+  if (searchQ) f.push(`or=(denomination_usuelle.ilike.%25${encodeURIComponent(searchQ)}%25,commune.ilike.%25${encodeURIComponent(searchQ)}%25)`);
   return f;
 }
 

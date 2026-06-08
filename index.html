@@ -890,8 +890,8 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
     // commercial=eq.XXX
     const mComm = f.match(/^commercial=eq\.(.+)$/);
     if (mComm)   { const c = decodeURIComponent(mComm[1]); rows = rows.filter(r => r.commercial === c); return; }
-    // or=(commercial.eq.NAME,and(commercial.is.null,libelle_type_erp.eq.TYPE)) — mes prospects + pool du type
-    const mCommAndType = f.match(/^or=\(commercial\.eq\.(.+?),and\(commercial\.is\.null,libelle_type_erp\.eq\.(.+)\)\)$/);
+    // or=(commercial.eq.%22NAME%22,and(commercial.is.null,libelle_type_erp.eq.%22TYPE%22))
+    const mCommAndType = f.match(/^or=\(commercial\.eq\.%22(.+?)%22,and\(commercial\.is\.null,libelle_type_erp\.eq\.%22(.+)%22\)\)$/);
     if (mCommAndType) {
       const name = decodeURIComponent(mCommAndType[1]);
       const type = decodeURIComponent(mCommAndType[2]);
@@ -1499,7 +1499,8 @@ function buildFilters(statut = filterStatut) {
       f.push(`commercial=eq.${myName}`);
     } else if (filterType) {
       // Type sélectionné : mes prospects + pool non assigné de ce type
-      f.push(`or=(commercial.eq.${myName},and(commercial.is.null,libelle_type_erp.eq.${encodeURIComponent(filterType)}))`);
+      // %22 = guillemet double → protège valeurs avec virgules/espaces dans or=()
+      f.push(`or=(commercial.eq.%22${myName}%22,and(commercial.is.null,libelle_type_erp.eq.%22${encodeURIComponent(filterType)}%22))`);
     } else {
       // Aucun type : uniquement mes prospects assignés
       f.push(`commercial=eq.${myName}`);

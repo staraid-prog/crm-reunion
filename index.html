@@ -970,6 +970,7 @@ async function doLogin() {
     const { data } = await dbSelect('crm_users', {
       cols:    'id,prenom,nom,email,role',
       filters: [`email=eq.${encodeURIComponent(email)}`, `password_hash=eq.${hash}`, 'actif=eq.true'],
+      order:   'id',
       limit: 1
     });
     if (!data || !data[0]) {

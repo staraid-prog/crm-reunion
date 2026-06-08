@@ -43,8 +43,34 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 /* LAYOUT */
 .layout{display:flex;flex:1;overflow:hidden;}
 
-/* SIDEBAR */
-#sidebar{width:275px;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+/* BOUTON MENU ☰ */
+.menu-btn{background:none;border:none;color:#fff;cursor:pointer;padding:6px 10px;border-radius:4px;font-size:22px;line-height:1;transition:background .15s;flex-shrink:0;}
+.menu-btn:hover{background:rgba(255,255,255,.18);}
+
+/* SIDEBAR — tiroir latéral */
+#sidebar{
+  position:fixed;top:50px;left:0;
+  width:275px;height:calc(100vh - 50px);
+  background:#fff;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  z-index:300;
+  transform:translateX(-280px);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+  box-shadow:none;
+  overflow-y:auto;
+}
+#sidebar.open{
+  transform:translateX(0);
+  box-shadow:6px 0 28px rgba(0,0,0,.18);
+}
+/* Fond semi-transparent derrière le sidebar */
+#sidebarBackdrop{
+  display:none;position:fixed;
+  inset:50px 0 0 0;
+  background:rgba(0,0,0,.28);
+  z-index:299;cursor:pointer;
+}
+#sidebarBackdrop.show{display:block;}
 .sidebar-stats{padding:10px 12px;background:var(--grey);border-bottom:1px solid var(--border);flex-shrink:0;}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
 .stat-box{background:#fff;border:1px solid var(--border);border-radius:4px;padding:6px 8px;text-align:center;cursor:pointer;transition:background .15s;}
@@ -80,7 +106,6 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 .erp-filter-body::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 
 /* CENTRE — liste prospects */
-#main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#f0f0f0;}
 .main-toolbar{padding:8px 16px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .main-toolbar .type-label{font-size:12px;font-weight:700;color:var(--red);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .main-toolbar .count-label{font-size:11px;color:var(--light);}
@@ -102,9 +127,12 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 .main-empty h3{font-size:15px;color:var(--mid);}
 .main-empty p{font-size:12px;text-align:center;line-height:1.6;}
 
-/* DETAIL PANEL */
-#detail{width:420px;display:flex;flex-direction:column;overflow:hidden;background:#f5f5f5;border-left:1px solid var(--border);flex-shrink:0;}
+/* DETAIL PANEL — prend tout l'espace disponible */
+#detail{flex:1;min-width:320px;display:flex;flex-direction:column;overflow:hidden;background:#f5f5f5;border-left:1px solid var(--border);}
 #detail.hidden{display:none;}
+/* Liste prospects — réduite quand la fiche est ouverte */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#f0f0f0;transition:width .2s ease;}
+#main.narrow{width:260px;flex:none;min-width:260px;}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--light);gap:12px;}
 .empty-state .ei{font-size:48px;}
 .empty-state h3{font-size:16px;color:var(--mid);}
@@ -239,11 +267,15 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 
 <!-- HEADER -->
 <header>
+  <button class="menu-btn" onclick="toggleSidebar()" id="menuBtn" title="Filtres & statuts">☰</button>
   <div class="logo">CRM Réunion <em>STAR aid</em></div>
   <div class="spacer"></div>
   <input type="search" id="searchInput" placeholder="🔍 Rechercher un prospect..." oninput="onSearch()">
   <span class="hbadge" id="totalBadge">…</span>
 </header>
+
+<!-- Fond derrière le sidebar -->
+<div id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
 <div class="layout">
 
@@ -613,6 +645,28 @@ let _currentRecord = null;
 let offset         = 0;
 let totalCount     = 0;
 
+/* ─── SIDEBAR DRAWER ────────────────────────────────────── */
+function toggleSidebar() {
+  const sb  = document.getElementById('sidebar');
+  const bd  = document.getElementById('sidebarBackdrop');
+  const btn = document.getElementById('menuBtn');
+  const isOpen = sb.classList.contains('open');
+  if (isOpen) {
+    sb.classList.remove('open');
+    bd.classList.remove('show');
+    btn.style.opacity = '';
+  } else {
+    sb.classList.add('open');
+    bd.classList.add('show');
+    btn.style.opacity = '0.7';
+  }
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+  document.getElementById('menuBtn').style.opacity = '';
+}
+
 /* ─── INIT ──────────────────────────────────────────────── */
 async function init() {
   try {
@@ -733,7 +787,9 @@ function clearErpFilter() {
   document.getElementById('prospectList').style.display     = 'none';
   document.getElementById('prospectList').innerHTML         = '';
   document.getElementById('detail').classList.add('hidden');
+  document.getElementById('main').classList.remove('narrow'); // pleine largeur
   currentSiret = null;
+  _currentRecord = null;
   renderFilters();
 }
 
@@ -827,6 +883,10 @@ async function selectProspect(siret, el) {
   currentSiret = siret;
   document.querySelectorAll('.prospect-item').forEach(e => e.classList.remove('active'));
   if (el) el.classList.add('active');
+
+  // Rétrécir la liste + fermer le sidebar
+  document.getElementById('main').classList.add('narrow');
+  closeSidebar();
 
   const detail = document.getElementById('detail');
   detail.classList.remove('hidden');

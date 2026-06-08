@@ -166,10 +166,8 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 .call-log-txt span{color:var(--green);font-weight:700;}
 
 /* STATUS TUNNEL */
-.tun-btn{padding:6px 10px;border-radius:5px;border:2px solid transparent;cursor:pointer;font-size:11px;font-weight:700;text-align:center;transition:all .15s;background:#f5f5f5;}
-.tun-btn:hover:not(:disabled){opacity:.9;filter:brightness(.95);}
+.tun-btn{padding:6px 10px;border-radius:5px;border:2px solid transparent;cursor:default;font-size:11px;font-weight:700;text-align:center;transition:all .15s;background:#f5f5f5;pointer-events:none;}
 .tun-btn.sel{opacity:1;}
-.tun-btn:disabled{opacity:.4;cursor:not-allowed;}
 
 /* ARGUMENT */
 .arg-box{background:#fffbf0;border:1.5px solid #ffe8a0;border-radius:6px;padding:12px 14px;font-size:13px;color:#5a4500;line-height:1.6;}
@@ -1344,11 +1342,9 @@ async function init() {
   try {
     await Promise.all([loadStats(), loadErpTypes()]);
     renderFilters();
-    // Commercial : afficher la liste tout de suite (prospects assignés visibles sans choisir un type)
-    if (currentUser && currentUser.role !== 'admin') {
-      document.getElementById('mainEmpty').style.display    = 'none';
-      document.getElementById('prospectList').style.display = 'flex';
-    }
+    // Tous les rôles : afficher la liste directement (pas besoin de choisir un type)
+    document.getElementById('mainEmpty').style.display    = 'none';
+    document.getElementById('prospectList').style.display = 'flex';
     loadList(true);
   } catch(e) {
     document.getElementById('detail').innerHTML =
@@ -1486,18 +1482,12 @@ function clearErpFilter() {
   document.getElementById('detail').classList.add('hidden');
   document.getElementById('main').classList.remove('narrow');
   currentSiret = null;
-  if (currentUser && currentUser.role !== 'admin') {
-    // Commercial : garder la liste visible (ses prospects restent affichés)
-    document.getElementById('mainEmpty').style.display    = 'none';
-    document.getElementById('prospectList').style.display = 'flex';
-  } else {
-    // Admin : revenir à l'état "choisissez un type"
-    document.getElementById('mainEmpty').style.display    = 'flex';
-    document.getElementById('prospectList').style.display = 'none';
-    document.getElementById('prospectList').innerHTML     = '';
-  }
+  // Tous les utilisateurs : garder la liste visible
+  document.getElementById('mainEmpty').style.display    = 'none';
+  document.getElementById('prospectList').style.display = 'flex';
   _currentRecord = null;
   renderFilters();
+  loadList(true);
 }
 
 function toggleErpPanel() {
@@ -1526,11 +1516,16 @@ function buildFilters(statut = filterStatut) {
       // Aucun type : uniquement mes prospects assignés
       f.push(`commercial=eq.${myName}`);
     }
-  } else {
+  } else if (currentUser) {
     // ── Admin ────────────────────────────────────────────────
-    if (filterType) f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
-    if (filterMine && currentUser) {
-      f.push(`commercial=eq.${encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom)}`);
+    const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
+    if (filterType) {
+      // Type sélectionné : tous les prospects de ce type
+      f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
+      if (filterMine) f.push(`commercial=eq.${myName}`);
+    } else {
+      // Sans type : ses propres prospects assignés (même logique que commercial)
+      f.push(`commercial=eq.${myName}`);
     }
   }
 
@@ -1542,18 +1537,7 @@ async function loadList(reset = false) {
   if (reset) { offset = 0; }
   const container = document.getElementById('prospectList');
 
-  const isCommercial = currentUser && currentUser.role !== 'admin';
-  if (!filterType && !isCommercial) {
-    // Admin sans type sélectionné → message d'invite
-    container.innerHTML = `
-      <div style="padding:24px 14px;text-align:center;color:var(--light);">
-        <div style="font-size:28px;margin-bottom:10px;">🏢</div>
-        <div style="font-size:12px;font-weight:700;color:var(--mid);margin-bottom:6px;">Choisissez un type</div>
-        <div style="font-size:11px;line-height:1.6;">Sélectionnez un type<br>d'établissement ci-dessus<br>pour afficher les prospects</div>
-      </div>`;
-    document.getElementById('cnt-all').textContent = '—';
-    return;
-  }
+  // Tous les utilisateurs voient leurs prospects sans type sélectionné
 
   if (reset) container.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
 
@@ -1673,9 +1657,8 @@ function renderDetail(r) {
     ${STATUTS.slice(0, 6).map(s => {
       const sel = statut === s.id;
       return `<button class="tun-btn${sel ? ' sel' : ''}"
-                style="color:${s.dot};background:${sel ? s.dot + '22' : '#f5f5f5'};border-color:${sel ? s.dot : 'transparent'};"
-                onclick="changeStatut(${s.id})"
-                ${isLocked ? 'disabled title="Statut verrouillé"' : ''}>${s.label}</button>`;
+                style="color:${s.dot};background:${sel ? s.dot + '22' : '#f5f5f5'};border-color:${sel ? s.dot : 'transparent'};cursor:default;pointer-events:none;"
+                tabindex="-1">${s.label}</button>`;
     }).join('')}
   </div>`;
 

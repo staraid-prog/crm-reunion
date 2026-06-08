@@ -205,12 +205,20 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
     <!-- Filtre type ERP -->
     <div class="erp-filter">
       <div class="erp-filter-head" onclick="toggleErpPanel()">
-        <span>🏢 Type d'établissement <span id="erp-active-badge" style="display:none;background:var(--red);color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:4px;"></span></span>
+        <span>🏢 Type d'établissement
+          <span id="erp-active-badge" style="display:none;background:var(--red);color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:4px;"></span>
+        </span>
         <span class="chev open" id="erp-chev">▼</span>
       </div>
       <div class="erp-filter-body open" id="erp-filter-body">
         <div class="spinner-wrap"><div class="spinner"></div></div>
       </div>
+    </div>
+
+    <!-- En-tête liste (type actif) -->
+    <div id="list-header" style="display:none;padding:6px 12px;background:#fdf0f1;border-bottom:1px solid var(--border);font-size:11px;color:var(--red);font-weight:700;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <span id="list-header-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <button onclick="clearErpFilter()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 0 0 6px;line-height:1;" title="Effacer le filtre">✕</button>
     </div>
 
     <!-- Liste -->
@@ -346,19 +354,32 @@ async function loadErpTypes() {
 
 function setErpFilter(type, btn) {
   if (filterType === type) {
-    // Désélectionner
-    filterType = '';
-    document.querySelectorAll('.erp-chip').forEach(c => { c.classList.remove('on'); c.querySelector('.ebox').textContent = ''; });
-    document.getElementById('erp-active-badge').style.display = 'none';
-  } else {
-    filterType = type;
-    document.querySelectorAll('.erp-chip').forEach(c => { c.classList.remove('on'); c.querySelector('.ebox').textContent = ''; });
-    btn.classList.add('on');
-    btn.querySelector('.ebox').textContent = '✓';
-    const badge = document.getElementById('erp-active-badge');
-    badge.textContent = '1 filtre';
-    badge.style.display = 'inline';
+    clearErpFilter();
+    return;
   }
+  filterType = type;
+  document.querySelectorAll('.erp-chip').forEach(c => { c.classList.remove('on'); c.querySelector('.ebox').textContent = ''; });
+  btn.classList.add('on');
+  btn.querySelector('.ebox').textContent = '✓';
+  // Badge dans le titre du panneau
+  const badge = document.getElementById('erp-active-badge');
+  badge.textContent = '✓';
+  badge.style.display = 'inline';
+  // Header au-dessus de la liste
+  const lh = document.getElementById('list-header');
+  lh.style.display = 'flex';
+  document.getElementById('list-header-label').textContent = type;
+  currentSiret = null;
+  renderFilters();
+  loadList(true);
+}
+
+function clearErpFilter() {
+  filterType = '';
+  document.querySelectorAll('.erp-chip').forEach(c => { c.classList.remove('on'); c.querySelector('.ebox').textContent = ''; });
+  document.getElementById('erp-active-badge').style.display = 'none';
+  document.getElementById('list-header').style.display = 'none';
+  currentSiret = null;
   renderFilters();
   loadList(true);
 }
@@ -385,6 +406,19 @@ async function buildQuery(forCount = false) {
 async function loadList(reset = false) {
   if (reset) { offset = 0; }
   const container = document.getElementById('prospectList');
+
+  // ── Aucun type sélectionné → message d'invite ──────────
+  if (!filterType) {
+    container.innerHTML = `
+      <div style="padding:24px 14px;text-align:center;color:var(--light);">
+        <div style="font-size:28px;margin-bottom:10px;">🏢</div>
+        <div style="font-size:12px;font-weight:700;color:var(--mid);margin-bottom:6px)">Choisissez un type</div>
+        <div style="font-size:11px;line-height:1.6;">Sélectionnez un type<br>d'établissement ci-dessus<br>pour afficher les prospects</div>
+      </div>`;
+    document.getElementById('cnt-all').textContent = '—';
+    return;
+  }
+
   if (reset) container.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
 
   const q = await buildQuery();
@@ -405,8 +439,7 @@ async function loadList(reset = false) {
     div.className = 'prospect-item' + (r.siret === currentSiret ? ' active' : '');
     div.innerHTML = `
       <div class="pi-name">${esc(r.denomination_usuelle)}</div>
-      <div class="pi-meta">${esc(r.commune||'—')}</div>
-      <div class="pi-type">${esc(r.libelle_type_erp||'')}</div>`;
+      <div class="pi-meta">${esc(r.commune||'—')}</div>`;
     div.onclick = () => selectProspect(r.siret, div);
     container.appendChild(div);
   });
@@ -420,7 +453,7 @@ async function loadList(reset = false) {
   if (offset < (count || 0)) {
     const btn = document.createElement('button');
     btn.className = 'load-more-btn';
-    btn.textContent = `Charger plus (${fmt((count||0) - offset)} restants)`;
+    btn.textContent = `▼ Charger plus (${fmt((count||0) - offset)} restants)`;
     btn.onclick = () => loadList(false);
     container.appendChild(btn);
   }

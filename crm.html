@@ -259,6 +259,14 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 .contacts-sep-label{font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
 .contacts-empty{text-align:center;padding:10px 0;font-size:12px;color:var(--light);font-style:italic;}
 
+/* SÉLECTEUR DESTINATAIRES MAIL */
+.rcpt-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:7px;cursor:pointer;border:1.5px solid var(--border);background:#f9fafb;transition:all .12s;user-select:none;}
+.rcpt-row:hover{background:#f0f0f0;}
+.rcpt-row.sel{border-color:var(--red);background:var(--red-light);}
+.rcpt-row.sel:hover{background:#fce8ea;}
+.rcpt-check{width:18px;height:18px;border-radius:4px;flex-shrink:0;border:2px solid #ccc;background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;transition:all .12s;}
+.rcpt-row.sel .rcpt-check{background:var(--red);border-color:var(--red);color:#fff;}
+
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 </style>
@@ -439,8 +447,15 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
     </div>
     <div class="modal-body">
       <div class="mrow">
-        <label>Destinataire (email)</label>
-        <input id="mail-to" type="email" placeholder="contact@etablissement.re">
+        <label>Destinataire(s)</label>
+        <!-- Contacts disponibles dans la fiche -->
+        <div id="mail-recipients-picker" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+        <!-- Champ résultat / saisie manuelle -->
+        <div style="position:relative;">
+          <input id="mail-to" type="text" placeholder="Ou saisir une adresse manuellement…"
+                 style="padding-right:70px;" oninput="onMailToInput()">
+          <span id="mail-to-count" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--light);pointer-events:none;"></span>
+        </div>
       </div>
       <div class="mrow">
         <label>Objet</label>
@@ -448,7 +463,7 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
       </div>
       <div class="mrow">
         <label>Message (modifiable)</label>
-        <textarea id="mail-body" style="min-height:240px;"></textarea>
+        <textarea id="mail-body" style="min-height:220px;"></textarea>
       </div>
       <div class="hint-box">
         💡 <strong>Conseil :</strong> Pour joindre un PDF, générez-le via les boutons <em>Devis</em> ou <em>Contrat</em>, téléchargez-le, puis joignez-le manuellement dans Gmail.
@@ -1319,11 +1334,95 @@ function setPasDuToutInteresse() {
 }
 
 /* ─── MODAL MAIL ────────────────────────────────────────── */
+/* ─── DESTINATAIRES MAIL ────────────────────────────────── */
+let _mailRecipients = [];
+
+function buildMailRecipients(r) {
+  const list = [];
+  // Contact principal
+  const mainEmail = r.email_crm || r.email_contact || '';
+  if (mainEmail) {
+    list.push({
+      name:     r.signataire || r.denomination_usuelle || 'Contact principal',
+      role:     r.fonction   || 'Contact principal',
+      email:    mainEmail,
+      selected: true
+    });
+  }
+  // Contacts supplémentaires
+  try {
+    const extras = JSON.parse(r.contacts_json || '[]');
+    if (Array.isArray(extras)) {
+      extras.forEach(c => {
+        if (c.mail) {
+          list.push({
+            name:     [c.prenom, c.nom].filter(Boolean).join(' ') || 'Contact',
+            role:     c.fonction || '',
+            email:    c.mail,
+            selected: false
+          });
+        }
+      });
+    }
+  } catch {}
+  return list;
+}
+
+function renderMailRecipients() {
+  const picker = document.getElementById('mail-recipients-picker');
+  if (!picker) return;
+  if (_mailRecipients.length === 0) {
+    picker.innerHTML = `<p style="font-size:12px;color:var(--light);font-style:italic;padding:4px 0;">
+      Aucune adresse email dans la fiche — renseignez-en une dans Fiche Contact.
+    </p>`;
+    return;
+  }
+  picker.innerHTML = _mailRecipients.map((c, i) => `
+    <div class="rcpt-row${c.selected ? ' sel' : ''}" onclick="toggleRecipient(${i})">
+      <div class="rcpt-check">${c.selected ? '✓' : ''}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${esc(c.name)}${c.role ? ' <span style="font-weight:400;color:var(--mid);">· ' + esc(c.role) + '</span>' : ''}
+        </div>
+        <div style="font-size:11px;color:var(--mid);margin-top:1px;">${esc(c.email)}</div>
+      </div>
+    </div>`).join('');
+  updateMailToField();
+}
+
+function toggleRecipient(idx) {
+  if (_mailRecipients[idx]) {
+    _mailRecipients[idx].selected = !_mailRecipients[idx].selected;
+    renderMailRecipients();
+  }
+}
+
+function updateMailToField() {
+  const selected = _mailRecipients.filter(c => c.selected).map(c => c.email);
+  document.getElementById('mail-to').value = selected.join(', ');
+  const cnt = document.getElementById('mail-to-count');
+  if (cnt) cnt.textContent = selected.length > 1 ? selected.length + ' dest.' : '';
+}
+
+// Quand l'utilisateur tape manuellement, désélectionner tout (cohérence)
+function onMailToInput() {
+  const cnt = document.getElementById('mail-to-count');
+  if (cnt) cnt.textContent = '';
+}
+
 function openMailModal() {
   const r = _currentRecord;
   if (!r) return;
-  const prenom = (r.signataire || '').trim().split(' ')[0];
+
+  // Construire la liste des destinataires
+  _mailRecipients = buildMailRecipients(r);
+  renderMailRecipients();
+
+  // Corps du mail — salutation avec le premier signataire sélectionné
+  const firstSel = _mailRecipients.find(c => c.selected);
+  const prenom   = firstSel ? firstSel.name.trim().split(' ')[0] : '';
   const civilite = prenom ? `Bonjour ${prenom},` : 'Bonjour,';
+
   const body =
 `${civilite}
 
@@ -1353,7 +1452,6 @@ STAR aid — Groupe STAR
 🌐 www.star-aid.fr
 4 allée des Primevères, 97490 Sainte-Clotilde (Réunion)`;
 
-  document.getElementById('mail-to').value      = r.email_crm || r.email_contact || '';
   document.getElementById('mail-subject').value = `Défibrillateur DAE — ${r.denomination_usuelle || ''}`;
   document.getElementById('mail-body').value    = body;
   document.getElementById('mailModal').classList.remove('hidden');

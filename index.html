@@ -105,6 +105,13 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 .erp-chip .elabel{flex:1;font-size:11px;line-height:1.3;text-align:left;}
 .erp-filter-body::-webkit-scrollbar{width:4px;}
 .erp-filter-body::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
+/* Filtre 5e catégorie */
+.dae5-filter{border-bottom:1px solid var(--border);padding:7px 10px;flex-shrink:0;}
+.dae5-filter-label{font-size:10px;font-weight:700;color:var(--mid);letter-spacing:.3px;text-transform:uppercase;margin-bottom:6px;}
+.dae5-btns{display:flex;gap:5px;}
+.dae5-btn{flex:1;padding:5px 0;border-radius:4px;border:1.5px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--mid);transition:all .15s;text-align:center;}
+.dae5-btn:hover{background:var(--grey);}
+.dae5-btn.on{background:var(--red);border-color:var(--red);color:#fff;}
 
 /* CENTRE — liste prospects */
 .main-toolbar{padding:8px 16px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
@@ -434,6 +441,15 @@ body.demo-mode header{background:#b45309 !important;}
       </div>
       <div class="erp-filter-body open" id="erp-filter-body">
         <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Filtre 5e catégorie DAE -->
+    <div class="dae5-filter">
+      <div class="dae5-filter-label">📋 5e catégorie DAE</div>
+      <div class="dae5-btns">
+        <button class="dae5-btn on" id="dae5-btn-all" onclick="setDae5Filter('')">Tout</button>
+        <button class="dae5-btn" id="dae5-btn-non" onclick="setDae5Filter('non')">Sans 5e cat.</button>
       </div>
     </div>
 
@@ -1303,6 +1319,7 @@ const DEMO_DATA = [
 /* ─── ÉTAT ──────────────────────────────────────────────── */
 let filterStatut   = -1;
 let filterType     = '';
+let filterDae5     = '';   // '' = tout | 'non' = exclure 5e catégorie
 let searchQ        = '';
 let currentSiret   = null;
 let _currentRecord = null;
@@ -1490,6 +1507,13 @@ function clearErpFilter() {
   loadList(true);
 }
 
+function setDae5Filter(val) {
+  filterDae5 = val;
+  document.getElementById('dae5-btn-all').classList.toggle('on', val === '');
+  document.getElementById('dae5-btn-non').classList.toggle('on', val === 'non');
+  loadList(true);
+}
+
 function toggleErpPanel() {
   const body = document.getElementById('erp-filter-body');
   const chev = document.getElementById('erp-chev');
@@ -1529,6 +1553,7 @@ function buildFilters(statut = filterStatut) {
     }
   }
 
+  if (filterDae5 === 'non') f.push(`dae_5e_categorie=eq.Non`);
   if (searchQ) f.push(`or=(denomination_usuelle.ilike.%25${encodeURIComponent(searchQ)}%25,commune.ilike.%25${encodeURIComponent(searchQ)}%25)`);
   return f;
 }

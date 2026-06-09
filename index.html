@@ -1753,6 +1753,13 @@ function renderDetail(r) {
       <h2>${esc(r.denomination_usuelle)}</h2>
       <div class="sub">${esc(r.type_erp||'')} — ${esc(r.libelle_type_erp||'')}
         <br>${esc(r.commune||'')} ${esc(r.code_postal||'')}</div>
+      ${r.dae_5e_categorie ? `
+      <div style="margin-top:6px;">
+        <span style="display:inline-block;background:#fff3e0;color:#b45309;border:1px solid #fcd34d;
+                     border-radius:4px;font-size:11px;font-weight:700;padding:3px 9px;">
+          📋 5e catégorie : ${esc(r.dae_5e_categorie)}
+        </span>
+      </div>` : ''}
     </div>
 
     <div class="detail-body">

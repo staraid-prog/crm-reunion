@@ -937,7 +937,9 @@ body.demo-mode header{background:#b45309 !important;}
 <script>
 /* ─── MAKE.COM WEBHOOK ──────────────────────────────────────────── */
 const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/n6sczdlu6oqdc37b6ydpj1xxze5oruyj';
-const EMAIL_FROM       = 'm.michon@star-aid.fr';
+// Email dynamique : email du commercial connecté (fallback Mathieu)
+function getEmailFrom() { return currentUser?.email || 'm.michon@star-aid.fr'; }
+function getCommercialNom() { return currentUser ? (currentUser.prenom + ' ' + currentUser.nom) : 'Mathieu MICHON'; }
 
 /* ─── SUPABASE REST ─────────────────────────────────────── */
 const SUPA_URL = 'https://obnpzcebhcrkizycuipk.supabase.co/rest/v1';
@@ -2647,7 +2649,7 @@ async function logJ10Messagerie() {
     const res = await fetch(MAKE_WEBHOOK_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ type: 'relance', from: EMAIL_FROM, to, subject, body })
+      body:    JSON.stringify({ type: 'relance', from: getEmailFrom(), to, subject, body })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
 
@@ -2996,7 +2998,7 @@ async function sendMail() {
     const res = await fetch(MAKE_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: EMAIL_FROM, to, subject, body, attachments: [] })
+      body: JSON.stringify({ from: getEmailFrom(), to, subject, body, attachments: [] })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     toast('✅ Mail envoyé à ' + to);
@@ -3258,7 +3260,7 @@ async function doSendOffer() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type:             'offre',
-        from:             EMAIL_FROM,
+        from:             getEmailFrom(),
         to,
         subject,
         body,
@@ -3398,7 +3400,10 @@ function buildDevisPdf(r, qty, type, prix = 89) {
   ].forEach(l=>{doc.text(l,14,yL);yL+=3.5;});
   yL+=4;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...DARK);
-  ['STAR group - STAR aid','4 allée des Primevères','Le Moufia','97490 SAINTE CLOTILDE','La Réunion','Mathieu MICHON','m.michon@star-aid.fr','0262 150 950','0692 39 49 83']
+  // Infos commercial connecté (dynamique)
+  const commercialNom   = (typeof currentUser !== 'undefined' && currentUser) ? (currentUser.prenom+' '+currentUser.nom).toUpperCase() : 'Mathieu MICHON';
+  const commercialEmail = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : 'm.michon@star-aid.fr';
+  ['STAR group - STAR aid','4 allée des Primevères','Le Moufia','97490 SAINTE CLOTILDE','La Réunion',commercialNom,commercialEmail,'0262 150 950','0692 39 49 83']
     .forEach(l=>{doc.text(l,14,yL);yL+=5;});
 
   // Droite : titre Devis + encadré client

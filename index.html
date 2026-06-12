@@ -4199,7 +4199,8 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   doc.text("Relevé d'identité bancaire.", 18 + cbSz2 + 2, y);
   y += 14;
 
-  // ── ANNEXE MATÉRIEL ──
+  // ── ANNEXE MATÉRIEL ── (nouvelle page si pas assez d'espace)
+  checkNewPage(140);
   doc.setFillColor(...RED);
   doc.rect(14, y-6, W-28, 10, 'F');
   doc.setTextColor(255,255,255);

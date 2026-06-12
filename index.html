@@ -2204,22 +2204,24 @@ async function logMessagerie() {
   }
 }
 
-// Appel 2 depuis Relance J+2 → messagerie (garde statut J+2, enregistre date+MSG:)
+// Appel 2 depuis Relance J+2 → messagerie → passe en Relance J+5
 async function logRelanceJ2Messagerie() {
   const siret = _callSiret;
   closeCallModal();
   if (!siret) return;
   const now    = _nowReunion();
   const stored = 'MSG:' + now;
-  const updates = { date_heure_appel: stored };
+  const updates = { date_heure_appel: stored, statut_crm: 3 };
   if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
   const ok = await dbUpdate('prospects', siret, updates);
   if (ok) {
-    toast('📵 Messagerie enregistrée — ' + now);
+    toast('📵 Messagerie enregistrée — passage en Relance J+5');
     if (_currentRecord) {
       _currentRecord.date_heure_appel = stored;
+      _currentRecord.statut_crm = 3;
       if (currentUser) _currentRecord.commercial = updates.commercial;
       renderDetail(_currentRecord);
+      renderFilters();
     }
   }
 }

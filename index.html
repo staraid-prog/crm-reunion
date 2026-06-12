@@ -324,6 +324,34 @@ body.demo-mode header{background:#b45309 !important;}
   line-height:1;padding:0;transition:color .12s;flex-shrink:0;}
 .ur-del:hover{color:var(--danger);}
 .user-row.me{border-color:var(--red);background:var(--red-light);}
+
+/* ──────────────── DASHBOARD ──────────────── */
+.dash-tabs{display:flex;border-bottom:2px solid var(--border);flex-shrink:0;background:#fff;}
+.dash-tab{padding:10px 16px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;
+  color:var(--mid);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap;}
+.dash-tab:hover{color:var(--dark);}
+.dash-tab.active{color:var(--red);border-bottom-color:var(--red);}
+.dash-view{flex:1;overflow-y:auto;padding:10px 12px;flex-direction:column;}
+.dash-view::-webkit-scrollbar{width:4px;}
+.dash-view::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
+.dash-day{margin-bottom:16px;}
+.dash-day-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--mid);padding:5px 10px;background:var(--grey);border-radius:5px;margin-bottom:6px;display:block;}
+.dash-day-label.today{background:#fef0f1;color:var(--red);}
+.dash-card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 12px;
+  cursor:pointer;transition:all .12s;border-left:3px solid transparent;
+  display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.dash-card:hover{border-color:#f5c0c5;background:#fffafa;transform:translateX(2px);}
+.dash-card.j2{border-left-color:#06b6d4;}
+.dash-card.j5{border-left-color:#8b5cf6;}
+.dash-card.j10{border-left-color:#f97316;}
+.dash-card-body{flex:1;min-width:0;}
+.dash-card-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dash-card-meta{font-size:11px;color:var(--light);margin-top:2px;}
+.dash-empty{text-align:center;padding:28px 16px;color:var(--light);}
+.dash-empty .dei{font-size:36px;margin-bottom:8px;}
+.dash-section-title{font-size:11px;font-weight:700;color:var(--mid);text-transform:uppercase;
+  letter-spacing:.3px;margin:10px 0 6px;display:flex;align-items:center;gap:6px;}
 </style>
 </head>
 <body>
@@ -400,6 +428,7 @@ body.demo-mode header{background:#b45309 !important;}
 <header>
   <button class="menu-btn" onclick="toggleSidebar()" id="menuBtn" title="Filtres & statuts">☰</button>
   <div class="logo">CRM Réunion <em>STAR aid</em></div>
+  <button class="btn btn-outline btn-sm" onclick="showDashboard()" id="dashBtn" title="Tableau de bord">📊 Dashboard</button>
   <div class="spacer"></div>
   <input type="search" id="searchInput" placeholder="🔍 Rechercher un prospect..." oninput="onSearch()">
   <span class="hbadge" id="totalBadge">…</span>
@@ -459,14 +488,24 @@ body.demo-mode header{background:#b45309 !important;}
 
   </div><!-- /sidebar -->
 
-  <!-- ── CENTRE : liste prospects ── -->
+  <!-- ── CENTRE : dashboard + liste prospects ── -->
   <div id="main">
+    <!-- Tabs Dashboard -->
+    <div class="dash-tabs" id="dashTabs" style="display:flex;">
+      <button class="dash-tab active" id="tab-today" onclick="switchDashTab('today')">📅 AUJOURD'HUI</button>
+      <button class="dash-tab" id="tab-calendar" onclick="switchDashTab('calendar')">📆 CALENDRIER COMPLET</button>
+    </div>
+    <!-- Contenu Dashboard -->
+    <div class="dash-view" id="dashView" style="display:flex;">
+      <div id="dash-content"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+    </div>
+    <!-- Toolbar (type ERP sélectionné) -->
     <div class="main-toolbar" id="mainToolbar" style="display:none;">
       <span class="type-label" id="mainTypeLabel"></span>
       <span class="count-label" id="cnt-all"></span>
       <button onclick="clearErpFilter()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:700;padding:2px 6px;" title="Effacer">✕ Effacer</button>
     </div>
-    <div class="main-empty" id="mainEmpty"></div>
+    <div class="main-empty" id="mainEmpty" style="display:none;"></div>
     <div class="prospect-list" id="prospectList" style="display:none;"></div>
   </div>
 
@@ -923,6 +962,15 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
     // siret=eq.XXX
     const mSiret = f.match(/^siret=eq\.(.+)$/);
     if (mSiret)  { const s = decodeURIComponent(mSiret[1]); rows = rows.filter(r => r.siret === s); return; }
+    // statut_crm=in.(2,3,4)
+    const mIn = f.match(/^statut_crm=in\.\((.+)\)$/);
+    if (mIn) { const ids = mIn[1].split(',').map(Number); rows = rows.filter(r => ids.includes(r.statut_crm)); return; }
+    // date_relance=eq.YYYY-MM-DD
+    const mDateEq = f.match(/^date_relance=eq\.(.+)$/);
+    if (mDateEq) { const dt = mDateEq[1]; rows = rows.filter(r => r.date_relance === dt); return; }
+    // date_relance=gte.YYYY-MM-DD
+    const mDateGte = f.match(/^date_relance=gte\.(.+)$/);
+    if (mDateGte) { const dt = mDateGte[1]; rows = rows.filter(r => r.date_relance && r.date_relance >= dt); return; }
     // commercial=eq.XXX
     const mComm = f.match(/^commercial=eq\.(.+)$/);
     if (mComm)   { const c = decodeURIComponent(mComm[1]); rows = rows.filter(r => r.commercial === c); return; }
@@ -954,6 +1002,8 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
 
   if (order === 'denomination_usuelle') {
     rows.sort((a,b) => (a.denomination_usuelle||'').localeCompare(b.denomination_usuelle||'', 'fr'));
+  } else if (order === 'date_relance') {
+    rows.sort((a,b) => (a.date_relance||'').localeCompare(b.date_relance||''));
   }
 
   const count = rows.length;
@@ -1362,10 +1412,8 @@ async function init() {
   try {
     await Promise.all([loadStats(), loadErpTypes()]);
     renderFilters();
-    // Tous les rôles : afficher la liste directement (pas besoin de choisir un type)
-    document.getElementById('mainEmpty').style.display    = 'none';
-    document.getElementById('prospectList').style.display = 'flex';
-    loadList(true);
+    // Afficher le dashboard par défaut à la connexion
+    showDashboard();
   } catch(e) {
     document.getElementById('detail').innerHTML =
       `<div style="padding:30px;color:#d73a49;font-size:13px;line-height:1.8;">
@@ -1391,6 +1439,205 @@ async function loadStats() {
   document.getElementById('st-devis').textContent    = fmt(sig.count);
   document.getElementById('st-signe').textContent    = fmt(perdu.count);
   document.getElementById('totalBadge').textContent  = fmt(tot.count) + ' prospects';
+}
+
+/* ─── DASHBOARD — HELPERS DATE ──────────────────────────── */
+function todayISO() {
+  // Retourne YYYY-MM-DD en heure Réunion
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Indian/Reunion' });
+}
+
+function calcRelanceDate(jours) {
+  // Calcule la date de relance en ajoutant jours à aujourd'hui (heure Réunion)
+  // et en décalant samedi/dimanche au lundi suivant
+  const todayStr = todayISO();
+  const [y, m, d] = todayStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + jours);
+  const dow = date.getDay();
+  if (dow === 6) date.setDate(date.getDate() + 2); // Samedi → Lundi
+  if (dow === 0) date.setDate(date.getDate() + 1); // Dimanche → Lundi
+  const yd = date.getFullYear();
+  const md = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yd}-${md}-${dd}`;
+}
+
+function fmtDateLabel(isoStr) {
+  // Convertit YYYY-MM-DD en "LUNDI 16 JUIN"
+  if (!isoStr) return '';
+  const [y, m, d] = isoStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const DAYS   = ['DIMANCHE','LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI'];
+  const MONTHS = ['JANVIER','FÉVRIER','MARS','AVRIL','MAI','JUIN','JUILLET',
+                  'AOÛT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DÉCEMBRE'];
+  return `${DAYS[date.getDay()]} ${d} ${MONTHS[m - 1]}`;
+}
+
+function buildDashFilters() {
+  // Pour les commerciaux : filtrer uniquement leurs prospects
+  if (!currentUser || currentUser.role === 'admin') return [];
+  const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
+  return [`commercial=eq.${myName}`];
+}
+
+/* ─── DASHBOARD — AFFICHAGE ─────────────────────────────── */
+let _dashTab = 'today';
+
+function showDashboard() {
+  // Fermer la fiche et remettre main en pleine largeur
+  document.getElementById('detail').classList.add('hidden');
+  document.getElementById('main').classList.remove('narrow');
+  currentSiret   = null;
+  _currentRecord = null;
+  // Masquer la liste et toolbar
+  document.getElementById('mainToolbar').style.display  = 'none';
+  document.getElementById('mainEmpty').style.display    = 'none';
+  document.getElementById('prospectList').style.display = 'none';
+  // Afficher le dashboard
+  document.getElementById('dashTabs').style.display = 'flex';
+  document.getElementById('dashView').style.display = 'flex';
+  loadDashboard();
+}
+
+function hideDashboard() {
+  document.getElementById('dashTabs').style.display = 'none';
+  document.getElementById('dashView').style.display = 'none';
+}
+
+function switchDashTab(tab) {
+  _dashTab = tab;
+  document.getElementById('tab-today').classList.toggle('active', tab === 'today');
+  document.getElementById('tab-calendar').classList.toggle('active', tab === 'calendar');
+  loadDashboard();
+}
+
+async function loadDashboard() {
+  const content = document.getElementById('dash-content');
+  if (!content) return;
+  content.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  try {
+    if (_dashTab === 'today') {
+      await renderDashToday(content);
+    } else {
+      await renderDashCalendar(content);
+    }
+  } catch(e) {
+    content.innerHTML = `<div style="padding:16px;color:#d73a49;font-size:12px;">❌ Erreur : ${esc(e.message)}</div>`;
+  }
+}
+
+async function renderDashToday(container) {
+  const today = todayISO();
+  const myF   = buildDashFilters();
+
+  const { data } = await dbSelect('prospects', {
+    cols:    'siret,denomination_usuelle,commune,statut_crm',
+    filters: [`date_relance=eq.${today}`, 'statut_crm=in.(2,3,4)', ...myF],
+    limit:   300,
+    order:   'denomination_usuelle'
+  });
+  const rows = data || [];
+
+  // Grouper par statut
+  const groups = { 2:[], 3:[], 4:[] };
+  rows.forEach(r => { if (groups[r.statut_crm]) groups[r.statut_crm].push(r); });
+
+  const todayLabel = fmtDateLabel(today);
+  const LABELS = { 2:'Relance J+2', 3:'Relance J+5', 4:'Relance J+10' };
+  const DOTS   = { 2:'#06b6d4',     3:'#8b5cf6',     4:'#f97316'      };
+  const CLS    = { 2:'j2',          3:'j5',           4:'j10'          };
+
+  let html = `<div style="padding:8px 0 4px;">
+    <div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;
+                letter-spacing:.4px;margin-bottom:14px;">📅 ${todayLabel}</div>`;
+
+  if (rows.length === 0) {
+    html += `<div class="dash-empty">
+      <div class="dei">🎉</div>
+      <div style="font-size:13px;font-weight:700;color:var(--mid);">Aucune relance aujourd'hui</div>
+      <div style="font-size:12px;margin-top:5px;color:var(--light);">Tout est à jour pour aujourd'hui !</div>
+    </div>`;
+  } else {
+    [2, 3, 4].forEach(s => {
+      if (!groups[s].length) return;
+      html += `<div style="margin-bottom:16px;">
+        <div class="dash-section-title">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${DOTS[s]};flex-shrink:0;"></span>
+          ${LABELS[s]}
+          <span style="background:${DOTS[s]}22;color:${DOTS[s]};border-radius:10px;padding:1px 8px;font-size:10px;margin-left:2px;">${groups[s].length}</span>
+        </div>
+        ${groups[s].map(r => `
+          <div class="dash-card ${CLS[s]}" onclick="selectProspect('${esc(r.siret)}',null)">
+            <div class="dash-card-body">
+              <div class="dash-card-name">${esc(r.denomination_usuelle)}</div>
+              <div class="dash-card-meta">${esc(r.commune || '—')}</div>
+            </div>
+            <span style="color:#ccc;font-size:16px;">›</span>
+          </div>`).join('')}
+      </div>`;
+    });
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+async function renderDashCalendar(container) {
+  const today = todayISO();
+  const myF   = buildDashFilters();
+
+  const { data } = await dbSelect('prospects', {
+    cols:    'siret,denomination_usuelle,commune,statut_crm,date_relance',
+    filters: [`date_relance=gte.${today}`, 'statut_crm=in.(2,3,4)', ...myF],
+    limit:   500,
+    order:   'date_relance'
+  });
+  const rows = data || [];
+
+  if (rows.length === 0) {
+    container.innerHTML = `<div class="dash-empty" style="padding-top:24px;">
+      <div class="dei">📆</div>
+      <div style="font-size:13px;font-weight:700;color:var(--mid);">Aucune relance planifiée</div>
+      <div style="font-size:12px;margin-top:5px;color:var(--light);">Envoyez des offres commerciales pour planifier des relances.</div>
+    </div>`;
+    return;
+  }
+
+  const DOTS = { 2:'#06b6d4', 3:'#8b5cf6', 4:'#f97316' };
+  const CLS  = { 2:'j2',      3:'j5',      4:'j10'     };
+
+  // Regrouper par date
+  const groups = {};
+  rows.forEach(r => {
+    const dt = r.date_relance || '';
+    if (!groups[dt]) groups[dt] = [];
+    groups[dt].push(r);
+  });
+
+  let html = '';
+  Object.keys(groups).sort().forEach(dt => {
+    const isToday = dt === today;
+    const label   = fmtDateLabel(dt);
+    const group   = groups[dt];
+    html += `<div class="dash-day">
+      <div class="dash-day-label${isToday ? ' today' : ''}">
+        ${isToday ? '📅 ' : ''}${label}<span style="font-weight:400;opacity:.65;"> — ${group.length} prospect${group.length > 1 ? 's' : ''}</span>
+      </div>
+      ${group.map(r => `
+        <div class="dash-card ${CLS[r.statut_crm] || ''}" onclick="selectProspect('${esc(r.siret)}',null)">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;
+                       background:${DOTS[r.statut_crm] || '#ccc'};flex-shrink:0;"></span>
+          <div class="dash-card-body">
+            <div class="dash-card-name">${esc(r.denomination_usuelle)}</div>
+            <div class="dash-card-meta">${esc(r.commune || '—')}</div>
+          </div>
+          <span style="font-size:10px;color:${DOTS[r.statut_crm] || '#ccc'};font-weight:700;
+                       white-space:nowrap;flex-shrink:0;">${STATUTS[r.statut_crm]?.label || ''}</span>
+          <span style="color:#ccc;font-size:16px;">›</span>
+        </div>`).join('')}
+    </div>`;
+  });
+  container.innerHTML = html;
 }
 
 /* ─── FILTRES STATUT ────────────────────────────────────── */
@@ -1432,12 +1679,18 @@ function renderFilters() {
 
 function toggleFilterMine() {
   filterMine = !filterMine;
+  hideDashboard();
+  document.getElementById('mainEmpty').style.display    = 'none';
+  document.getElementById('prospectList').style.display = 'flex';
   renderFilters();
   loadList(true);
 }
 
 function setFilter(id) {
   filterStatut = id;
+  hideDashboard();
+  document.getElementById('mainEmpty').style.display    = 'none';
+  document.getElementById('prospectList').style.display = 'flex';
   renderFilters();
   loadList(true);
 }
@@ -1484,6 +1737,7 @@ function setErpFilter(type, btn) {
   btn.querySelector('.ebox').textContent = '✓';
   const badge = document.getElementById('erp-active-badge');
   badge.textContent = '✓'; badge.style.display = 'inline';
+  hideDashboard();
   document.getElementById('mainToolbar').style.display  = 'flex';
   document.getElementById('mainTypeLabel').textContent  = type;
   document.getElementById('mainEmpty').style.display    = 'none';
@@ -1502,7 +1756,7 @@ function clearErpFilter() {
   document.getElementById('detail').classList.add('hidden');
   document.getElementById('main').classList.remove('narrow');
   currentSiret = null;
-  // Tous les utilisateurs : garder la liste visible
+  hideDashboard();
   document.getElementById('mainEmpty').style.display    = 'none';
   document.getElementById('prospectList').style.display = 'flex';
   _currentRecord = null;
@@ -1514,6 +1768,9 @@ function setDae5Filter(val) {
   filterDae5 = val;
   document.getElementById('dae5-btn-all').classList.toggle('on', val === '');
   document.getElementById('dae5-btn-non').classList.toggle('on', val === 'non');
+  hideDashboard();
+  document.getElementById('mainEmpty').style.display    = 'none';
+  document.getElementById('prospectList').style.display = 'flex';
   loadList(true);
 }
 
@@ -1624,6 +1881,11 @@ function onSearch() {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     searchQ = document.getElementById('searchInput').value.trim();
+    if (searchQ) {
+      hideDashboard();
+      document.getElementById('mainEmpty').style.display    = 'none';
+      document.getElementById('prospectList').style.display = 'flex';
+    }
     renderFilters();
     loadList(true);
   }, 300);
@@ -2375,13 +2637,14 @@ async function logRelanceMessagerie(fromStatut) {
   const siret      = _callSiret;
   closeCallModal();
   if (!siret) return;
-  const nextStatut = fromStatut === 2 ? 3 : 4;
-  const nextLabel  = fromStatut === 2 ? 'J+5' : 'J+10';
-  const now        = _nowReunion();
-  const appelsJson = _appendAppel(_currentRecord, 'msg');
+  const nextStatut  = fromStatut === 2 ? 3 : 4;
+  const nextLabel   = fromStatut === 2 ? 'J+5' : 'J+10';
+  const jours       = fromStatut === 2 ? 5 : 10;
+  const now         = _nowReunion();
+  const appelsJson  = _appendAppel(_currentRecord, 'msg');
   // Ne pas écraser date_heure_appel si c'est une OFFRE:
   const isOffre = _currentRecord?.date_heure_appel?.startsWith('OFFRE:');
-  const base = { statut_crm: nextStatut };
+  const base = { statut_crm: nextStatut, date_relance: calcRelanceDate(jours) };
   if (!isOffre) base.date_heure_appel = 'MSG:' + now;
   if (currentUser) base.commercial = currentUser.prenom + ' ' + currentUser.nom;
   const ok = await _saveWithAppels(siret, base, appelsJson);
@@ -2389,8 +2652,9 @@ async function logRelanceMessagerie(fromStatut) {
     toast(`📵 Messagerie enregistrée — passage en Relance ${nextLabel}`);
     if (_currentRecord) {
       if (!isOffre) _currentRecord.date_heure_appel = 'MSG:' + now;
-      _currentRecord.appels_json = appelsJson;
-      _currentRecord.statut_crm = nextStatut;
+      _currentRecord.appels_json  = appelsJson;
+      _currentRecord.statut_crm   = nextStatut;
+      _currentRecord.date_relance = base.date_relance;
       if (currentUser) _currentRecord.commercial = base.commercial;
       renderDetail(_currentRecord);
       renderFilters();
@@ -2417,10 +2681,15 @@ async function saveRecord(siret) {
 async function passerEnRelance(nextStatut) {
   const r = _currentRecord;
   if (!r) return;
-  const label = STATUTS[nextStatut]?.label || 'Relance';
-  const ok = await dbUpdate('prospects', r.siret, { statut_crm: nextStatut });
+  const label  = STATUTS[nextStatut]?.label || 'Relance';
+  // Jours selon le statut cible : 2→J+2, 3→J+5, 4→J+10
+  const joursMap = { 2:2, 3:5, 4:10 };
+  const updates  = { statut_crm: nextStatut };
+  if (joursMap[nextStatut]) updates.date_relance = calcRelanceDate(joursMap[nextStatut]);
+  const ok = await dbUpdate('prospects', r.siret, updates);
   if (ok) {
-    _currentRecord.statut_crm = nextStatut;
+    _currentRecord.statut_crm  = nextStatut;
+    if (updates.date_relance) _currentRecord.date_relance = updates.date_relance;
     renderDetail(_currentRecord);
     renderFilters();
     toast('🔄 ' + label);
@@ -2930,13 +3199,15 @@ async function doSendOffer() {
     // Sauvegarder le/les destinataires avec l'entrée offre dans appels_json
     const appelsArr  = _parseAppels(_currentRecord?.appels_json);
     appelsArr.push({ d: now, t: 'offre', to });
-    const appelsJson = JSON.stringify(appelsArr);
+    const appelsJson   = JSON.stringify(appelsArr);
+    const relanceDate  = calcRelanceDate(2); // J+2 → date de relance
     toast('✅ Offre commerciale envoyée à ' + to);
-    await _saveWithAppels(r.siret, { statut_crm: 2, date_heure_appel: offreDate }, appelsJson);
+    await _saveWithAppels(r.siret, { statut_crm: 2, date_heure_appel: offreDate, date_relance: relanceDate }, appelsJson);
     if (_currentRecord) {
-      _currentRecord.statut_crm = 2;
+      _currentRecord.statut_crm      = 2;
       _currentRecord.date_heure_appel = offreDate;
-      _currentRecord.appels_json = appelsJson;
+      _currentRecord.appels_json      = appelsJson;
+      _currentRecord.date_relance     = relanceDate;
       renderDetail(_currentRecord);
       renderFilters();
     }

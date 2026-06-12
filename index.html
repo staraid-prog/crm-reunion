@@ -2321,7 +2321,7 @@ async function logJ10Messagerie() {
     const res = await fetch(MAKE_WEBHOOK_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ from: EMAIL_FROM, to, subject, body, attachments: [] })
+      body:    JSON.stringify({ type: 'relance', from: EMAIL_FROM, to, subject, body })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
 
@@ -2913,6 +2913,7 @@ async function doSendOffer() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        type:             'offre',
         from:             EMAIL_FROM,
         to,
         subject,

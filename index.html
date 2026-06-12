@@ -2305,11 +2305,12 @@ async function logJ10Messagerie() {
 
   // Utiliser le/les destinataires de l'offre commerciale (stockés dans appels_json)
   const appels     = _parseAppels(r.appels_json);
-  const offreEntry = [...appels].reverse().find(a => a.t === 'offre');
-  const to         = offreEntry?.to || r.email_crm || r.email_contact || '';
+  const offreEntry = [...appels].reverse().find(a => a.t === 'offre' && a.to);
+  // Fallback : email principal du prospect si l'offre n'a pas encore le champ to
+  const to = offreEntry?.to || r.email_crm || r.email_contact || '';
 
-  if (!to) {
-    toast('❌ Aucun destinataire trouvé — envoyez d\'abord l\'offre commerciale', true);
+  if (!to || !to.includes('@')) {
+    toast('❌ Aucun email valide — renseignez un contact sur la fiche', true);
     return;
   }
   const subject = `Relance — Défibrillateur DAE — ${r.denomination_usuelle || ''}`;

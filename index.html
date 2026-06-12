@@ -2141,25 +2141,36 @@ function _parseAppels(json) {
 
 function _buildCallLogHtml(r) {
   const appels = _parseAppels(r.appels_json);
+  const lines  = [];
 
+  // Ligne offre commerciale (si envoyée)
+  if (r.date_heure_appel?.startsWith('OFFRE:')) {
+    lines.push(`<div style="line-height:1.9;">📧&nbsp;`
+      + `<span style="color:var(--mid);">Offre commerciale envoyée le&nbsp;:&nbsp;</span>`
+      + `<span style="color:#2563eb;font-weight:700;">${esc(r.date_heure_appel.slice(6))}</span>`
+      + `</div>`);
+  }
+
+  // Historique appels
   if (appels.length > 0) {
-    return appels.map((a, i) => {
+    appels.forEach((a, i) => {
       const isMsg = a.t === 'msg';
-      return `<div style="line-height:1.9;">`
+      lines.push(`<div style="line-height:1.9;">`
         + `${isMsg ? '📵' : '📞'}&nbsp;`
         + `<span style="color:var(--mid);">Appel ${i+1}&nbsp;:&nbsp;</span>`
         + `<span style="color:var(--green);font-weight:700;">${esc(a.d)}</span>`
         + (isMsg ? `&nbsp;<span style="color:#b45309;font-weight:600;">Messagerie</span>` : '')
-        + `</div>`;
-    }).join('');
+        + `</div>`);
+    });
+    return lines.join('') || 'Aucun appel enregistré';
   }
+
+  if (lines.length > 0) return lines.join('');
 
   // Fallback ancien format
   if (!r.date_heure_appel) return 'Aucun appel enregistré';
   if (r.date_heure_appel.startsWith('MSG:'))
     return `📵 Messagerie&nbsp;: <span>${esc(r.date_heure_appel.slice(4))}</span>`;
-  if (r.date_heure_appel.startsWith('OFFRE:'))
-    return `📧 Offre envoyée le&nbsp;: <span style="color:#2563eb;">${esc(r.date_heure_appel.slice(6))}</span>`;
   return `📞 Dernier appel&nbsp;: <span>${esc(r.date_heure_appel)}</span>`;
 }
 

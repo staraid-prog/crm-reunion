@@ -3805,39 +3805,47 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   doc.text(`FAIT EN DEUX EXEMPLAIRES, À ${(villeSign || '………………………………………').toUpperCase()}  LE ${dateSign}`, W/2, y, { align:'center' });
   y += 14;
 
-  // Colonnes LOCATAIRE | LOUEUR
-  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
-  doc.text('Le LOCATAIRE :', 20, y);
-  doc.text('Le LOUEUR :', W/2 + 10, y);
-  y += 5;
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GREY);
-  doc.text('(Cachet de la structure)', 20, y);
-  doc.text('(Cachet de la structure)', W/2 + 10, y);
-  y += 24;
-  doc.setDrawColor(...LGREY);
-  doc.line(20, y, W/2 - 10, y);
-  doc.line(W/2 + 10, y, W - 20, y);
-  y += 4;
-  doc.setFontSize(8);
-  doc.text('Signature + Nom lisible', 20, y);
-  doc.text('Signature + Nom lisible', W/2 + 10, y);
-  y += 10;
+  // Fonction helper pour dessiner un bloc signature
+  function drawSignatureBloc(yStart) {
+    const MID = W/2 + 5;
+    // ── LOCATAIRE (gauche) ──
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
+    doc.text('Le LOCATAIRE :', 20, yStart);
+    // Cadre cachet locataire
+    doc.setDrawColor(...LGREY);
+    doc.rect(20, yStart + 3, 75, 22);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(180,180,180);
+    doc.text('Cachet de la structure', 57.5, yStart + 15, { align:'center' });
 
-  // Deuxième jeu (pour le 2e exemplaire)
-  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
-  doc.text('Le LOCATAIRE :', 20, y);
-  doc.text('Le LOUEUR :', W/2 + 10, y);
-  y += 5;
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GREY);
-  doc.text('(Cachet de la structure)', 20, y);
-  doc.text('(Cachet de la structure)', W/2 + 10, y);
-  y += 24;
-  doc.setDrawColor(...LGREY);
-  doc.line(20, y, W/2 - 10, y);
-  doc.line(W/2 + 10, y, W - 20, y);
-  y += 4;
-  doc.text('Signature + Nom lisible', 20, y);
-  doc.text('Signature + Nom lisible', W/2 + 10, y);
+    // ── LOUEUR (droite) ──
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
+    doc.text('Le LOUEUR :', MID, yStart);
+    // Cadre cachet LOUEUR avec contenu imprimé
+    doc.setDrawColor(...LGREY);
+    doc.rect(MID, yStart + 3, 75, 22);
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+    doc.text('SARL STAR GROUP', MID + 37.5, yStart + 8, { align:'center' });
+    doc.setFont('helvetica','normal');
+    doc.text('STAR AID - STAR COMPUTER', MID + 37.5, yStart + 12, { align:'center' });
+    doc.text('4 Allée des Primevères', MID + 37.5, yStart + 16, { align:'center' });
+    doc.text('97490 SAINTE-CLOTILDE', MID + 37.5, yStart + 20, { align:'center' });
+    doc.setFont('helvetica','bold');
+    doc.text('SIRET : 500 168 190 00022', MID + 37.5, yStart + 24, { align:'center' });
+
+    // Lignes de signature
+    const sigY = yStart + 29;
+    doc.setDrawColor(...LGREY);
+    doc.line(20, sigY, 95, sigY);
+    doc.line(MID, sigY, MID + 75, sigY);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...GREY);
+    doc.text('Signature + Nom lisible', 20, sigY + 3.5);
+    doc.text('Signature + Nom lisible', MID, sigY + 3.5);
+    return yStart + 38;
+  }
+
+  y = drawSignatureBloc(y);
+  y += 6;
+  y = drawSignatureBloc(y);
 
   addPageFooter();
 
@@ -3934,8 +3942,8 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
     y += 8;
   };
   lig('Nom de la personne responsable :', '');
-  lig('Email :', r.email_crm || r.email_contact || '');
-  lig('Tél :', r.telephone_crm || r.telephone_google || '');
+  lig('Email :', '');
+  lig('Tél :', '');
 
   addPageFooter();
   return doc;

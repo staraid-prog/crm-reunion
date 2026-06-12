@@ -1821,6 +1821,9 @@ function renderDetail(r) {
         </div>`}
     </div>`;
 
+  // Mémoriser la position de scroll avant de réécrire
+  const _scrollY = detail.querySelector('.detail-body')?.scrollTop || 0;
+
   detail.innerHTML = `
     <!-- EN-TÊTE -->
     <div class="detail-header">
@@ -1924,6 +1927,12 @@ function renderDetail(r) {
 
     </div><!-- /detail-body -->
   `;
+
+  // Restaurer la position de scroll
+  if (_scrollY > 0) {
+    const body = detail.querySelector('.detail-body');
+    if (body) body.scrollTop = _scrollY;
+  }
 }
 
 /* ─── MODAL CONTACT ─────────────────────────────────────── */

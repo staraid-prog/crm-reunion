@@ -2141,37 +2141,34 @@ function _parseAppels(json) {
 
 function _buildCallLogHtml(r) {
   const appels = _parseAppels(r.appels_json);
-  const lines  = [];
 
-  // Ligne offre commerciale (si envoyée)
-  if (r.date_heure_appel?.startsWith('OFFRE:')) {
-    lines.push(`<div style="line-height:1.9;">📧&nbsp;`
-      + `<span style="color:var(--mid);">Offre commerciale envoyée le&nbsp;:&nbsp;</span>`
-      + `<span style="color:#2563eb;font-weight:700;">${esc(r.date_heure_appel.slice(6))}</span>`
-      + `</div>`);
-  }
-
-  // Historique appels
   if (appels.length > 0) {
-    appels.forEach((a, i) => {
+    let callNum = 0;
+    return appels.map(a => {
+      if (a.t === 'offre') {
+        return `<div style="line-height:1.9;">📧&nbsp;`
+          + `<span style="color:var(--mid);">Offre commerciale&nbsp;:&nbsp;</span>`
+          + `<span style="color:#2563eb;font-weight:700;">${esc(a.d)}</span>`
+          + `</div>`;
+      }
+      callNum++;
       const isMsg = a.t === 'msg';
-      lines.push(`<div style="line-height:1.9;">`
+      return `<div style="line-height:1.9;">`
         + `${isMsg ? '📵' : '📞'}&nbsp;`
-        + `<span style="color:var(--mid);">Appel ${i+1}&nbsp;:&nbsp;</span>`
+        + `<span style="color:var(--mid);">Appel ${callNum}&nbsp;:&nbsp;</span>`
         + `<span style="color:var(--green);font-weight:700;">${esc(a.d)}</span>`
         + (isMsg ? `&nbsp;<span style="color:#b45309;font-weight:600;">Messagerie</span>` : '')
-        + `</div>`);
-    });
-    return lines.join('') || 'Aucun appel enregistré';
+        + `</div>`;
+    }).join('');
   }
 
-  if (lines.length > 0) return lines.join('');
-
-  // Fallback ancien format
+  // Fallback ancien format (avant appels_json)
   if (!r.date_heure_appel) return 'Aucun appel enregistré';
+  if (r.date_heure_appel.startsWith('OFFRE:'))
+    return `📧 Offre commerciale&nbsp;: <span style="color:#2563eb;font-weight:700;">${esc(r.date_heure_appel.slice(6))}</span>`;
   if (r.date_heure_appel.startsWith('MSG:'))
     return `📵 Messagerie&nbsp;: <span>${esc(r.date_heure_appel.slice(4))}</span>`;
-  return `📞 Dernier appel&nbsp;: <span>${esc(r.date_heure_appel)}</span>`;
+  return `📞 Appel 1&nbsp;: <span>${esc(r.date_heure_appel)}</span>`;
 }
 
 function _appendAppel(record, type) {
@@ -2776,12 +2773,14 @@ async function doSendOffer() {
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const now = new Date().toLocaleString('fr-FR', { timeZone: 'Indian/Reunion', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-    const offreDate = 'OFFRE:' + now;
+    const offreDate  = 'OFFRE:' + now;
+    const appelsJson = _appendAppel(_currentRecord, 'offre');
     toast('✅ Offre commerciale envoyée à ' + to);
-    await dbUpdate('prospects', r.siret, { statut_crm: 2, date_heure_appel: offreDate });
+    await _saveWithAppels(r.siret, { statut_crm: 2, date_heure_appel: offreDate }, appelsJson);
     if (_currentRecord) {
       _currentRecord.statut_crm = 2;
       _currentRecord.date_heure_appel = offreDate;
+      _currentRecord.appels_json = appelsJson;
       renderDetail(_currentRecord);
       renderFilters();
     }

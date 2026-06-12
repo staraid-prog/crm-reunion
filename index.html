@@ -3094,13 +3094,41 @@ function previewDevis() {
   toast('✅ Devis généré et validé');
 }
 
-function sendDevisByGmail() {
+async function sendDevisByGmail() {
   const r = _currentRecord;
   if (!r) return;
-  const prenom = (r.signataire || '').trim().split(' ')[0];
-  const body = `${prenom ? 'Bonjour '+prenom+',' : 'Bonjour,'}\n\nVeuillez trouver en pièce jointe notre devis pour la location d'un défibrillateur DAE.\n\nCordialement,\nSTAR aid`;
-  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(r.email_crm||r.email_contact||'')}&su=${encodeURIComponent('Devis défibrillateur DAE — '+(r.denomination_usuelle||''))}&body=${encodeURIComponent(body)}`, '_blank');
-  toast('Gmail ouvert — téléchargez le PDF ci-dessus et joignez-le ✓');
+  const to = r.email_crm || r.email_contact || '';
+  if (!to) { toast('Aucun email destinataire renseigné', true); return; }
+
+  const ds = _docState[r.siret]?.devis;
+  if (!ds?.pdfBase64) { toast('Générez d\'abord le devis', true); return; }
+
+  const prenom  = (r.signataire || '').trim().split(' ')[0];
+  const subject = 'Devis défibrillateur DAE — ' + (r.denomination_usuelle || '');
+  const body    = (prenom ? 'Bonjour ' + prenom + ',\n\n' : 'Bonjour,\n\n')
+    + 'Veuillez trouver en pièce jointe notre devis pour la location d\'un défibrillateur DAE.\n\n'
+    + 'Cordialement,\n' + getCommercialNom() + '\nSTAR aid';
+
+  toast('📤 Envoi en cours…');
+  try {
+    const res = await fetch(MAKE_WEBHOOK_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        type:            'devis',
+        from:            getEmailFrom(),
+        to,
+        subject,
+        body,
+        devis_filename:  ds.filename,
+        devis_content:   ds.pdfBase64,
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    toast('✅ Devis envoyé à ' + to + ' avec pièce jointe');
+  } catch(e) {
+    toast('❌ Erreur envoi : ' + e.message, true);
+  }
 }
 
 /* ─── MODAL CONTRAT ─────────────────────────────────────── */

@@ -1722,11 +1722,25 @@ function renderDetail(r) {
        </button>
        `;
 
-  // ── Suivi commercial (Signé / Perdu) ──
+  // ── Suivi commercial (Relancer / Signé / Perdu) ──
+  const relancerBtn = (statut === 2 || statut === 3) ? (() => {
+    const nextStatut = statut === 2 ? 3 : 4;
+    const nextLabel  = statut === 2 ? 'J+5' : 'J+10';
+    return `<button class="act-btn" onclick="passerEnRelance(${nextStatut})"
+               style="background:#f0f9ff;color:#0369a1;border-color:#7dd3fc;">
+             <span class="act-icon">🔄</span>
+             <div class="act-body">
+               <div>Relancer</div>
+               <div class="act-sub">Passer en Relance ${nextLabel}</div>
+             </div>
+           </button>`;
+  })() : '';
+
   const suiviHtml = isLocked ? '' :
     `<div class="dsec" style="border:none;padding-top:4px;">
        <h3>📊 Suivi commercial</h3>
        <div class="act-group" style="margin-top:4px;">
+         ${relancerBtn}
          <button class="act-btn" onclick="setProspectSigne()"
                  style="background:#f0fdf4;color:#16a34a;border-color:#86efac;">
            <span class="act-icon">✅</span>
@@ -2301,6 +2315,19 @@ async function saveRecord(siret) {
 }
 
 /* ─── CHANGEMENT DE STATUT ──────────────────────────────── */
+async function passerEnRelance(nextStatut) {
+  const r = _currentRecord;
+  if (!r) return;
+  const label = STATUTS[nextStatut]?.label || 'Relance';
+  const ok = await dbUpdate('prospects', r.siret, { statut_crm: nextStatut });
+  if (ok) {
+    _currentRecord.statut_crm = nextStatut;
+    renderDetail(_currentRecord);
+    renderFilters();
+    toast('🔄 ' + label);
+  }
+}
+
 async function changeStatut(id) {
   const r = _currentRecord;
   if (!r) return;

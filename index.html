@@ -3630,10 +3630,20 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   para('(Ci-après dénommé « LOCATAIRE »)');
   gap(4);
 
+  // Cachet de la structure (boîte jaune à gauche) + D'AUTRE PART (à droite)
+  checkNewPage(32);
+  const cachetBoxY = y;
+  const cachetBoxH = 24;
+  const cachetBoxW = 78;
+  doc.setFillColor(...YELLOW);
+  doc.rect(14, cachetBoxY, cachetBoxW, cachetBoxH, 'F');
+  doc.setDrawColor(...LGREY);
+  doc.rect(14, cachetBoxY, cachetBoxW, cachetBoxH);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(110,110,70);
+  doc.text('Cachet de la structure', 14 + cachetBoxW/2, cachetBoxY + cachetBoxH/2 + 1.5, { align:'center' });
   doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
-  doc.text("D'AUTRE PART,", 14, y); y += 7;
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
-  doc.text('Cachet de la structure', W - 14, y - 4, { align:'right' });
+  doc.text("D'AUTRE PART,", W - 14, cachetBoxY + cachetBoxH/2 + 1.5, { align:'right' });
+  y = cachetBoxY + cachetBoxH + 5;
   para("(Ci-après encore dénommées collectivement les « PARTIES » ou individuellement une « PARTIE »)");
   gap(3);
 
@@ -3689,9 +3699,16 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
 
   para("Le paiement du loyer se fera au choix selon les échéanciers suivants :");
   ['Par mois', 'Par trimestre', 'Par semestre', 'Par année'].forEach(opt => {
-    checkNewPage(5);
+    checkNewPage(6);
+    const cbSz = 4;
+    // Case à cocher jaune avec bordure noire
+    doc.setFillColor(...YELLOW);
+    doc.rect(24, y - cbSz + 0.5, cbSz, cbSz, 'F');
+    doc.setDrawColor(60, 60, 60);
+    doc.rect(24, y - cbSz + 0.5, cbSz, cbSz);
     doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
-    doc.text('☐  ' + opt, 24, y); y += 5;
+    doc.text(opt, 24 + cbSz + 2.5, y);
+    y += 6;
   });
   gap(2);
 
@@ -3883,37 +3900,193 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   doc.addPage();
   addPageHeader();
 
-  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(...DARK);
-  doc.text('MANDAT DE PRÉLÈVEMENT SEPA', W/2, y, { align:'center' });
-  y += 14;
-
-  field('Titulaire du compte :', r.denomination_usuelle || '');
-  fieldYellow('IBAN :', '');
-  fieldYellow('BIC :', '');
-  fieldYellow('Banque :', '');
-  field('Fait à :', villeSign || r.commune || '');
-  field('Le :', dateSign);
+  // ── Titre SEPA ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...RED);
+  doc.text('MANDAT DE PRELEVEMENT SEPA :', 14, y);
   y += 8;
 
-  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...DARK);
-  doc.text('Signature du titulaire du compte :', 14, y);
-  doc.text('Cachet établissement :', W/2 + 10, y);
-  y += 5;
-  // Zones jaunes signature SEPA
-  doc.setFillColor(...YELLOW);
-  doc.rect(14, y, W/2 - 24, 22, 'F');
-  doc.rect(W/2 + 10, y, W/2 - 24, 22, 'F');
+  // ── Boîte header SEPA ──
+  const sepaBoxY = y;
   doc.setDrawColor(...LGREY);
-  doc.rect(14, y, W/2 - 24, 22);
-  doc.rect(W/2 + 10, y, W/2 - 24, 22);
-  y += 28;
+  doc.rect(14, y, W-28, 34);
+
+  // Bloc gauche gris "Mandat de prélèvement SEPA"
+  doc.setFillColor(230, 230, 230);
+  doc.rect(14, y, 34, 34, 'F');
+  doc.setDrawColor(...LGREY); doc.rect(14, y, 34, 34);
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+  doc.text('Mandat de', 31, y+8, { align:'center' });
+  doc.text('prélèvement', 31, y+14, { align:'center' });
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(...DARK);
+  doc.text('SEPA', 31, y+24, { align:'center' });
+
+  // Texte description central
+  const desc1 = "En signant ce formulaire de mandat, vous autorisez (A)  STAR GROUP – STAR aid  à envoyer les instructions à votre banque pour débiter votre compte, et (B) votre banque à débiter votre compte conformément aux instructions de  STAR GROUP – STAR aid";
+  const desc2 = "Vous bénéficiez du droit d'être remboursé par votre banque selon les conditions décrites dans la convention que vous avez passée avec elle. Une demande de remboursement doit être présentée dans les 8 semaines suivant la date de débit de votre compte pour un prélèvement autorisé.";
+  doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(...DARK);
+  const d1lines = doc.splitTextToSize(desc1, 108);
+  let ty = y + 5;
+  d1lines.forEach(l => { doc.text(l, 50, ty); ty += 3.5; });
+  ty += 1;
+  const d2lines = doc.splitTextToSize(desc2, 108);
+  d2lines.forEach(l => { doc.text(l, 50, ty); ty += 3.2; });
+
+  // Logo STAR AID (coin supérieur droit)
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...RED);
+  doc.text('STAR', W-24, y+10, { align:'center' });
+  doc.setFont('helvetica','bold'); doc.setFontSize(7);
+  doc.text('♥aid', W-24, y+16, { align:'center' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(...GREY);
+  doc.text('PRÉVENTION DES RISQUES', W-24, y+22, { align:'center' });
+  doc.text('PROFESSIONNELS', W-24, y+26, { align:'center' });
+
+  y = sepaBoxY + 38;
+
+  // ── Identifiant créancier | Référence ──
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+  doc.text('Identifiant créancier : ', 14, y);
+  const icW = doc.getTextWidth('Identifiant créancier : ');
+  doc.setFont('helvetica','bold'); doc.setTextColor(...DARK);
+  doc.text('FR37ZZZ603460', 14 + icW, y);
+  doc.setFont('helvetica','normal');
+  doc.text('Référence unique du mandat :', W/2 + 2, y);
+  doc.setFillColor(...YELLOW);
+  doc.rect(W/2 + 2 + doc.getTextWidth('Référence unique du mandat :') + 1, y-4, 45, 5.5, 'F');
+  y += 5;
+  doc.setDrawColor(...LGREY); doc.line(14, y, W-14, y);
+  y += 5;
+
+  // ── Débiteur | Créancier ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...RED);
+  doc.text('Débiteur :', 14, y);
+  doc.text('Créancier :', W/2 + 2, y);
+  y += 6;
+
+  const debY = y;
+
+  // Débiteur champs (jaune)
+  const dField = (label, w2 = 68) => {
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+    doc.text(label, 14, y);
+    const lw2 = doc.getTextWidth(label);
+    doc.setFillColor(...YELLOW);
+    doc.rect(14+lw2+1, y-3.5, w2, 4.5, 'F');
+    doc.setDrawColor(180,180,180); doc.line(14+lw2+1, y+1, 14+lw2+1+w2, y+1);
+    y += 5.5;
+  };
+  dField('Votre Nom', 72);
+  dField('Votre Adresse', 64);
+  dField('Code postal', 50);
+  // Pays + Ville
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+  doc.text('Pays', 14, y);
+  doc.setFillColor(...YELLOW); doc.rect(27, y-3.5, 22, 4.5, 'F');
+  doc.setDrawColor(180,180,180); doc.line(27, y+1, 49, y+1);
+  doc.text('Ville', 52, y);
+  doc.setFillColor(...YELLOW); doc.rect(62, y-3.5, 30, 4.5, 'F');
+  doc.setDrawColor(180,180,180); doc.line(62, y+1, 92, y+1);
+  y += 5.5;
+
+  // Créancier (pré-rempli)
+  let cy2 = debY;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...DARK);
+  doc.text('STAR GROUP – STAR aid', W/2 + 2, cy2); cy2 += 5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...GREY);
+  doc.text('Nom        STAR GROUP – STAR aid', W/2 + 2, cy2); cy2 += 5;
+  doc.text('Adresse  4, Allée des Primèvères – Le Moufia', W/2 + 2, cy2); cy2 += 5;
+  doc.text('Code postal  97490', W/2 + 2, cy2); cy2 += 5;
+  doc.text('Pays  FR – Réunion     Ville  SAINTE - CLOTILDE', W/2 + 2, cy2);
+
+  doc.setDrawColor(...LGREY); doc.line(14, y, W-14, y);
+  y += 6;
+
+  // ── IBAN ──
+  const bw = 5.5, bh = 5.5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...DARK);
+  doc.text('IBAN', 14, y);
+  let bx = 30;
+  for (let i = 0; i < 27; i++) {
+    doc.setFillColor(...YELLOW); doc.rect(bx, y-bh+1, bw, bh, 'F');
+    doc.setDrawColor(...RED);  doc.rect(bx, y-bh+1, bw, bh);
+    bx += bw + 0.4;
+    if ((i+1) % 4 === 0 && i < 26) bx += 1.5;
+  }
+  y += 9;
+
+  // ── BIC + Paiement ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...DARK);
+  doc.text('BIC', 14, y);
+  bx = 30;
+  for (let i = 0; i < 11; i++) {
+    doc.setFillColor(...YELLOW); doc.rect(bx, y-bh+1, bw, bh, 'F');
+    doc.setDrawColor(...RED);  doc.rect(bx, y-bh+1, bw, bh);
+    bx += bw + 0.4;
+  }
+  // Paiement (droite, même ligne)
+  const pxStart = W/2 - 8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+  doc.text('Paiement :', pxStart, y);
+  const pw = doc.getTextWidth('Paiement :');
+  // [X] Récurrent/Répétitif
+  doc.setDrawColor(...RED); doc.rect(pxStart + pw + 2, y-4, 4, 4);
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...DARK);
+  doc.text('X', pxStart + pw + 2.7, y-0.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  doc.text('Récurrent/Répétitif', pxStart + pw + 8, y);
+  // [ ] Ponctuel
+  const p2x = pxStart + pw + 8 + doc.getTextWidth('Récurrent/Répétitif') + 3;
+  doc.setDrawColor(...RED); doc.rect(p2x, y-4, 4, 4);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  doc.text('Ponctuel', p2x + 5, y);
+  y += 9;
+
+  // ── Le : (date boxes) + A : ──
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+  doc.text('Le :', 14, y);
+  bx = 25;
+  for (let i = 0; i < 10; i++) {
+    doc.setFillColor(...YELLOW); doc.rect(bx, y-bh+1, bw, bh, 'F');
+    doc.setDrawColor(...RED);  doc.rect(bx, y-bh+1, bw, bh);
+    bx += bw + 0.4;
+    if (i === 1 || i === 3) bx += 1.5;
+  }
+  y += 9;
+  doc.text('A :', 14, y);
+  doc.setFillColor(...YELLOW); doc.rect(23, y-3.5, 85, 4.5, 'F');
+  doc.setDrawColor(180,180,180); doc.line(23, y+1, 108, y+1);
+  y += 10;
+
+  // ── Signature | Nota ──
+  const sigH = 28;
+  doc.setFillColor(...YELLOW); doc.rect(14, y, W/2 - 18, sigH, 'F');
+  doc.setDrawColor(...RED); doc.rect(14, y, W/2 - 18, sigH);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...RED);
+  doc.text('Signature :', 16, y + 5);
+
+  const notaTxt = "Nota : Vos droits concernant le présent mandat sont expliqués dans un document que vous pouvez obtenir auprès de votre banque.";
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...GREY);
+  const notaW = W/2 - 8;
+  const notaX = W/2 + 5;
+  const notaLines2 = doc.splitTextToSize(notaTxt, notaW);
+  let ny = y + 6;
+  notaLines2.forEach(l => { doc.text(l, notaX, ny); ny += 4; });
+
+  y += sigH + 6;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...DARK);
+  doc.text('Veuillez compléter tous les champs du mandat.', W/2, y, { align:'center' });
+  y += 14;
 
   // ── PIÈCES OBLIGATOIRES ──
   doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...DARK);
   doc.text('PIÈCES OBLIGATOIRES À FOURNIR :', 14, y);
   y += 8;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GREY);
-  doc.text('☐  Relevé d\'identité bancaire.', 18, y); y += 14;
+  const cbSz2 = 4;
+  doc.setFillColor(...YELLOW); doc.rect(18, y-cbSz2+0.5, cbSz2, cbSz2, 'F');
+  doc.setDrawColor(60,60,60); doc.rect(18, y-cbSz2+0.5, cbSz2, cbSz2);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GREY);
+  doc.text("Relevé d'identité bancaire.", 18 + cbSz2 + 2, y);
+  y += 14;
 
   // ── ANNEXE MATÉRIEL ──
   doc.setFillColor(...RED);

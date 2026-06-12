@@ -2303,22 +2303,15 @@ async function logJ10Messagerie() {
   const r = _currentRecord;
   if (!r) return;
 
-  // Collecter tous les emails du prospect
-  const emails = [];
-  if (r.email_crm)     emails.push(r.email_crm.trim());
-  if (r.email_contact) emails.push(r.email_contact.trim());
-  try {
-    const extras = JSON.parse(r.contacts_json || '[]');
-    extras.forEach(c => { if (c.mail) emails.push(c.mail.trim()); });
-  } catch {}
-  const uniqueEmails = [...new Set(emails.filter(Boolean))];
+  // Utiliser le/les destinataires de l'offre commerciale (stockés dans appels_json)
+  const appels     = _parseAppels(r.appels_json);
+  const offreEntry = [...appels].reverse().find(a => a.t === 'offre');
+  const to         = offreEntry?.to || r.email_crm || r.email_contact || '';
 
-  if (uniqueEmails.length === 0) {
-    toast('❌ Aucune adresse email trouvée pour ce prospect', true);
+  if (!to) {
+    toast('❌ Aucun destinataire trouvé — envoyez d\'abord l\'offre commerciale', true);
     return;
   }
-
-  const to      = uniqueEmails.join(',');
   const subject = `Relance — Défibrillateur DAE — ${r.denomination_usuelle || ''}`;
   const body    = buildRelanceMailBody();
 
@@ -2932,7 +2925,10 @@ async function doSendOffer() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const now = new Date().toLocaleString('fr-FR', { timeZone: 'Indian/Reunion', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
     const offreDate  = 'OFFRE:' + now;
-    const appelsJson = _appendAppel(_currentRecord, 'offre');
+    // Sauvegarder le/les destinataires avec l'entrée offre dans appels_json
+    const appelsArr  = _parseAppels(_currentRecord?.appels_json);
+    appelsArr.push({ d: now, t: 'offre', to });
+    const appelsJson = JSON.stringify(appelsArr);
     toast('✅ Offre commerciale envoyée à ' + to);
     await _saveWithAppels(r.siret, { statut_crm: 2, date_heure_appel: offreDate }, appelsJson);
     if (_currentRecord) {

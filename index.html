@@ -4126,7 +4126,12 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   doc.text('A REMPLIR PAR STAR-AID', cx+3, y+2); cx += colWs[2];
   doc.setFillColor(...YELLOW);
   doc.rect(cx, y-4, colWs[3] || (W-14-cx), 12, 'F');
-  doc.text('', cx+3, y+2);
+  // Redessiner les bordures par-dessus les fonds jaunes
+  doc.setDrawColor(...LGREY);
+  doc.line(cx - colWs[2], y-4, cx - colWs[2], y+8); // bord gauche N° série
+  doc.line(cx, y-4, cx, y+8);                         // séparation N° série / Emplacement
+  doc.line(W-14, y-4, W-14, y+8);                     // bord droit Emplacement
+  doc.line(cx - colWs[2], y+8, W-14, y+8);            // bord bas des deux cellules
   y += 14;
 
   // Lignes vides supplémentaires

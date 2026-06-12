@@ -654,6 +654,47 @@ body.demo-mode header{background:#b45309 !important;}
 </div>
 
 <!-- ═══════════════════════════════════════════════════
+     MODAL — OFFRE COMMERCIALE (sélection destinataires)
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="offerModal">
+  <div class="modal-box" style="width:480px;">
+    <div class="modal-head">
+      <h3>📧 Envoyer l'offre commerciale</h3>
+      <button class="cls" onclick="closeOfferModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- PJ -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <span style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;border-radius:4px;padding:4px 10px;font-size:12px;font-weight:700;">📄 Devis.pdf</span>
+        <span style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;border-radius:4px;padding:4px 10px;font-size:12px;font-weight:700;">📋 Contrat.pdf</span>
+      </div>
+      <!-- Destinataires -->
+      <div class="mrow">
+        <label>Destinataire(s)</label>
+        <div id="offer-recipients-picker" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+        <div style="position:relative;">
+          <input id="offer-to" type="text" placeholder="Ou saisir une adresse manuellement…"
+                 style="padding-right:70px;">
+          <span id="offer-to-count" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--light);pointer-events:none;"></span>
+        </div>
+      </div>
+      <!-- Objet -->
+      <div class="mrow">
+        <label>Objet</label>
+        <input id="offer-subject" type="text" readonly style="background:#f9f9f9;color:var(--mid);">
+      </div>
+      <div class="hint-box">
+        💡 Le mail type + le devis et le contrat en PDF seront envoyés automatiquement.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-grey" onclick="closeOfferModal()">Annuler</button>
+      <button class="btn btn-red" onclick="doSendOffer()">📧 Envoyer l'offre</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
      MODAL — DEVIS (configuration)
 ════════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden" id="devisModal">
@@ -2523,22 +2564,75 @@ function sendContratByGmail() {
   toast('Gmail ouvert — téléchargez le PDF ci-dessus et joignez-le ✓');
 }
 
-/* ─── ENVOI OFFRE COMMERCIALE ───────────────────────────── */
-async function sendOfferEmail() {
+/* ─── OFFRE COMMERCIALE — MODAL + ENVOI ─────────────────── */
+function sendOfferEmail() {
   const r = _currentRecord;
   if (!r) return;
   const docState = _docState[r.siret] || {};
   const ds = docState.devis;
   const cs = docState.contrat;
   if (!ds?.validated || !cs?.ready) { toast('Générez d\'abord le devis et le contrat', true); return; }
-  if (!ds?.pdfBase64 || !cs?.pdfBase64) { toast('Régénérez le devis et le contrat (aperçu)', true); return; }
+  if (!ds?.pdfBase64 || !cs?.pdfBase64) { toast('Régénérez le devis et le contrat via Aperçu PDF', true); return; }
 
-  const to = r.email_crm || r.email_contact || '';
-  if (!to) { toast('Aucun email pour ce prospect', true); return; }
+  // Remplir le modal
+  _mailRecipients = buildMailRecipients(r);
+  renderOfferRecipients();
+  document.getElementById('offer-subject').value =
+    `Proposition commerciale — Location défibrillateur DAE — ${r.denomination_usuelle || ''}`;
+  document.getElementById('offerModal').classList.remove('hidden');
+}
 
-  const subject = `Proposition commerciale — Location défibrillateur DAE — ${r.denomination_usuelle || ''}`;
-  const body    = buildMailBody('');
+function closeOfferModal() {
+  document.getElementById('offerModal').classList.add('hidden');
+}
 
+function renderOfferRecipients() {
+  const picker = document.getElementById('offer-recipients-picker');
+  if (!picker) return;
+  if (_mailRecipients.length === 0) {
+    picker.innerHTML = `<p style="font-size:12px;color:var(--light);font-style:italic;">
+      Aucune adresse email — renseignez-en une dans Fiche Contact.</p>`;
+    updateOfferToField(); return;
+  }
+  picker.innerHTML = _mailRecipients.map((c, i) => `
+    <div class="rcpt-row${c.selected ? ' sel' : ''}" onclick="toggleOfferRecipient(${i})">
+      <div class="rcpt-check">${c.selected ? '✓' : ''}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;">${esc(c.name)}
+          ${c.role ? `<span style="font-weight:400;color:var(--mid);">· ${esc(c.role)}</span>` : ''}</div>
+        <div style="font-size:11px;color:var(--mid);">${esc(c.email)}</div>
+      </div>
+    </div>`).join('');
+  updateOfferToField();
+}
+
+function toggleOfferRecipient(idx) {
+  if (_mailRecipients[idx]) {
+    _mailRecipients[idx].selected = !_mailRecipients[idx].selected;
+    renderOfferRecipients();
+  }
+}
+
+function updateOfferToField() {
+  const selected = _mailRecipients.filter(c => c.selected).map(c => c.email);
+  document.getElementById('offer-to').value = selected.join(', ');
+  const cnt = document.getElementById('offer-to-count');
+  if (cnt) cnt.textContent = selected.length > 1 ? selected.length + ' dest.' : '';
+}
+
+async function doSendOffer() {
+  const r = _currentRecord;
+  if (!r) return;
+  const to = document.getElementById('offer-to').value.trim();
+  if (!to) { toast('Aucun destinataire sélectionné', true); return; }
+
+  const docState = _docState[r.siret] || {};
+  const ds = docState.devis;
+  const cs = docState.contrat;
+  const subject  = document.getElementById('offer-subject').value;
+  const body     = buildMailBody('');
+
+  closeOfferModal();
   toast('📤 Envoi en cours…');
   try {
     const res = await fetch(MAKE_WEBHOOK_URL, {
@@ -3171,6 +3265,7 @@ document.addEventListener('click', e => {
     { id:'contactModal',  close: closeContact      },
     { id:'confirmModal',  close: cancelConfirm     },
     { id:'mailModal',     close: closeMailModal    },
+    { id:'offerModal',    close: closeOfferModal   },
     { id:'devisModal',    close: closeDevisModal   },
     { id:'contratModal',  close: closeContratModal },
     { id:'pdfModal',      close: closePdfModal     },

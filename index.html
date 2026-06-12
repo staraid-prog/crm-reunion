@@ -3408,7 +3408,11 @@ function buildDevisPdf(r, qty, type, prix = 89) {
   doc.text(num,W-14,30,{align:'right'});
   doc.text('SAINTE CLOTILDE, le '+dStr,W-14,36,{align:'right'});
   const cX=108,cY=43,cBW=W-14-cX;
-  const cL=[]; if(r.denomination_usuelle)cL.push({b:true,t:r.denomination_usuelle}); const adr=r.adresse_voie||r.adresse_google||''; if(adr)cL.push({t:adr}); const cpv=[r.code_postal,r.commune].filter(Boolean).join(' '); if(cpv)cL.push({t:cpv}); cL.push({t:'La Réunion'}); if(r.siret){cL.push({t:'N° de TVA : FR'+r.siret.slice(0,11)});cL.push({t:'N° Siret : '+r.siret});}
+  // Calcul clé TVA intracommunautaire française : (12 + 3*(SIREN mod 97)) mod 97
+  const siren = (r.siret||'').slice(0,9);
+  const tvaKey = siren.length===9 ? String((12 + 3*(parseInt(siren)%97))%97).padStart(2,'0') : '';
+  const tvaNum = tvaKey ? 'FR'+tvaKey+siren : '';
+  const cL=[]; if(r.denomination_usuelle)cL.push({b:true,t:r.denomination_usuelle}); const adr=r.adresse_voie||r.adresse_google||''; if(adr)cL.push({t:adr}); const cpv=[r.code_postal,r.commune].filter(Boolean).join(' '); if(cpv)cL.push({t:cpv}); cL.push({t:'La Réunion'}); if(tvaNum)cL.push({t:'N° de TVA : '+tvaNum}); if(r.siret)cL.push({t:'N° Siret : '+r.siret});
   const cBH=8+cL.length*5.5+2; doc.setDrawColor(...LGREY); doc.rect(cX,cY,cBW,cBH);
   let cy2=cY+7; cL.forEach(({b,t})=>{doc.setFont('helvetica',b?'bold':'normal');doc.setFontSize(b?10:9);doc.setTextColor(...DARK);doc.text(t,cX+3,cy2);cy2+=5.5;});
 

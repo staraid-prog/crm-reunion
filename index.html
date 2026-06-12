@@ -2056,16 +2056,19 @@ function openCallModal(siret) {
   _callSiret = siret;
   const statut = _currentRecord?.statut_crm ?? null;
   const isRelanceJ2 = statut === 2;
+  const isRelanceJ5 = statut === 3;
 
   // Adapter le contenu du modal selon le contexte
   const body = document.querySelector('#callModal .modal-body');
-  if (isRelanceJ2) {
+  if (isRelanceJ2 || isRelanceJ5) {
+    const nextLabel  = isRelanceJ2 ? 'J+5' : 'J+10';
+    const fnMsg      = isRelanceJ2 ? 'logRelanceMessagerie(2)' : 'logRelanceMessagerie(3)';
     body.innerHTML = `
       <p style="font-size:13px;color:var(--mid);margin-bottom:18px;text-align:center;">
         Que s'est-il passé lors de ce rappel ?
       </p>
       <div style="display:flex;flex-direction:column;gap:10px;">
-        <button onclick="logRelanceJ2Messagerie()"
+        <button onclick="${fnMsg}"
           style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #fcd34d;
                  background:#fffbeb;color:#b45309;font-size:13px;font-weight:700;cursor:pointer;
                  display:flex;align-items:center;gap:10px;transition:background .15s;"
@@ -2073,7 +2076,7 @@ function openCallModal(siret) {
           <span style="font-size:20px;">📵</span>
           <div style="text-align:left;">
             <div>Messagerie</div>
-            <div style="font-size:11px;font-weight:400;color:#92400e;margin-top:2px;">Passer en Relance J+5</div>
+            <div style="font-size:11px;font-weight:400;color:#92400e;margin-top:2px;">Passer en Relance ${nextLabel}</div>
           </div>
         </button>
         <button onclick="closeCallModal()"
@@ -2238,20 +2241,24 @@ async function logMessagerie() {
 }
 
 // Appel 2 depuis Relance J+2 → messagerie → passe en Relance J+5
-async function logRelanceJ2Messagerie() {
-  const siret = _callSiret;
+// fromStatut 2 → J+5 (3) | fromStatut 3 → J+10 (4)
+async function logRelanceMessagerie(fromStatut) {
+  const siret      = _callSiret;
   closeCallModal();
   if (!siret) return;
+  const nextStatut = fromStatut === 2 ? 3 : 4;
+  const nextLabel  = fromStatut === 2 ? 'J+5' : 'J+10';
   const now        = _nowReunion();
   const appelsJson = _appendAppel(_currentRecord, 'msg');
-  const base = { date_heure_appel: 'MSG:' + now, statut_crm: 3 };
+  const base = { date_heure_appel: 'MSG:' + now, statut_crm: nextStatut };
   if (currentUser) base.commercial = currentUser.prenom + ' ' + currentUser.nom;
   const ok = await _saveWithAppels(siret, base, appelsJson);
   if (ok) {
-    toast('📵 Messagerie enregistrée — passage en Relance J+5');
+    toast(`📵 Messagerie enregistrée — passage en Relance ${nextLabel}`);
     if (_currentRecord) {
       _currentRecord.date_heure_appel = 'MSG:' + now;
-      _currentRecord.statut_crm = 3;
+      _currentRecord.appels_json = appelsJson;
+      _currentRecord.statut_crm = nextStatut;
       if (currentUser) _currentRecord.commercial = base.commercial;
       renderDetail(_currentRecord);
       renderFilters();

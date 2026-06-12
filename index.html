@@ -937,9 +937,7 @@ body.demo-mode header{background:#b45309 !important;}
 <script>
 /* ─── MAKE.COM WEBHOOK ──────────────────────────────────────────── */
 const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/n6sczdlu6oqdc37b6ydpj1xxze5oruyj';
-// Email dynamique : email du commercial connecté (fallback Mathieu)
-function getEmailFrom() { return currentUser?.email || 'm.michon@star-aid.fr'; }
-function getCommercialNom() { return currentUser ? (currentUser.prenom + ' ' + currentUser.nom) : 'Mathieu MICHON'; }
+const EMAIL_FROM = 'm.michon@star-aid.fr';
 
 /* ─── SUPABASE REST ─────────────────────────────────────── */
 const SUPA_URL = 'https://obnpzcebhcrkizycuipk.supabase.co/rest/v1';
@@ -2649,7 +2647,7 @@ async function logJ10Messagerie() {
     const res = await fetch(MAKE_WEBHOOK_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ type: 'relance', from: getEmailFrom(), to, subject, body })
+      body:    JSON.stringify({ type: 'relance', from: EMAIL_FROM, to, subject, body })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
 
@@ -2998,7 +2996,7 @@ async function sendMail() {
     const res = await fetch(MAKE_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: getEmailFrom(), to, subject, body, attachments: [] })
+      body: JSON.stringify({ from: EMAIL_FROM, to, subject, body, attachments: [] })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     toast('✅ Mail envoyé à ' + to);
@@ -3094,41 +3092,13 @@ function previewDevis() {
   toast('✅ Devis généré et validé');
 }
 
-async function sendDevisByGmail() {
+function sendDevisByGmail() {
   const r = _currentRecord;
   if (!r) return;
-  const to = r.email_crm || r.email_contact || '';
-  if (!to) { toast('Aucun email destinataire renseigné', true); return; }
-
-  const ds = _docState[r.siret]?.devis;
-  if (!ds?.pdfBase64) { toast('Générez d\'abord le devis', true); return; }
-
-  const prenom  = (r.signataire || '').trim().split(' ')[0];
-  const subject = 'Devis défibrillateur DAE — ' + (r.denomination_usuelle || '');
-  const body    = (prenom ? 'Bonjour ' + prenom + ',\n\n' : 'Bonjour,\n\n')
-    + 'Veuillez trouver en pièce jointe notre devis pour la location d\'un défibrillateur DAE.\n\n'
-    + 'Cordialement,\n' + getCommercialNom() + '\nSTAR aid';
-
-  toast('📤 Envoi en cours…');
-  try {
-    const res = await fetch(MAKE_WEBHOOK_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        type:            'devis',
-        from:            getEmailFrom(),
-        to,
-        subject,
-        body,
-        devis_filename:  ds.filename,
-        devis_content:   ds.pdfBase64,
-      })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    toast('✅ Devis envoyé à ' + to + ' avec pièce jointe');
-  } catch(e) {
-    toast('❌ Erreur envoi : ' + e.message, true);
-  }
+  const prenom = (r.signataire || '').trim().split(' ')[0];
+  const body = `${prenom ? 'Bonjour '+prenom+',' : 'Bonjour,'}\n\nVeuillez trouver en pièce jointe notre devis pour la location d'un défibrillateur DAE.\n\nCordialement,\nSTAR aid`;
+  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(r.email_crm||r.email_contact||'')}&su=${encodeURIComponent('Devis défibrillateur DAE — '+(r.denomination_usuelle||''))}&body=${encodeURIComponent(body)}`, '_blank');
+  toast('Gmail ouvert — téléchargez le PDF ci-dessus et joignez-le ✓');
 }
 
 /* ─── MODAL CONTRAT ─────────────────────────────────────── */
@@ -3288,7 +3258,7 @@ async function doSendOffer() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type:             'offre',
-        from:             getEmailFrom(),
+        from:             EMAIL_FROM,
         to,
         subject,
         body,
@@ -3428,10 +3398,7 @@ function buildDevisPdf(r, qty, type, prix = 89) {
   ].forEach(l=>{doc.text(l,14,yL);yL+=3.5;});
   yL+=4;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...DARK);
-  // Infos commercial connecté (dynamique)
-  const commercialNom   = (typeof currentUser !== 'undefined' && currentUser) ? (currentUser.prenom+' '+currentUser.nom).toUpperCase() : 'Mathieu MICHON';
-  const commercialEmail = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : 'm.michon@star-aid.fr';
-  ['STAR group - STAR aid','4 allée des Primevères','Le Moufia','97490 SAINTE CLOTILDE','La Réunion',commercialNom,commercialEmail,'0262 150 950','0692 39 49 83']
+  ['STAR group - STAR aid','4 allée des Primevères','Le Moufia','97490 SAINTE CLOTILDE','La Réunion','Mathieu MICHON','m.michon@star-aid.fr','0262 150 950','0692 39 49 83']
     .forEach(l=>{doc.text(l,14,yL);yL+=5;});
 
   // Droite : titre Devis + encadré client

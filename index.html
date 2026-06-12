@@ -2079,7 +2079,7 @@ function openCallModal(siret) {
             <div style="font-size:11px;font-weight:400;color:#92400e;margin-top:2px;">Passer en Relance ${nextLabel}</div>
           </div>
         </button>
-        <button onclick="closeCallModal()"
+        <button onclick="logPriseEnCharge()"
           style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #86efac;
                  background:#f0fdf4;color:#16a34a;font-size:13px;font-weight:700;cursor:pointer;
                  display:flex;align-items:center;gap:10px;transition:background .15s;"
@@ -2087,7 +2087,7 @@ function openCallModal(siret) {
           <span style="font-size:20px;">✅</span>
           <div style="text-align:left;">
             <div>Pris en charge</div>
-            <div style="font-size:11px;font-weight:400;color:#15803d;margin-top:2px;">Fermer — rester sur la fiche</div>
+            <div style="font-size:11px;font-weight:400;color:#15803d;margin-top:2px;">Enregistre l'appel — reste sur la fiche</div>
           </div>
         </button>
       </div>`;
@@ -2241,6 +2241,27 @@ async function logMessagerie() {
 }
 
 // Appel 2 depuis Relance J+2 → messagerie → passe en Relance J+5
+// Pris en charge depuis J+2 ou J+5 → enregistre l'appel, garde le statut
+async function logPriseEnCharge() {
+  const siret = _callSiret;
+  closeCallModal();
+  if (!siret) return;
+  const now        = _nowReunion();
+  const appelsJson = _appendAppel(_currentRecord, 'appel');
+  const base = { date_heure_appel: now };
+  if (currentUser) base.commercial = currentUser.prenom + ' ' + currentUser.nom;
+  const ok = await _saveWithAppels(siret, base, appelsJson);
+  if (ok) {
+    toast('📞 Appel enregistré — ' + now);
+    if (_currentRecord) {
+      _currentRecord.date_heure_appel = now;
+      _currentRecord.appels_json = appelsJson;
+      if (currentUser) _currentRecord.commercial = base.commercial;
+      renderDetail(_currentRecord);
+    }
+  }
+}
+
 // fromStatut 2 → J+5 (3) | fromStatut 3 → J+10 (4)
 async function logRelanceMessagerie(fromStatut) {
   const siret      = _callSiret;

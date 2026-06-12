@@ -1636,43 +1636,35 @@ async function renderDashCalendar(container) {
   const DOTS = { 2:'#06b6d4', 3:'#8b5cf6', 4:'#f97316' };
   const CLS  = { 2:'j2',      3:'j5',      4:'j10'     };
 
-  // Séparer : avec date ISO valide / sans date
-  const withDate    = rows.filter(r => r.date_relance && /^\d{4}-\d{2}-\d{2}$/.test(r.date_relance));
+  // Prospects sans date → leur assigner aujourd'hui + sauvegarder en background
   const withoutDate = rows.filter(r => !r.date_relance || !/^\d{4}-\d{2}-\d{2}$/.test(r.date_relance));
-
-  // Regrouper par date
-  const groups = {};
-  withDate.forEach(r => {
-    if (!groups[r.date_relance]) groups[r.date_relance] = [];
-    groups[r.date_relance].push(r);
-  });
-
-  // Carte prospect pour la vue calendrier
-  function calCard(r) {
-    const label = STATUTS[r.statut_crm]?.label || '';
-    return `<div class="cal-card ${CLS[r.statut_crm]||''}" onclick="selectProspect('${esc(r.siret)}',null)">
-      <div class="cal-card-name">${esc(r.denomination_usuelle)}</div>
-      <div class="cal-card-tag" style="color:${DOTS[r.statut_crm]||'#ccc'};font-weight:600;">${label} · ${esc(r.commune||'—')}</div>
-    </div>`;
+  if (withoutDate.length > 0) {
+    withoutDate.forEach(r => { r.date_relance = today; });
+    // Sauvegarde en parallèle, sans bloquer l'affichage
+    Promise.all(withoutDate.map(r => dbUpdate('prospects', r.siret, { date_relance: today })));
   }
 
-  // Petite carte pour la section "non planifié"
-  function flatCard(r) {
-    return `<div class="dash-card ${CLS[r.statut_crm]||''}" onclick="selectProspect('${esc(r.siret)}',null)"
-              style="margin-bottom:4px;">
-      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${DOTS[r.statut_crm]||'#ccc'};flex-shrink:0;"></span>
-      <div class="dash-card-body">
-        <div class="dash-card-name">${esc(r.denomination_usuelle)}</div>
-        <div class="dash-card-meta">${esc(r.commune||'—')}</div>
+  // Regrouper TOUS les prospects par date
+  const groups = {};
+  rows.forEach(r => {
+    const dt = r.date_relance || today;
+    if (!groups[dt]) groups[dt] = [];
+    groups[dt].push(r);
+  });
+
+  // Carte prospect dans une colonne du calendrier
+  function calCard(r) {
+    return `<div class="cal-card ${CLS[r.statut_crm]||''}" onclick="selectProspect('${esc(r.siret)}',null)">
+      <div class="cal-card-name">${esc(r.denomination_usuelle)}</div>
+      <div class="cal-card-tag" style="color:${DOTS[r.statut_crm]||'#ccc'};font-weight:600;">
+        ${STATUTS[r.statut_crm]?.label||''} · ${esc(r.commune||'—')}
       </div>
-      <span style="font-size:10px;color:${DOTS[r.statut_crm]||'#ccc'};font-weight:700;white-space:nowrap;flex-shrink:0;">${STATUTS[r.statut_crm]?.label||''}</span>
-      <span style="color:#ccc;font-size:16px;">›</span>
     </div>`;
   }
 
   let html = '<div class="cal-grid">';
 
-  // Colonnes calendrier, triées chronologiquement
+  // Colonnes triées chronologiquement
   Object.keys(groups).sort().forEach(dt => {
     const isPast  = dt < today;
     const isToday = dt === today;
@@ -1684,24 +1676,15 @@ async function renderDashCalendar(container) {
 
     html += `<div class="cal-col">
       <div class="cal-head${headCls}">
-        <div class="cal-head-day">${isPast?'⚠️ ':''}${dayName}</div>
+        <div class="cal-head-day">${isPast ? '⚠️ ' : ''}${dayName}</div>
         <div class="cal-head-date">${dayDate}</div>
-        <div class="cal-head-badge">${group.length} relance${group.length>1?'s':''}</div>
+        <div class="cal-head-badge">${group.length} relance${group.length > 1 ? 's' : ''}</div>
       </div>
       <div class="cal-body">${group.map(calCard).join('')}</div>
     </div>`;
   });
 
   html += '</div>';
-
-  // Section "date non définie" sous le calendrier
-  if (withoutDate.length > 0) {
-    html += `<div class="cal-nodate">
-      <div class="cal-nodate-head">📋 Date de relance non définie — ${withoutDate.length} prospect${withoutDate.length>1?'s':''}</div>
-      <div class="cal-nodate-list">${withoutDate.map(flatCard).join('')}</div>
-    </div>`;
-  }
-
   container.innerHTML = html;
 }
 

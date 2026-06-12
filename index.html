@@ -190,6 +190,10 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 .act-mail:hover{background:#dbeafe;}
 .act-devis  {background:#f0fdf4;color:#16a34a;border-color:#86efac;}
 .act-devis:hover{background:#dcfce7;}
+.dv-prix-btn{flex:1;padding:14px 0;border-radius:8px;border:2px solid var(--border);
+  background:#f9f9f9;font-size:22px;font-weight:700;color:var(--mid);cursor:pointer;transition:.15s;}
+.dv-prix-btn:hover{border-color:var(--red);color:var(--red);background:#fff5f5;}
+.dv-prix-btn.sel{border-color:var(--red);background:var(--red);color:#fff;}
 .act-contrat{background:#fff7ed;color:#c2410c;border-color:#fdba74;}
 .act-contrat:hover{background:#ffedd5;}
 .act-sep{height:1px;background:var(--border);margin:2px 0;}
@@ -727,27 +731,17 @@ body.demo-mode header{background:#b45309 !important;}
         </div>
       </div>
       <div class="mrow">
-        <label>Remise commerciale</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-          <input type="number" id="dv-remise-com" min="0" max="500" value="0"
-            style="width:90px;font-size:15px;padding:8px 12px;border:1.5px solid var(--border);border-radius:5px;text-align:center;"
-            oninput="updateDevisCalc()" placeholder="0">
-          <span style="font-size:11px;color:var(--light);">€ de remise sur le total HT</span>
+        <label>Prix unitaire / mois HT</label>
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <button class="dv-prix-btn" data-prix="79" onclick="selectDevisPrix(79)">79 €</button>
+          <button class="dv-prix-btn sel" data-prix="89" onclick="selectDevisPrix(89)">89 €</button>
         </div>
       </div>
 
       <div class="price-box">
         <div class="price-row">
           <span style="color:var(--mid);">Prix unitaire HT</span>
-          <span style="font-weight:700;">89,00 €/mois</span>
-        </div>
-        <div class="price-row">
-          <span style="color:var(--mid);">Remise volume</span>
-          <span id="dv-remise" style="font-weight:700;color:var(--light);">Aucune</span>
-        </div>
-        <div class="price-row" id="dv-remise-com-row" style="display:none;">
-          <span style="color:#16a34a;">Remise commerciale</span>
-          <span id="dv-remise-com-display" style="font-weight:700;color:#16a34a;"></span>
+          <span id="dv-pu" style="font-weight:700;">89,00 €/mois</span>
         </div>
         <div style="border-top:1px solid #86efac;padding-top:10px;margin-top:4px;">
           <div class="price-row" style="font-weight:700;">
@@ -764,9 +758,6 @@ body.demo-mode header{background:#b45309 !important;}
           </div>
         </div>
       </div>
-      <p style="font-size:11px;color:var(--light);margin-top:8px;text-align:center;">
-        Remise : 10€/app. pour 2-3 appareils · 20€/app. pour 4+
-      </p>
     </div>
     <div class="modal-foot">
       <button class="btn btn-grey" onclick="closeDevisModal()">Annuler</button>
@@ -2432,10 +2423,19 @@ function openDevisModal() {
   const full = document.getElementById('dv-full');
   if (full) full.checked = true;
   document.getElementById('dv-qty').value = '1';
-  const remiseCom = document.getElementById('dv-remise-com');
-  if (remiseCom) remiseCom.value = '0';
+  // Réinitialiser la sélection de prix à 89€
+  document.querySelectorAll('.dv-prix-btn').forEach(b => b.classList.remove('sel'));
+  const btn89 = document.querySelector('.dv-prix-btn[data-prix="89"]');
+  if (btn89) btn89.classList.add('sel');
   updateDevisCalc();
   document.getElementById('devisModal').classList.remove('hidden');
+}
+
+function selectDevisPrix(prix) {
+  document.querySelectorAll('.dv-prix-btn').forEach(b => b.classList.remove('sel'));
+  const btn = document.querySelector(`.dv-prix-btn[data-prix="${prix}"]`);
+  if (btn) btn.classList.add('sel');
+  updateDevisCalc();
 }
 
 function closeDevisModal() {
@@ -2445,15 +2445,15 @@ function closeDevisModal() {
 function validerDevis() {
   const r = _currentRecord;
   if (!r) return;
-  const qty       = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
-  const type      = document.querySelector('input[name="dv-type"]:checked')?.value || 'Full automatique';
-  const remiseCom = Math.max(0, parseFloat(document.getElementById('dv-remise-com')?.value) || 0);
-  const nom       = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
-  const filename  = `Devis_StarAid_${nom}.pdf`;
-  const b64       = buildDevisPdf(r, qty, type, remiseCom).output('datauristring').split(',')[1];
+  const qty  = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
+  const type = document.querySelector('input[name="dv-type"]:checked')?.value || 'Full automatique';
+  const prix = parseInt(document.querySelector('.dv-prix-btn.sel')?.dataset.prix || '89');
+  const nom  = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
+  const filename = `Devis_StarAid_${nom}.pdf`;
+  const b64  = buildDevisPdf(r, qty, type, prix).output('datauristring').split(',')[1];
 
   if (!_docState[r.siret]) _docState[r.siret] = {};
-  _docState[r.siret].devis = { qty, type, remiseCom, validated: true, pdfBase64: b64, filename };
+  _docState[r.siret].devis = { qty, type, prix, validated: true, pdfBase64: b64, filename };
 
   closeDevisModal();
   toast('✅ Devis validé — prêt à envoyer');
@@ -2461,25 +2461,14 @@ function validerDevis() {
 }
 
 function updateDevisCalc() {
-  const qty        = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
-  const remiseCom  = Math.max(0, parseFloat(document.getElementById('dv-remise-com')?.value) || 0);
-  const remise     = qty >= 4 ? 20 : qty >= 2 ? 10 : 0;
-  const ht         = Math.max(0, (89 - remise) * qty - remiseCom);
-  const tva        = ht * 0.085;
-  const ttc        = ht + tva;
+  const qty  = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
+  const prix = parseInt(document.querySelector('.dv-prix-btn.sel')?.dataset.prix || '89');
+  const ht   = prix * qty;
+  const tva  = ht * 0.085;
+  const ttc  = ht + tva;
 
-  const rem = document.getElementById('dv-remise');
-  rem.textContent = remise > 0 ? `-${remise} €/app.` : 'Aucune';
-  rem.style.color = remise > 0 ? '#16a34a' : 'var(--light)';
-
-  const comRow = document.getElementById('dv-remise-com-row');
-  const comDisplay = document.getElementById('dv-remise-com-display');
-  if (remiseCom > 0 && comRow && comDisplay) {
-    comRow.style.display = '';
-    comDisplay.textContent = `-${fmtEur(remiseCom)}`;
-  } else if (comRow) {
-    comRow.style.display = 'none';
-  }
+  const puEl = document.getElementById('dv-pu');
+  if (puEl) puEl.textContent = fmtEur(prix) + '/mois';
 
   document.getElementById('dv-ht').textContent  = fmtEur(ht);
   document.getElementById('dv-tva').textContent = fmtEur(tva);
@@ -2489,17 +2478,17 @@ function updateDevisCalc() {
 function previewDevis() {
   const r    = _currentRecord;
   if (!r) return;
-  const qty       = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
-  const type      = document.querySelector('input[name="dv-type"]:checked')?.value || 'Full automatique';
-  const remiseCom = Math.max(0, parseFloat(document.getElementById('dv-remise-com')?.value) || 0);
-  const doc       = buildDevisPdf(r, qty, type, remiseCom);
-  const nom       = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
-  const filename  = `Devis_StarAid_${nom}.pdf`;
-  const b64       = doc.output('datauristring').split(',')[1];
+  const qty  = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
+  const type = document.querySelector('input[name="dv-type"]:checked')?.value || 'Full automatique';
+  const prix = parseInt(document.querySelector('.dv-prix-btn.sel')?.dataset.prix || '89');
+  const doc  = buildDevisPdf(r, qty, type, prix);
+  const nom  = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
+  const filename = `Devis_StarAid_${nom}.pdf`;
+  const b64  = doc.output('datauristring').split(',')[1];
 
   // Auto-validation + stockage du PDF
   if (!_docState[r.siret]) _docState[r.siret] = {};
-  _docState[r.siret].devis = { qty, type, remiseCom, validated: true, pdfBase64: b64, filename };
+  _docState[r.siret].devis = { qty, type, prix, validated: true, pdfBase64: b64, filename };
 
   const url = doc.output('bloburl');
   _pdfUrl   = url;
@@ -2735,7 +2724,7 @@ function downloadCurrentPdf() {
 }
 
 /* ─── GÉNÉRATION PDF — DEVIS ────────────────────────────── */
-function buildDevisPdf(r, qty, type, remiseCom = 0) {
+function buildDevisPdf(r, qty, type, prix = 89) {
   const { jsPDF } = window.jspdf;
   const doc  = new jsPDF({ unit: 'mm', format: 'a4' });
   const W    = 210;
@@ -2744,12 +2733,10 @@ function buildDevisPdf(r, qty, type, remiseCom = 0) {
   const GREY = [120, 120, 120];
   const LGREY= [200, 200, 200];
 
-  const remise     = qty >= 4 ? 20 : qty >= 2 ? 10 : 0;
-  const puHT       = 89;
-  const subtotalHT = (puHT - remise) * qty;
-  const totalHT    = Math.max(0, subtotalHT - remiseCom);
-  const tva        = totalHT * 0.085;
-  const totalTTC   = totalHT + tva;
+  const puHT     = prix;
+  const totalHT  = puHT * qty;
+  const tva      = totalHT * 0.085;
+  const totalTTC = totalHT + tva;
   const numDevis = 'D' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + (r.siret||'').slice(-4);
   const date     = new Date().toLocaleDateString('fr-FR', { timeZone: 'Indian/Reunion' });
 
@@ -2816,34 +2803,8 @@ function buildDevisPdf(r, qty, type, remiseCom = 0) {
   doc.text(fmtEur(puHT), 160, rY+7, { align:'center' });
   doc.text(fmtEur(puHT*qty), W-15, rY+7, { align:'right' });
 
-  // Ligne 2 — remise volume (si applicable)
-  if (remise > 0) {
-    rY += 12;
-    doc.setFillColor(240,255,244);
-    doc.rect(14, rY, W-28, 10, 'F');
-    doc.setTextColor(22,163,74);
-    doc.setFont('helvetica','italic'); doc.setFontSize(10);
-    const rl = qty >= 4 ? 'Remise volume (4 appareils et +)' : 'Remise volume (2-3 appareils)';
-    doc.text(rl, 16, rY+6.5);
-    doc.text(String(qty), 130, rY+6.5, { align:'center' });
-    doc.text('−'+fmtEur(remise), 160, rY+6.5, { align:'center' });
-    doc.text('−'+fmtEur(remise*qty), W-15, rY+6.5, { align:'right' });
-  }
-
-  // Ligne 3 — remise commerciale (si applicable)
-  if (remiseCom > 0) {
-    rY += (remise > 0 ? 10 : 12);
-    doc.setFillColor(240,255,244);
-    doc.rect(14, rY, W-28, 10, 'F');
-    doc.setTextColor(22,163,74);
-    doc.setFont('helvetica','italic'); doc.setFontSize(10);
-    doc.text('Remise commerciale', 16, rY+6.5);
-    doc.text('−'+fmtEur(remiseCom), W-15, rY+6.5, { align:'right' });
-  }
-
   // ── Totaux ──
-  const lastRowH = remiseCom > 0 ? 10 : (remise > 0 ? 10 : 12);
-  let totY = rY + lastRowH + 6;
+  let totY = rY + 12 + 6;
   doc.setDrawColor(...LGREY); doc.line(120, totY, W-14, totY);
 
   totY += 6;

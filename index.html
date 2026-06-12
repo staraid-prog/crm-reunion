@@ -3474,13 +3474,13 @@ function buildDevisPdf(r, qty, type, prix = 89) {
 function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   const { jsPDF } = window.jspdf;
   const doc  = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W    = 210;
-  const RED  = [171, 30, 46];
-  const DARK = [26, 26, 26];
-  const GREY = [90, 90, 90];
-  const LGREY= [200, 200, 200];
-  let   y    = 0;
-  const NEWF = true; // flag nouvelle version fidèle au DOCX
+  const W      = 210;
+  const RED    = [171, 30, 46];
+  const DARK   = [26, 26, 26];
+  const GREY   = [90, 90, 90];
+  const LGREY  = [200, 200, 200];
+  const YELLOW = [255, 255, 153];
+  let   y      = 0;
 
   function addPageHeader() {
     doc.setFillColor(...RED);
@@ -3544,6 +3544,7 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   }
 
   function gap(n = 4) { y += n; }
+
   function field(label, val, valColor = [...DARK]) {
     checkNewPage(8);
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
@@ -3552,6 +3553,35 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
     doc.text(val || '', 65, y);
     doc.setDrawColor(...LGREY); doc.line(65, y+1, W-14, y+1);
     y += 9;
+  }
+
+  // Champ à remplir (fond jaune sur la zone valeur)
+  function fieldYellow(label, val) {
+    checkNewPage(8);
+    const lw = doc.getStringUnitWidth(label) * 9 / doc.internal.scaleFactor;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+    doc.text(label, 14, y);
+    // Fond jaune sur la zone à remplir
+    doc.setFillColor(...YELLOW);
+    doc.rect(14 + lw + 1, y - 4, W - 14 - (14 + lw + 1), 5.5, 'F');
+    doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
+    doc.text(val || '', 14 + lw + 2, y);
+    y += 7;
+  }
+
+  // Ligne de texte avec fond jaune (champs à remplir par le client)
+  function paraYellow(txt, indent = 0) {
+    const maxW = W - 28 - indent;
+    const lines = doc.splitTextToSize(txt, maxW);
+    lines.forEach(line => {
+      checkNewPage(5);
+      doc.setFillColor(...YELLOW);
+      doc.rect(14 + indent, y - 3.5, maxW, 5.2, 'F');
+      doc.setTextColor(...GREY);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+      doc.text(line, 14 + indent, y);
+      y += 4.5;
+    });
   }
 
   // ════════════════ PAGE 1 ════════════════
@@ -3593,12 +3623,13 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   y += 5;
   doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
 
-  const repPar = r.signataire || '…………………………………………………………………………………………';
-  para('représentée par ' + repPar);
-  const fonc = r.fonction || '…………………………………………………………………………';
-  para('de nationalité ……………………………    Fonction ' + fonc);
-  const adresse = [r.adresse_voie, r.code_postal ? r.code_postal + ' ' + r.commune : r.commune].filter(Boolean).join(', ') || '…………………………………………………………………………………………………………………';
-  para('Sise ' + adresse);
+  // Champs à remplir → fond jaune
+  const repPar = r.signataire || '';
+  paraYellow('représentée par ' + repPar);
+  const fonc = r.fonction || '';
+  paraYellow('de nationalité …………………………………    Fonction ' + fonc);
+  const adresse = [r.adresse_voie, r.code_postal ? r.code_postal + ' ' + r.commune : r.commune].filter(Boolean).join(', ') || '';
+  paraYellow('Sise ' + adresse);
   para('(Ci-après dénommé « LOCATAIRE »)');
   gap(4);
 
@@ -3811,10 +3842,12 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
     // ── LOCATAIRE (gauche) ──
     doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
     doc.text('Le LOCATAIRE :', 20, yStart);
-    // Cadre cachet locataire
+    // Cadre cachet locataire — fond jaune (à remplir)
+    doc.setFillColor(...YELLOW);
+    doc.rect(20, yStart + 3, 75, 22, 'F');
     doc.setDrawColor(...LGREY);
     doc.rect(20, yStart + 3, 75, 22);
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(180,180,180);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(130,130,100);
     doc.text('Cachet de la structure', 57.5, yStart + 15, { align:'center' });
 
     // ── LOUEUR (droite) ──
@@ -3858,21 +3891,25 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   y += 14;
 
   field('Titulaire du compte :', r.denomination_usuelle || '');
-  field('IBAN :', '');
-  field('BIC :', '');
-  field('Banque :', '');
+  fieldYellow('IBAN :', '');
+  fieldYellow('BIC :', '');
+  fieldYellow('Banque :', '');
   field('Fait à :', villeSign || r.commune || '');
   field('Le :', dateSign);
   y += 8;
 
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...DARK);
   doc.text('Signature du titulaire du compte :', 14, y);
   doc.text('Cachet établissement :', W/2 + 10, y);
-  y += 26;
+  y += 5;
+  // Zones jaunes signature SEPA
+  doc.setFillColor(...YELLOW);
+  doc.rect(14, y, W/2 - 24, 22, 'F');
+  doc.rect(W/2 + 10, y, W/2 - 24, 22, 'F');
   doc.setDrawColor(...LGREY);
-  doc.line(14, y, W/2 - 10, y);
-  doc.line(W/2 + 10, y, W - 14, y);
-  y += 14;
+  doc.rect(14, y, W/2 - 24, 22);
+  doc.rect(W/2 + 10, y, W/2 - 24, 22);
+  y += 28;
 
   // ── PIÈCES OBLIGATOIRES ──
   doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...DARK);
@@ -3912,9 +3949,14 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   doc.setTextColor(...DARK); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
   doc.text('ZOLL', cx+3, y+2); cx += colWs[0];
   doc.text('AED PLUS - FULL AUTO', cx+3, y+2); cx += colWs[1];
+  // Cellules à remplir → fond jaune
+  doc.setFillColor(...YELLOW);
+  doc.rect(cx, y-4, colWs[2], 12, 'F');
   doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
   doc.text('A REMPLIR PAR STAR-AID', cx+3, y+2); cx += colWs[2];
-  doc.text('……………………………………………', cx+3, y+2);
+  doc.setFillColor(...YELLOW);
+  doc.rect(cx, y-4, colWs[3] || (W-14-cx), 12, 'F');
+  doc.text('', cx+3, y+2);
   y += 14;
 
   // Lignes vides supplémentaires
@@ -3930,15 +3972,18 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   }
   y += 10;
 
-  // Infos responsable
+  // Infos responsable — fond jaune sur les zones à remplir
   const lig = (label, val) => {
-    checkNewPage(7);
+    checkNewPage(8);
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
     doc.text(label, 14, y);
-    doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
     const lw = doc.getTextWidth(label);
-    doc.text(val || '……………………………………………………………………………………………………………', 14 + lw + 2, y);
-    doc.setDrawColor(...LGREY); doc.line(14 + lw + 2, y+1, W-14, y+1);
+    const valX = 14 + lw + 2;
+    // Fond jaune
+    doc.setFillColor(...YELLOW);
+    doc.rect(valX, y - 4, W - 14 - valX, 5.5, 'F');
+    doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
+    doc.text(val || '', valX, y);
     y += 8;
   };
   lig('Nom de la personne responsable :', '');

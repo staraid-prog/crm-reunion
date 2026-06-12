@@ -3339,133 +3339,218 @@ function downloadCurrentPdf() {
 /* ─── GÉNÉRATION PDF — DEVIS ────────────────────────────── */
 function buildDevisPdf(r, qty, type, prix = 89) {
   const { jsPDF } = window.jspdf;
-  const doc  = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W    = 210;
-  const RED  = [171, 30, 46];
-  const DARK = [26, 26, 26];
-  const GREY = [120, 120, 120];
-  const LGREY= [200, 200, 200];
+  const doc   = new jsPDF({ unit:'mm', format:'a4' });
+  const W     = 210;
+  const RED   = [171,30,46];
+  const DARK  = [26,26,26];
+  const GREY  = [100,100,100];
+  const LGREY = [200,200,200];
 
-  const puHT     = prix;
-  const totalHT  = puHT * qty;
-  const tva      = totalHT * 0.085;
-  const totalTTC = totalHT + tva;
-  const numDevis = 'D' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + (r.siret||'').slice(-4);
-  const date     = new Date().toLocaleDateString('fr-FR', { timeZone: 'Indian/Reunion' });
+  const ht  = prix * (qty||1);
+  const tva = Math.round(ht * 0.085 * 100) / 100;
+  const ttc = ht + tva;
+  const now = new Date();
+  const num = 'D' + now.toISOString().slice(0,10).replace(/-/g,'') + '-' + ('00000'+(r.siret||'').slice(-5)).slice(-5);
+  const dStr= now.toLocaleDateString('fr-FR');
+  const vStr= new Date(+now+30*86400e3).toLocaleDateString('fr-FR');
+  const fm  = n => n.toFixed(2).replace('.',',')+' €';
 
-  // ── En-tête rouge ──
-  doc.setFillColor(...RED);
-  doc.rect(0, 0, W, 42, 'F');
+  // Colonnes tableau (total 182mm = 14→196)
+  const C0=14,C1=39,C2=114,C3=133,C4=151,C5=169,C6=187,C7=196;
 
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(22);
-  doc.text('STAR AID', 14, 16);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  doc.text('Groupe STAR | Fournisseur de défibrillateurs', 14, 22);
-  doc.text('4 allée des Primevères — 97490 Sainte-Clotilde (Réunion)', 14, 27);
-  doc.text('www.star-aid.fr  |  contact@star-aid.re', 14, 32);
-  doc.text('SIRET 500 168 190 00022', 14, 37);
+  // ── Ligne de tableau ──
+  function tRow(y0,ref,items,pu,qt,rem,mht,tvaS,bg) {
+    const dW=C2-C1-3, rW=C1-C0-3;
+    const dL=[]; items.forEach(({b,t})=>{ doc.setFont('helvetica',b?'bold':'normal'); doc.setFontSize(7.5); doc.splitTextToSize(t,dW).forEach(l=>dL.push({b,l})); });
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    const rL=doc.splitTextToSize(ref,rW);
+    const h=Math.max(dL.length*4.5+7, rL.length*4+6, 12);
+    doc.setFillColor(...(bg||[255,255,255])); doc.rect(C0,y0,C7-C0,h,'F');
+    doc.setDrawColor(...LGREY); [C0,C1,C2,C3,C4,C5,C6,C7].forEach(x=>doc.line(x,y0,x,y0+h)); doc.line(C0,y0+h,C7,y0+h);
+    let ry=y0+5; doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...DARK); rL.forEach(l=>{doc.text(l,C0+2,ry);ry+=4;});
+    let dy=y0+5; dL.forEach(({b,l})=>{ doc.setFont('helvetica',b?'bold':'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK); doc.text(l,C1+2,dy); dy+=4.5; });
+    const my=y0+h/2+2; doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+    if(pu)  doc.text(pu,  (C2+C3)/2,my,{align:'center'});
+    if(qt)  doc.text(qt,  (C3+C4)/2,my,{align:'center'});
+    if(rem) doc.text(rem, (C4+C5)/2,my,{align:'center'});
+    if(mht) doc.text(mht, (C5+C6)/2,my,{align:'center'});
+    if(tvaS)doc.text(tvaS,(C6+C7)/2,my,{align:'center'});
+    return y0+h;
+  }
 
-  doc.setFont('helvetica','bold'); doc.setFontSize(18);
-  doc.text('DEVIS', W-14, 16, { align:'right' });
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  doc.text('N° ' + numDevis, W-14, 22, { align:'right' });
-  doc.text('Date : ' + date, W-14, 27, { align:'right' });
-  doc.text('Valable 30 jours', W-14, 32, { align:'right' });
+  function phdr(pg,tot){ doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GREY); doc.text('STAR group - STAR aid - Devis '+num,14,7); doc.text('Page '+pg+'/'+tot,W-14,7,{align:'right'}); doc.setDrawColor(...LGREY); doc.line(14,9,W-14,9); }
+  function pftr(pg,tot){ doc.setDrawColor(...LGREY); doc.line(14,280,W-14,280); doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...GREY); doc.text('STAR group - STAR aid - Devis '+num+'   Page '+pg+'/'+tot,W/2,284,{align:'center'}); doc.text('STAR group - STAR aid - SARL au capital de 21 090 €',W/2,288,{align:'center'}); doc.text('N° Siret : 50016819000022 - R.C.S. Saint Denis 974 500 168 190 - Code APE : 4646 Z - TVA intracommunautaire : FR39500168190',W/2,292,{align:'center'}); }
 
-  // ── Bloc CLIENT ──
-  doc.setTextColor(...DARK);
-  doc.setFont('helvetica','bold'); doc.setFontSize(9);
-  doc.text('CLIENT', 14, 52);
-  doc.setDrawColor(...LGREY); doc.line(14, 54, 95, 54);
+  // ═════════════ PAGE 1 ═════════════
+  phdr(1,2);
 
-  let cy = 61;
-  doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  doc.text(r.denomination_usuelle || '', 14, cy); cy += 7;
-  doc.setFont('helvetica','normal'); doc.setFontSize(10);
-  const adr = r.adresse_voie || r.adresse_google || '';
-  if (adr) { doc.text(adr, 14, cy); cy += 6; }
-  const cpville = [r.code_postal, r.commune].filter(Boolean).join(' ');
-  if (cpville) { doc.text(cpville, 14, cy); cy += 6; }
-  if (r.signataire) { doc.text('À l\'attention de : ' + r.signataire, 14, cy); cy += 6; }
-  doc.setTextColor(...GREY); doc.setFontSize(9);
-  doc.text('SIRET : ' + (r.siret||''), 14, cy);
+  // Gauche : logo + infos société
+  doc.setFont('helvetica','bold'); doc.setFontSize(26); doc.setTextColor(...DARK);
+  doc.text('STAR',14,21); const sw=doc.getTextWidth('STAR');
+  doc.setFontSize(22); doc.setTextColor(...RED); doc.text('aid',14+sw+1,21);
+  let yL=27;
+  doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...DARK);
+  doc.text('afnor',14,yL); doc.text('Qualiopi',35,yL);
+  doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(...GREY);
+  doc.text('CERTIFICATION',14,yL+3.5); doc.text('processus certifié',35,yL+3.5); doc.text('■ RÉPUBLIQUE FRANÇAISE',35,yL+7);
+  yL+=12;
+  doc.setFont('helvetica','normal'); doc.setFontSize(5.5); doc.setTextColor(...RED);
+  ["Cette Certification Qualité a été délivrée au titre de la catégorie d'action suivante : Action de Formation",
+   "Numéro de déclaration d'activité de l'organisme de formation : 98 97 04214 97",
+   "Numéro d'habilitation INRS SST : H32317/2019/SST-1/O/23",
+   "Numéro d'habilitation INRS PRAP IBC : H33153/2019/Prap-IBC-1/O/23"
+  ].forEach(l=>{doc.text(l,14,yL);yL+=3.5;});
+  yL+=4;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...DARK);
+  ['STAR group - STAR aid','4 allée des Primevères','Le Moufia','97490 SAINTE CLOTILDE','La Réunion','Mathieu MICHON','m.michon@star-aid.fr','0262 150 950','0692 39 49 83']
+    .forEach(l=>{doc.text(l,14,yL);yL+=5;});
 
-  // ── Tableau produits ──
-  const tY = 102;
-  doc.setFillColor(...RED);
-  doc.rect(14, tY, W-28, 8, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(9);
-  doc.text('DÉSIGNATION', 16, tY+5.5);
-  doc.text('QTÉ', 130, tY+5.5, { align:'center' });
-  doc.text('P.U. HT', 160, tY+5.5, { align:'center' });
-  doc.text('TOTAL HT', W-15, tY+5.5, { align:'right' });
+  // Droite : titre Devis + encadré client
+  doc.setFont('helvetica','normal'); doc.setFontSize(38); doc.setTextColor(185,185,185);
+  doc.text('Devis',W-14,21,{align:'right'});
+  doc.setFontSize(9.5); doc.setTextColor(...DARK);
+  doc.text(num,W-14,30,{align:'right'});
+  doc.text('SAINTE CLOTILDE, le '+dStr,W-14,36,{align:'right'});
+  const cX=108,cY=43,cBW=W-14-cX;
+  const cL=[]; if(r.denomination_usuelle)cL.push({b:true,t:r.denomination_usuelle}); const adr=r.adresse_voie||r.adresse_google||''; if(adr)cL.push({t:adr}); const cpv=[r.code_postal,r.commune].filter(Boolean).join(' '); if(cpv)cL.push({t:cpv}); cL.push({t:'La Réunion'}); if(r.siret){cL.push({t:'N° de TVA : FR'+r.siret.slice(0,11)});cL.push({t:'N° Siret : '+r.siret});}
+  const cBH=8+cL.length*5.5+2; doc.setDrawColor(...LGREY); doc.rect(cX,cY,cBW,cBH);
+  let cy2=cY+7; cL.forEach(({b,t})=>{doc.setFont('helvetica',b?'bold':'normal');doc.setFontSize(b?10:9);doc.setTextColor(...DARK);doc.text(t,cX+3,cy2);cy2+=5.5;});
 
-  // Ligne 1 — appareil
-  let rY = tY + 8;
-  doc.setFillColor(248,248,248);
-  doc.rect(14, rY, W-28, 12, 'F');
-  doc.setTextColor(...DARK);
-  doc.setFont('helvetica','normal'); doc.setFontSize(10);
-  doc.text('Défibrillateur ' + type + ' (location mensuelle)', 16, rY+5);
-  doc.setFontSize(8.5); doc.setTextColor(...GREY);
-  doc.text('Maintenance • Formation • Assistance 7j/7 • Attestation admin.', 16, rY+9.5);
-  doc.setTextColor(...DARK); doc.setFontSize(10);
-  doc.text(String(qty), 130, rY+7, { align:'center' });
-  doc.text(fmtEur(puHT), 160, rY+7, { align:'center' });
-  doc.text(fmtEur(puHT*qty), W-15, rY+7, { align:'right' });
+  // Titre section
+  let y=Math.max(yL+4,cY+cBH+6);
+  doc.setFillColor(248,248,248); doc.rect(14,y,C7-C0,8,'F'); doc.setDrawColor(...LGREY); doc.rect(14,y,C7-C0,8);
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...DARK);
+  doc.text('Proposition - Location Mensuelle Défibrillateur',W/2,y+5.5,{align:'center'});
+  y+=12;
 
-  // ── Totaux ──
-  let totY = rY + 12 + 6;
-  doc.setDrawColor(...LGREY); doc.line(120, totY, W-14, totY);
+  // En-tête tableau
+  doc.setFillColor(80,80,80); doc.rect(C0,y,C7-C0,7,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(255,255,255);
+  doc.text('Réf',C0+2,y+5); doc.text('Description',C1+2,y+5);
+  doc.text('Prix unitaire',(C2+C3)/2,y+5,{align:'center'}); doc.text('Quantité',(C3+C4)/2,y+5,{align:'center'});
+  doc.text('Remise',(C4+C5)/2,y+5,{align:'center'}); doc.text('Montant HT',(C5+C6)/2,y+5,{align:'center'}); doc.text('TVA',(C6+C7)/2,y+5,{align:'center'});
+  y+=7;
 
-  totY += 6;
-  doc.setTextColor(...DARK); doc.setFont('helvetica','normal'); doc.setFontSize(10);
-  doc.text('Sous-total HT / mois', 122, totY);
-  doc.text(fmtEur(totalHT), W-15, totY, { align:'right' });
+  y=tRow(y,'974-LOC-DEF-LIFE-MENS',[
+    {b:true, t:'974 - LOCATION DEFIBRILLATEUR MENSUELLE STAR LIFE'},
+    {b:false,t:'1x Défibrillateur.Electrodes adulte/enfant.'},
+    {b:false,t:'1x Alimentation LiThium.'},
+    {b:false,t:'1x Kit de préparation à la RCP.'},
+    {b:false,t:"Notice d'utilisation en français."},
+    {b:false,t:'Maintenance préventive (visite annuelle) offerte.'},
+    {b:false,t:'Maintenance curative sur appel offerte.'},
+    {b:false,t:'Remplacement batteries ou piles DAE offert.'},
+    {b:false,t:'Remplacement électrodes offert.'},
+    {b:false,t:'Matériel de prêt en cas de retour atelier du DAE offert.'},
+    {b:false,t:'1x information aux gestes de secours offerte.'},
+    {b:true, t:'CAUTION ENCAISSEE 675 € par appareil.'},
+  ],fm(prix),String(qty||1),'',fm(ht),'8,50%',[255,255,255]);
 
-  totY += 6;
-  doc.setTextColor(...GREY); doc.setFontSize(9);
-  doc.text('TVA 8,5% (taux DOM)', 122, totY);
-  doc.text(fmtEur(tva), W-15, totY, { align:'right' });
+  y=tRow(y,'974-FORM-DEMAT-DEF',[
+    {b:true, t:"Formation dématérialisée à l'utilisation d'un défibrillateur"},
+    {b:false,t:"Vidéo d'initiation"},
+    {b:false,t:"E Book + QCM d'évaluation"},
+    {b:true, t:'Offerte'},
+  ],'','1','','','8,50%',[248,248,248]);
 
-  totY += 5;
-  doc.setFillColor(...RED);
-  doc.rect(14, totY, W-28, 12, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  doc.text('TOTAL MENSUEL TTC', 16, totY+8);
-  doc.text(fmtEur(totalTTC), W-15, totY+8, { align:'right' });
+  y=tRow(y,'974-DEF-WAP-M2',[
+    {b:true, t:'974 - ARMOIRE DAE AVEC ALARME SONORE - METAL / JAUNE'},
+    {b:false,t:'Armoire de rangement DAE universelle en métal à fixer au mur'},
+    {b:true, t:'offerte (hors pose)'},
+  ],'159,00 €','1','-100,00 %','0,00 €','8,50%',[255,255,255]);
 
-  // ── Conditions ──
-  totY += 22;
-  doc.setTextColor(...GREY); doc.setFont('helvetica','italic'); doc.setFontSize(8.5);
-  doc.text('Devis valable 30 jours à compter de sa date d\'émission.', 14, totY);
-  doc.text('Engagement minimum : 1 mois. Résiliable avec préavis de 1 mois par LRAR. Loyer payable par prélèvement SEPA mensuel.', 14, totY+5);
-  doc.text('Prix en euros HT, TVA 8,5% applicable (taux normal DOM). Sans caution exigée.', 14, totY+10);
+  pftr(1,2);
 
-  // ── Signature ──
-  totY += 22;
-  doc.setDrawColor(...LGREY); doc.line(14, totY, W-14, totY);
-  totY += 6;
-  doc.setTextColor(...DARK); doc.setFont('helvetica','bold'); doc.setFontSize(10);
-  doc.text('Bon pour accord — LOCATAIRE', 14, totY);
-  doc.text('STAR aid', W-14, totY, { align:'right' });
-  totY += 5;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GREY);
-  doc.text('Date et signature :', 14, totY);
-  doc.text('Date : ' + date, W-14, totY, { align:'right' });
+  // ═════════════ PAGE 2 ═════════════
+  doc.addPage(); phdr(2,2); y=16;
 
-  // ── Pied de page ──
-  doc.setFillColor(...RED);
-  doc.rect(0, 272, W, 25, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(9);
-  doc.text('STAR GROUP', 14, 281);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  doc.text('SIRET 500 168 190 00022 — 4 allée des Primevères, 97490 Sainte-Clotilde (Réunion)', 14, 287);
-  doc.text('contact@star-aid.re  |  assistance@star-aid.fr  |  www.star-aid.fr', 14, 293);
+  y=tRow(y,'974-DEF-SIGNAL-KIT',[
+    {b:true,t:'974 - KIT DE SIGNALETIQUE SUPPORT ABS - 6 PIECES'},
+    {b:true,t:'offert (hors pose)'},
+  ],'59,00 €','1','-100,00 %','0,00 €','8,50%',[248,248,248]);
+
+  y=tRow(y,'974-DEF-REG-MAINT-DEF',[
+    {b:true,t:'974 - REGISTRE DE SUIVI DE MAINTENANCE DEFIBRILLATEUR'},
+    {b:true,t:'offert'},
+  ],'39,90 €','1','-100,00 %','0,00 €','8,50%',[255,255,255]);
+
+  y=tRow(y,'974-SERV-INSTALL',[
+    {b:true,t:'974 - INSTALLATION ARMOIRE et/ou SIGNALETIQUE DEFIBRILLATEUR'},
+    {b:true,t:'offerte'},
+  ],'90,00 €','1','-100,00 %','0,00 €','8,50%',[248,248,248]);
+
+  y+=8;
+  const lX=14,lW=90,tX=W/2+8,tW=W-14-tX;
+
+  // Totaux (droite)
+  let ty=y;
+  [[`Total HT`,fm(ht),false],[`TVA 8,50%`,fm(tva),false],[`Total TTC`,fm(ttc),true]].forEach(([lb,val,hi])=>{
+    if(hi){doc.setFillColor(225,225,225);doc.rect(tX,ty,tW,9,'F');}
+    doc.setDrawColor(...LGREY);doc.rect(tX,ty,tW,9);
+    doc.setFont('helvetica',hi?'bold':'normal');doc.setFontSize(9);doc.setTextColor(...DARK);
+    doc.text(lb,tX+3,ty+6); doc.text(val,tX+tW-2,ty+6,{align:'right'}); ty+=9;
+  });
+  ty+=5;
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...DARK);
+  doc.text("Offre valable jusqu'au "+vStr,tX+tW/2,ty,{align:'center'});ty+=13;
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(...DARK);
+  doc.text('Bon pour accord',tX+tW/2,ty,{align:'center'});ty+=9;
+  doc.text('et signature',tX+tW/2,ty,{align:'center'});ty+=12;
+  doc.setDrawColor(...LGREY);doc.rect(tX,ty,tW,16);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...DARK);
+  doc.text('Fait à :',tX+3,ty+8); doc.text('Le :',tX+tW/2+2,ty+8);
+
+  // Texte légal (gauche)
+  let ly=y+3;
+  const legLine=(txt,bold,sz)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz||7);doc.setTextColor(...DARK);doc.splitTextToSize(txt,lW-2).forEach(l=>{doc.text(l,lX,ly);ly+=3.8;});};
+  legLine("Réserve de propriété (Loi du 12/05/1980) :",true,7.5); ly+=0.5;
+  legLine("Les marchandises restent la propriété de STAR aid jusqu'à paiement intégral de la facture. Le vendeur se réserve expressément, en cas de défaut de paiement, un droit de reprise en possession du matériel, indépendamment de toutes poursuite judiciaire. En cas de saisie des biens, l'acheteur est tenu d'en informer le vendeur.");
+  legLine("L'acceptation de cette facture équivaut à l'acceptation de nos conditions générales de vente.");
+  ly+=2;
+  legLine("Modalités et conditions de règlement :",true,7.5); ly+=0.5;
+  legLine("Prélèvement bancaire ou virement.",true);
+  legLine("IBAN : FR76 1990 6009 7490 0157 5851 376");
+  legLine("BIC : AGRIRERX");
+  legLine("Merci d'indiquer le N° de facture correspondant à votre virement.");
+  ly+=2;
+  legLine("Ce devis est valable 30 jours.",true,7.5); ly+=0.5;
+  legLine("Toute commande est soumise à l'acceptation préalable de nos conditions générales de vente.");
+  doc.setDrawColor(...LGREY); doc.rect(lX,y,lW,Math.max(ly-y+3, ty-y+16+4));
+
+  pftr(2,2);
+
+  // ═════════════ PAGE 3 : CGV ═════════════
+  doc.addPage();
+  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(...DARK);
+  doc.text('CONDITIONS GÉNÉRALES DE',W/2,18,{align:'center'});
+  doc.text('VENTE (CGV)',W/2,27,{align:'center'});
+  doc.setDrawColor(...LGREY);doc.line(30,30,W-30,30);
+  doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(...GREY);
+  doc.text('Société STAR aid – v2 - 2025',W/2,36,{align:'center'});
+
+  const a1X=14,a2X=112,acW=86;
+  let yA1=43,yA2=43,useLeft=true;
+  const arts=[
+    {t:'Article 1 – Objet',txt:"Les présentes conditions générales de vente (CGV) régissent les relations contractuelles entre la société STAR aid et tout acheteur professionnel dans le cadre de la vente de marchandises et/ou de prestations de services. Toute commande implique l'acceptation pleine et entière des présentes CGV, lesquelles prévalent sur tout autre document de l'acheteur."},
+    {t:'Article 2 – Prix',txt:"Les prix en vigueur sont exprimés en euros hors taxes (HT) au moment de la commande. Ils seront majorés de la TVA applicable et, le cas échéant, des frais de transport. La société STAR aid se réserve le droit de modifier ses tarifs à tout moment. Toutefois, les produits ou services seront facturés sur la base des tarifs en vigueur au jour de l'enregistrement de la commande. Tout produit fabriqué suite à une commande validée (bon de commande signé) sera facturé au plus tard dans un délai de 3 mois après fabrication, sauf en cas de non-livraison imputable à STAR aid."},
+    {t:'Article 3 – Rabais et ristournes',txt:"Les tarifs incluent les éventuelles remises, rabais et ristournes que STAR aid pourrait accorder selon ses résultats ou la prise en charge de certaines prestations par le client."},
+    {t:'Article 4 – Escompte',txt:"Aucun escompte ne sera consenti en cas de paiement anticipé."},
+    {t:'Article 5 – Modalités de paiement',txt:"Le règlement des factures s'effectue principalement par prélèvement bancaire (après communication du RIB client). Sont également acceptés : le virement bancaire, le paiement par carte bancaire, le paiement par chèque à la livraison (sous réserve d'acceptation), et exceptionnellement en espèces, avec accord préalable de STAR aid. Lors de la commande, un acompte de 30 % du montant total TTC est exigé. Le solde est payable à réception des marchandises."},
+    {t:'Article 6 – Retard de paiement',txt:"Tout retard de paiement entraîne, de plein droit et sans mise en demeure préalable : des pénalités de retard au taux annuel de 18 %, une indemnité forfaitaire de 40 € pour frais de recouvrement. Les pénalités sont calculées sur le montant TTC dû à compter de la date d'échéance."},
+    {t:'Article 7 – Clause résolutoire',txt:"En cas de non-paiement dans un délai de 15 jours suivant la date d'exigibilité, la vente sera résolue de plein droit et pourra donner lieu à des dommages et intérêts au profit de STAR aid."},
+    {t:'Article 8 – Réserve de propriété',txt:"La propriété des marchandises reste acquise à STAR aid jusqu'au paiement intégral, principal et accessoires compris. En cas de procédure collective (redressement ou liquidation judiciaire), STAR aid se réserve le droit de revendiquer les marchandises impayées."},
+    {t:'Article 9 – Livraison',txt:"La livraison s'effectue : par remise directe au client, par mise à disposition en magasin, ou à l'adresse indiquée sur le bon de commande. Les délais sont donnés à titre indicatif. Aucun retard raisonnable ne pourra justifier l'annulation de la commande ni une demande de dommages et intérêts. Le transport est à la charge et aux risques de l'acheteur. En cas de dommage ou de manquant, l'acheteur doit : émettre des réserves écrites sur le bon de livraison, et les confirmer par courrier recommandé avec AR sous 5 jours."},
+    {t:'Article 10 – Force majeure',txt:"La responsabilité de STAR aid ne pourra être engagée en cas de force majeure, au sens de l'article 1218 du Code civil (anciennement 1148), c'est-à-dire tout événement imprévisible, irrésistible et extérieur."},
+    {t:'Article 11 – Juridiction compétente',txt:"Les présentes CGV sont soumises au droit français. En cas de litige non résolu à l'amiable, le Tribunal de Commerce de Saint-Denis de La Réunion sera seul compétent."},
+  ];
+  arts.forEach(({t,txt})=>{
+    doc.setFontSize(8); const tl=doc.splitTextToSize(txt,acW); const ah=6+tl.length*4+4;
+    if(useLeft && yA1+ah>272) useLeft=false;
+    const xA=useLeft?a1X:a2X; let yA=useLeft?yA1:yA2;
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...RED);doc.text(t,xA,yA);yA+=5.5;
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...DARK);tl.forEach(l=>{doc.text(l,xA,yA);yA+=4;});yA+=4;
+    if(useLeft)yA1=yA;else yA2=yA;
+  });
 
   return doc;
 }

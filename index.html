@@ -2339,7 +2339,7 @@ async function sendMail() {
     const res = await fetch(MAKE_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: EMAIL_FROM, to, subject, body })
+      body: JSON.stringify({ from: EMAIL_FROM, to, subject, body, attachments: [] })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     toast('✅ Mail envoyé à ' + to);

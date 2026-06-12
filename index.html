@@ -937,7 +937,7 @@ body.demo-mode header{background:#b45309 !important;}
 <script>
 /* ─── MAKE.COM WEBHOOK ──────────────────────────────────────────── */
 const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/n6sczdlu6oqdc37b6ydpj1xxze5oruyj';
-const EMAIL_FROM       = 'a.creusot@star-aid.fr';
+const EMAIL_FROM       = 'm.michon@star-aid.fr';
 
 /* ─── SUPABASE REST ─────────────────────────────────────── */
 const SUPA_URL = 'https://obnpzcebhcrkizycuipk.supabase.co/rest/v1';
@@ -3398,7 +3398,7 @@ function buildDevisPdf(r, qty, type, prix = 89) {
   ].forEach(l=>{doc.text(l,14,yL);yL+=3.5;});
   yL+=4;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...DARK);
-  ['STAR group - STAR aid','4 allée des Primevères','Le Moufia','97490 SAINTE CLOTILDE','La Réunion','Anthony CREUSOT','a.creusot@star-aid.fr','0262 150 950','0692 39 49 83']
+  ['STAR group - STAR aid','4 allée des Primevères','Le Moufia','97490 SAINTE CLOTILDE','La Réunion','Mathieu MICHON','m.michon@star-aid.fr','0262 150 950','0692 39 49 83']
     .forEach(l=>{doc.text(l,14,yL);yL+=5;});
 
   // Droite : titre Devis + encadré client

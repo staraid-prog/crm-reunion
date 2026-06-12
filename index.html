@@ -3477,9 +3477,10 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   const W    = 210;
   const RED  = [171, 30, 46];
   const DARK = [26, 26, 26];
-  const GREY = [100, 100, 100];
+  const GREY = [90, 90, 90];
   const LGREY= [200, 200, 200];
   let   y    = 0;
+  const NEWF = true; // flag nouvelle version fidèle au DOCX
 
   function addPageHeader() {
     doc.setFillColor(...RED);
@@ -3556,230 +3557,323 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   // ════════════════ PAGE 1 ════════════════
   addPageHeader();
 
-  // Titre
+  // ── Titre ──
   doc.setTextColor(...DARK);
   doc.setFont('helvetica','bold'); doc.setFontSize(14);
   doc.text('CONTRAT DE LOCATION DE DÉFIBRILLATEUR', W/2, y, { align:'center' });
   y += 7;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GREY);
-  doc.text(`Fait à ${villeSign || '…………………………'}  le ${dateSign}`, W/2, y, { align:'center' });
+  doc.text(`Fait à ${villeSign || '…………………………………………'}  le ${dateSign}`, W/2, y, { align:'center' });
   y += 12;
 
-  // Parties
-  sectionTitle('Entre les soussignés');
+  // ── ENTRE LES SOUSSIGNÉS ──
+  sectionTitle('ENTRE LES SOUSSIGNÉS :');
 
   artTitle('Le LOUEUR :');
-  para('La société STAR GROUP, société à responsabilité limitée au capital de 21 090,00 EUR,');
-  para('immatriculée au RCS de Saint-Denis sous le numéro 500 168 190 00022, dont le siège social est');
-  para('sis 4 allée des Primevères — Le Moufia — 97490 SAINTE-CLOTILDE (Réunion), représentée par');
-  para('ses gérants en exercice.');
-  para('(Ci-après dénommée « LOUEUR »)');
-  gap();
+  para('La société STAR GROUP, société à responsabilité limitée au capital de 21 090,00 €');
+  para('immatriculée au registre des commerces et des sociétés de Saint-Denis sous le numéro');
+  para('500 168 190 00022, dont le siège social est sis 4 allée des Primevères – Le Moufia –');
+  para('97490 SAINTE-CLOTILDE (Réunion), représentée par ses gérants en exercice.');
+  para('(Ci-après dénommé « LOUEUR »)');
+  gap(4);
 
-  artTitle('Le LOCATAIRE :');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+  doc.text("D'UNE PART,", 14, y); y += 5;
+  doc.text('ET', 14, y); y += 7;
+
+  artTitle('La société (LOCATAIRE) :');
   // Nom de la société en rouge
-  const societeNom = r.denomination_usuelle || '………………………………………………………………………………';
+  const societeNom = r.denomination_usuelle || '…………………………………………………………………………………………';
   checkNewPage(6);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  doc.setTextColor(...GREY);
-  doc.text('La société : ', 14, y);
-  const labelW = doc.getTextWidth('La société : ');
-  doc.setTextColor(...RED);
-  doc.setFont('helvetica','bold');
-  doc.text(societeNom, 14 + labelW, y);
-  y += 4.5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
+  doc.text('La société ', 14, y);
+  const lw1 = doc.getTextWidth('La société ');
+  doc.setTextColor(...RED); doc.setFont('helvetica','bold');
+  doc.text(societeNom, 14 + lw1, y);
+  y += 5;
   doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
-  para('Représentée par : ' + (r.signataire || '……………………………………………………………………………………'));
-  para('Fonction : ' + (r.fonction || '………………………………………') + '    N° SIRET : ' + (r.siret || '………………………………'));
-  para('Sise : ' + ([r.adresse_voie, r.code_postal ? r.code_postal + ' ' + r.commune : r.commune].filter(Boolean).join(', ') || '……………………………………………………………………………………………………'));
-  para('(Ci-après dénommée « LOCATAIRE »)');
-  gap();
 
-  sectionTitle('Il est préalablement indiqué ce qui suit');
-  para('Le LOUEUR est l\'un des fournisseurs majeurs de défibrillateurs dans la zone de l\'Océan Indien ainsi');
-  para('qu\'aux Antilles. Il gère un parc de défibrillateurs multimarques.');
-  gap(2);
-  para('Le LOUEUR offre un accompagnement pertinent et adapté dans l\'installation et la formation à l\'utilisation');
-  para('du défibrillateur, et possède les compétences techniques pour assurer le suivi et la maintenance adéquate');
-  para('des défibrillateurs fournis.');
-  gap(2);
-  para('Le LOCATAIRE s\'est montré intéressé par les services et le savoir-faire du LOUEUR. Au terme de');
-  para('discussions menées directement entre elles, les PARTIES sont convenues de conclure le contrat de location');
-  para('dont les termes sont ci-après arrêtés.');
-  gap();
+  const repPar = r.signataire || '…………………………………………………………………………………………';
+  para('représentée par ' + repPar);
+  const fonc = r.fonction || '…………………………………………………………………………';
+  para('de nationalité ……………………………    Fonction ' + fonc);
+  const adresse = [r.adresse_voie, r.code_postal ? r.code_postal + ' ' + r.commune : r.commune].filter(Boolean).join(', ') || '…………………………………………………………………………………………………………………';
+  para('Sise ' + adresse);
+  para('(Ci-après dénommé « LOCATAIRE »)');
+  gap(4);
 
-  sectionTitle('Cela exposé, il a été convenu de ce qui suit :');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+  doc.text("D'AUTRE PART,", 14, y); y += 7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
+  doc.text('Cachet de la structure', W - 14, y - 4, { align:'right' });
+  para("(Ci-après encore dénommées collectivement les « PARTIES » ou individuellement une « PARTIE »)");
+  gap(3);
 
-  // Article 1
-  sectionTitle('Régime juridique');
-  artTitle('Article 1 — Objet');
-  para('Le présent contrat a pour objet la location d\'un défibrillateur full automatique du parc du LOUEUR au');
-  para('LOCATAIRE pour son(ses) site(s) (voir annexe).');
+  // ── IL EST PRÉALABLEMENT INDIQUÉ ──
+  sectionTitle("IL EST PRÉALABLEMENT INDIQUÉ CE QUI SUIT :");
+  para("Le LOUEUR est une société qui est l'un des fournisseurs majeurs de défibrillateurs dans la zone de l'Océan Indien ainsi qu'aux Antilles. Il gère un parc de défibrillateurs multimarques.");
   gap(2);
-  para('La location susvisée comprend les services suivants :', 0);
-  para('— La mise en conformité administrative immédiate du dossier (délivrance de l\'attestation de démarche).', 4);
-  para('— La mise à disposition physique du matériel.', 4);
-  para('— La formation dématérialisée à l\'utilisation.', 4);
-  para('— La maintenance préventive et curative du défibrillateur.', 4);
-  gap();
+  para("Le LOUEUR, par ses connaissances certaines relatives aux premiers secours, offre un accompagnement pertinent et adapté dans l'installation et la formation à l'utilisation du défibrillateur.");
+  gap(2);
+  para("Le LOUEUR possède également les compétences techniques et un personnel spécialement formé pour assurer le suivi et la maintenance adéquate des défibrillateurs fournis.");
+  gap(2);
+  para("Le LOCATAIRE s'est montré intéressé par les services et le savoir-faire du LOUEUR.");
+  gap(2);
+  para("Au terme de discussions qu'elles ont menées directement entre elles, sur l'ensemble des obligations et engagements qu'entraîne la mise à disposition du défibrillateur, les PARTIES sont convenues de conclure le contrat de location dont les termes sont ci-après arrêtés.");
+  gap(3);
 
-  artTitle('Article 2 — Caution');
-  para('2-1  Conformément à l\'offre souscrite, aucun dépôt de garantie financière (caution) n\'est exigé du');
-  para('LOCATAIRE lors de la mise à disposition du matériel.');
-  gap(2);
-  para('2-2  En contrepartie de cette absence de caution, la validité et l\'exécution du présent contrat sont');
-  para('strictement conditionnées à la signature concomitante du Mandat de Prélèvement SEPA joint en annexe.');
-  gap(2);
-  para('2-3  Le LOCATAIRE s\'engage à maintenir ce mandat de prélèvement actif pendant toute la durée du contrat.');
-  para('Tout rejet de prélèvement ou révocation du mandat non régularisé sous huit (8) jours entraînera la');
-  para('résiliation de plein droit du contrat aux torts exclusifs du LOCATAIRE, ainsi que la restitution immédiate');
-  para('du matériel sous astreinte.');
-  gap();
+  sectionTitle("CELA EXPOSÉ, IL A ÉTÉ CONVENU DE CE QUI SUIT :");
 
-  artTitle('Article 3 — Loyer');
-  // Texte prix dynamique selon le tarif sélectionné
+  // ── RÉGIME JURIDIQUE ──
+  sectionTitle("RÉGIME JURIDIQUE");
+
+  artTitle("Article 1 – Objet");
+  para("Le présent contrat a pour objet la location d'un défibrillateur du parc du LOUEUR au LOCATAIRE pour son(ses) site(s) (voir annexe).");
+  gap(2);
+  para("La location susvisée comprend les services suivants :");
+  para("— Mise à disposition du défibrillateur", 8);
+  para("— Formation à l'utilisation du défibrillateur", 8);
+  para("— Maintenance du Défibrillateur", 8);
+  gap(3);
+
+  // ── Article 2 – Loyer ──
+  artTitle("Article 2 – Loyer");
+
+  checkNewPage(8);
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...DARK);
+  doc.text('2-1  Le prix du loyer est fixé mensuellement à :', 14, y);
+  y += 5.5;
+
+  // Ligne prix dynamique
+  const pxLabel = 'Défibrillateur STAR LIFE : ';
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
+  doc.text(pxLabel, 20, y);
+  const plW = doc.getTextWidth(pxLabel);
   if (prix === 79) {
-    para('Le prix du loyer est fixé mensuellement à :');
-    checkNewPage(6);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
-    doc.text('Défibrillateur STAR LIFE : ', 14, y);
-    const lw79 = doc.getTextWidth('Défibrillateur STAR LIFE : ');
     doc.setTextColor(...RED); doc.setFont('helvetica','bold');
-    doc.text('(79 € HT (soit 85,72 € TTC) par appareil, au lieu de 89 € HT.)', 14 + lw79, y);
-    y += 4.5;
-    doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
+    doc.text('(79 € HT (soit 85,72 € TTC) par appareil, au lieu de 89 € HT.)', 20 + plW, y);
   } else {
-    para('Le prix du loyer est fixé à 89 EUR HT par mois et par appareil (soit 96,57 EUR TTC/mois, TVA 8,5% DOM).');
+    doc.setTextColor(...DARK); doc.setFont('helvetica','bold');
+    doc.text('89 € HT (soit 96,57 € TTC) par appareil', 20 + plW, y);
   }
-  gap(2);
-  para('Le loyer est payable mensuellement et d\'avance (terme à échoir). Le règlement s\'effectue exclusivement par');
-  para('Prélèvement Automatique SEPA, conformément au mandat signé par le LOCATAIRE.');
-  gap(2);
-  para('Le cycle de facturation est calé sur la date anniversaire de la mise en service. La date de départ du contrat');
-  para('correspond au jour de la signature du Procès-Verbal de Livraison. Les loyers sont dus pour des périodes');
-  para('complètes courant de date à date. Il n\'y a aucun calcul au prorata temporis.');
-  gap();
-
-  artTitle('Article 4 — Durée du contrat');
-  para('La signature électronique des présentes vaut engagement ferme et irrévocable de commande, déclenchant');
-  para('l\'ouverture immédiate du dossier administratif et la délivrance de l\'attestation de démarche d\'équipement.');
-  gap(2);
-  para('Le présent contrat de location est conclu pour une durée indéterminée qui ne débutera qu\'à compter de la');
-  para('date de signature du Procès-Verbal de Livraison et de Mise en Service du matériel. Il comporte une période');
-  para('minimale incompressible d\'un (1) mois.');
-  gap(2);
-  para('Au-delà de ce premier mois, le LOCATAIRE bénéficie d\'une faculté de résiliation à tout moment, sans');
-  para('pénalité, moyennant un préavis d\'un (1) mois notifié par lettre recommandée avec accusé de réception.');
-  gap();
-
-  artTitle('Article 5 — Résiliation');
-  para('En cas de non-paiement d\'un loyer dû au LOUEUR et dans le cas où le LOCATAIRE n\'aurait pas remédié à');
-  para('ce manquement dans les trente (30) jours, le LOUEUR pourra résilier le contrat par lettre recommandée avec');
-  para('accusé de réception. La résiliation aura lieu de plein droit. Le défibrillateur devra être restitué sous peine');
-  para('d\'une astreinte de 50 EUR par jour de retard.');
-  gap();
-
-  sectionTitle('Mise à disposition du défibrillateur');
-  artTitle('Article 6 — Détermination du défibrillateur');
-  para('6-1  Tous les défibrillateurs en location sont fournis avec des électrodes et un kit de préparation RCP');
-  para('(Réanimation Cardio Pulmonaire).');
-  gap(2);
-  para('6-2  Un état descriptif sera effectué lors de la livraison et figurera sur le procès-verbal de livraison fait en');
-  para('deux exemplaires le jour même.');
-  gap();
-
-  sectionTitle('Formation au fonctionnement du défibrillateur');
-  artTitle('Article 7 — Formation dispensée par le LOUEUR');
-  para('Le contrat comprend la mise à disposition d\'une formation dématérialisée à la reconnaissance d\'un arrêt');
-  para('cardiaque, l\'alerte des secours et la mise en œuvre d\'une RCP avec massage cardiaque et défibrillateur.');
-  gap(2);
-  para('Thèmes abordés : reconnaître un Arrêt Cardio Respiratoire, faire un bon appel aux secours, pratiquer le');
-  para('massage cardiaque (RCP), utiliser un défibrillateur.');
-  gap();
-
-  sectionTitle('Maintenance du défibrillateur');
-  artTitle('Article 8 — Maintenance du défibrillateur');
-  para('Dans le cadre du présent contrat, le LOUEUR garantit une maintenance préventive et curative du défibrillateur.');
-  gap(2);
-  artTitle('8-1  Conditions générales de maintenance');
-  para('Assistance par email assistance@star-aid.fr de 06h00 à 17h00 (UTC+4), du lundi au vendredi, avec détection');
-  para('à distance des anomalies. Le LOCATAIRE s\'engage à laisser libre accès au matériel avec préavis de 24h.');
-  para('Le LOCATAIRE tiendra un registre pour consigner les anomalies, incidents ou pannes.');
-  gap(2);
-  artTitle('8-2  Maintenance préventive');
-  para('Un (1) passage par an : vérification complète, remplacement batterie sur site si dysfonctionnement, suivi et');
-  para('remplacement des électrodes à péremption. Assistance 7j/7 par email. Appel de contrôle sous 48h maximum.');
-  para('Matériel de prêt sous 48h en cas de retour atelier.');
-  gap(2);
-  artTitle('8-3  Maintenance curative');
-  para('Le LOUEUR interviendra dans un délai de 48 heures maximum après avis du LOCATAIRE : prêt immédiat');
-  para('d\'un appareil, remplacement batterie, électrodes et kit de secourisme.');
-  gap(2);
-  artTitle('8-4  Exclusions');
-  para('Sont exclus du présent contrat et donneront lieu à facturation séparée : non-respect des consignes ; électrodes');
-  para('ouvertes ; utilisation anormale ou négligence ; matériel de marque différente ; modifications ; variations du');
-  para('courant ; entretien par tiers ; vol ou vandalisme.');
-  gap(2);
-  artTitle('8-5  Limitation de responsabilité');
-  para('Le LOUEUR sera dégagé de toute responsabilité en cas d\'inobservation des clauses du présent contrat. Si la');
-  para('responsabilité du LOUEUR était engagée, l\'indemnisation serait limitée au montant du loyer perçu sur les');
-  para('douze (12) mois en cours.');
-  gap();
-
-  sectionTitle('En cas de difficulté dans l\'exécution du contrat');
-  artTitle('Article 9 — Médiation');
-  para('Les parties s\'engagent, préalablement à toute procédure judiciaire, à soumettre leur différend à une');
-  para('procédure de médiation conformément au règlement du CMAR (Centre de Médiation et d\'Arbitrage de la');
-  para('Réunion). Contact : contact@cmar.re — 28 rue Archambaud, 97410 — Tél. : 02 62 250 529.');
-  gap();
-
-  artTitle('Article 10 — Juridiction compétente');
-  para('En cas d\'échec de la médiation, la juridiction territorialement compétente est celle de Saint-Denis de la Réunion.');
-  gap(10);
-
-  // ── Bloc signature ──
-  checkNewPage(40);
-  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...DARK);
-  doc.text(`FAIT EN DEUX EXEMPLAIRES, À ${(villeSign || '………………').toUpperCase()}  LE ${dateSign}`, W/2, y, { align:'center' });
-  y += 14;
-  doc.text('Pour le LOUEUR — STAR GROUP', 30, y);
-  doc.text('Pour le LOCATAIRE', W-30, y, { align:'right' });
+  doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
   y += 6;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GREY);
-  doc.text('Date : ' + dateSign, 30, y);
-  y += 20;
+
+  para("Le paiement du loyer se fera au choix selon les échéanciers suivants :");
+  ['Par mois', 'Par trimestre', 'Par semestre', 'Par année'].forEach(opt => {
+    checkNewPage(5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
+    doc.text('☐  ' + opt, 24, y); y += 5;
+  });
+  gap(2);
+
+  checkNewPage(8);
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...DARK);
+  doc.text('Paiement du loyer à échoir :', 14, y); y += 4.5;
+  doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
+  para("Le paiement du prix du loyer se fera d'avance, dans les cinq jours débutant l'échéance choisie à l'article 3-2 du présent contrat.");
+  para("Le règlement du loyer se fera par prélèvement selon l'échéancier prévu ci-dessus.");
+  gap(3);
+
+  // ── Article 3 – Durée ──
+  artTitle("Article 3 – Durée du contrat");
+  para("Le contrat est conclu pour une première période de douze (12) mois à compter de la date de livraison (voir procès-verbal de livraison).");
+  gap(2);
+  para("Au-delà, et à l'échéance, il se renouvellera par tacite reconduction pour des périodes de durée identique à la période initiale, sauf dénonciation par l'une ou l'autre des parties par lettre recommandée avec avis de réception moyennant un préavis d'un mois.");
+  gap(2);
+  para("Le contrat est tacitement reconductible pour des périodes de douze (12) mois dans une limite cumulative de la garantie constructeur.");
+  gap(2);
+  para("Cette limite garantie constructeur correspond à la durée de vie du défibrillateur. Si le contrat est reconduit jusqu'à la limite sus évoquée, à son issue il ne pourra plus être reconduit. Les PARTIES devront alors s'entendre sur un nouveau contrat portant sur un nouvel appareil et de nouvelles conditions pour perpétuer leur relation.");
+  gap(3);
+
+  // ── Article 5 – Résiliation (pas d'Article 4 dans le DOCX) ──
+  artTitle("Article 5 – Résiliation");
+  para("En cas de non-paiement par le LOCATAIRE d'un loyer dû au LOUEUR en vertu du contrat et dans le cas où le LOCATAIRE n'aurait pas remédié à ce manquement dans les trente (30) jours, à compter de la notification écrite de ce manquement, le LOUEUR pourra résilier le contrat par lettre recommandée avec accusé de réception. La résiliation aura lieu de plein droit et sans formalité. Le défibrillateur devra être restitué à compter de la résiliation devenue effective sous peine d'une astreinte de 50 € par jour de retard.");
+  gap(2);
+  para("La résiliation pourra également intervenir dans le cas et conditions prévus à l'article 8-1-3 du présent contrat.");
+  gap(3);
+
+  // ── MISE À DISPOSITION ──
+  sectionTitle("MISE À DISPOSITION DU DÉFIBRILLATEUR");
+  artTitle("Article 6 – Détermination du défibrillateur");
+  para("6-1  Une fiche technique correspondant au défibrillateur loué est jointe en annexe du présent contrat. Tous les défibrillateurs en location sont fournis avec des électrodes (adulte/enfant) et un kit de préparation RCP.");
+  gap(2);
+  para("6-2  Un état descriptif du défibrillateur sera effectué lors de la livraison de l'appareil et figurera sur le procès-verbal de livraison fait en deux exemplaires le jour même.");
+  gap(3);
+
+  // ── FORMATION ──
+  sectionTitle("FORMATION AU FONCTIONNEMENT DU DÉFIBRILLATEUR");
+  artTitle("Article 7 – Formation dispensée par le LOUEUR au LOCATAIRE");
+  para("Le contrat de location du défibrillateur comprend également la mise à disposition d'une formation dématérialisée à la reconnaissance d'un arrêt cardiaque, l'alerte des secours et la mise en œuvre d'une RCP (Réanimation Cardio Pulmonaire) avec massage cardiaque et défibrillateur. Les objectifs pédagogiques de la formation dispensée sont :");
+  gap(2);
+  para("L'acquisition des connaissances et techniques des gestes destinés à sauver des vies (Secourisme, Réanimation et pose du Défibrillateur Automatisé Externe) chez une victime en Arrêt Cardio Respiratoire avant la prise en charge par les secours.");
+  gap(2);
+  para("Les thèmes abordés durant la formation seront les suivants :");
+  ["Apprendre à reconnaître un Arrêt Cardio Respiratoire",
+   "Apprendre à faire un bon appel aux secours",
+   "Apprendre le massage cardiaque (RCP)",
+   "Apprendre à utiliser un défibrillateur"].forEach(t => para('— ' + t, 8));
+  gap(3);
+
+  // ── MAINTENANCE ──
+  sectionTitle("MAINTENANCE DU DÉFIBRILLATEUR");
+  artTitle("Articles 8 – Maintenance du défibrillateur");
+  para("Dans le cadre du présent contrat, le LOUEUR s'engage à garantir une maintenance préventive et curative du défibrillateur dans les conditions ci-après exposées :");
+  gap(2);
+
+  artTitle("8-1  Conditions générales de maintenance");
+  artTitle("8-1-1  Contenu des prestations :");
+  para("Le LOUEUR assure une assistance par email : assistance@star-aid.fr de 06h00 à 17h00 (fuseau horaire UTC+4), du lundi au vendredi. Cette assistance comprend une détection à distance des anomalies de fonctionnement indiquées dans le manuel d'utilisation. Le fournisseur conseille le client sur les démarches à effectuer et les mesures conservatoires ou correctives à prendre (mail, appel téléphonique ou vidéoconférence).");
+  gap(2);
+
+  artTitle("8-1-2  Accès au matériel :");
+  para("Sous réserve d'avoir été prévenu au moins 24 heures à l'avance, le LOCATAIRE s'engage à laisser au personnel envoyé par le LOUEUR, le libre accès au matériel. Les interventions seront effectuées entre 08h00 et 17h00 les jours ouvrés, soit du lundi au vendredi. Les rendez-vous confirmés pourront être reportés par le client 72 heures avant la date prévue, à défaut une facturation d'un montant de 89 euros TTC sera adressée au LOCATAIRE.");
+  gap(2);
+
+  artTitle("8-1-3  Obligations du locataire :");
+  para("Le LOCATAIRE s'engage à respecter les conditions normales d'utilisation du matériel et à appliquer strictement toutes les instructions données par le fabricant. Le matériel ne pourra être modifié ou réparé par des tiers sans l'autorisation préalable écrite du fabricant. En cas de non-respect, le LOUEUR pourra, après lettre recommandée demeurée infructueuse dans les trente (30) jours, mettre fin au présent contrat. Le défibrillateur devra être restitué sous peine d'une astreinte de 50 € par jour de retard.");
+  gap(2);
+
+  artTitle("8-1-4  Dépannage :");
+  para("Le LOCATAIRE contactera directement par email : assistance@star-aid.fr.");
+  gap(2);
+
+  artTitle("8-1-5  Registre des anomalies :");
+  para("Le client tiendra un registre sur lequel il devra consigner toutes les anomalies, incidents ou pannes concernant le matériel, il devra en outre, indiquer dans ce registre tous les faits ayant entraîné ou susceptibles d'entraîner une anomalie de fonctionnement.");
+  gap(2);
+
+  artTitle("8-2  Maintenance préventive");
+  para("Un (1) passage par an comprenant les interventions suivantes :");
+  ["Vérification complète du défibrillateur (Application STAR aid)",
+   "Remplacement de la batterie sur site, en cas de dysfonctionnement",
+   "Suivi des électrodes : remplacement du jeu d'électrodes arrivée à date de péremption",
+   "Accès au numéro d'assistance : 7j/7 vous pouvez contacter notre équipe par mail. Un appel de contrôle gratuit sera programmé sous 48 heures maximum.",
+   "Matériel de prêt : En cas de panne nécessitant le retour atelier, un défibrillateur de prêt sera mis en place sous 48 heures."]
+    .forEach(item => para('— ' + item, 8));
+  gap(2);
+
+  artTitle("8-3  Maintenance curative");
+  para("En cas de défaillance du défibrillateur, le LOUEUR interviendra dans un délai de 48 heures maximum après avis du LOCATAIRE. Le LOUEUR procédera aux actes suivants :");
+  ["Prêt immédiat d'un appareil en cas de défaut grave constaté",
+   "Remplacement de la batterie sur site, en cas de dysfonctionnement",
+   "Remplacement du jeu d'électrodes utilisé",
+   "Remplacement du kit de secourisme utilisé"]
+    .forEach(item => para('— ' + item, 8));
+  gap(2);
+
+  artTitle("8-4  Exclusions :");
+  para("Sont exclues du présent contrat et donneront lieu à une facturation séparée (déplacement, pièces et main d'œuvre), les interventions dues aux faits suivants :");
+  ["Non-respect par le client des consignes d'entretien du constructeur.",
+   "Electrodes ouvertes ou décollées.",
+   "Utilisation anormale ayant entraîné des dégâts ou accidents.",
+   "Négligence ou faute du personnel du client.",
+   "Adjonctions ou connexions de matériel d'une autre marque.",
+   "Modifications des spécifications de la machine.",
+   "Utilisation de fournitures autres que celles préconisées par le fabricant.",
+   "Variations ou défaillances du courant électrique.",
+   "Défaillance de la climatisation ou du contrôle hygrométrique.",
+   "Entretien effectué par des personnes étrangères au fournisseur.",
+   "Consommation de pièces lors d'une utilisation de l'appareil pour une formation.",
+   "Vol, vandalisme, bris du matériel."]
+    .forEach(item => para('— ' + item, 8));
+  gap(2);
+
+  artTitle("8-5  Limitation de responsabilité :");
+  para("Le LOUEUR sera dégagé de toute responsabilité en cas d'inobservation par le LOCATAIRE d'une des clauses du présent contrat, ou en cas de survenance de l'un des faits prévus dans le chapitre « EXCLUSIONS ». Le LOUEUR ne pourra en aucun cas être considéré comme responsable de tous dommages directs ou indirects résultant de l'utilisation du matériel.");
+  gap(2);
+  para("La responsabilité du LOUEUR ne pourra être mise en œuvre si la non-exécution ou le retard dans l'exécution découle d'un cas de force majeure au sens de l'article 1148 du Code Civil. Dans l'éventualité où la responsabilité du LOUEUR serait engagée, l'indemnisation serait limitée au montant du loyer perçu au titre de la période de douze (12) mois en cours.");
+  gap(3);
+
+  // ── EN CAS DE DIFFICULTÉ ──
+  sectionTitle("EN CAS DE DIFFICULTÉ DANS L'EXÉCUTION DU CONTRAT");
+
+  artTitle("Article 9 – Médiation");
+  para("À l'exception des demandes relatives au paiement des sommes dues au titre des loyers échus et des factures dues qui pourront faire l'objet directement de la saisine de la juridiction compétente, les parties s'engagent, en cas de difficultés dans l'exécution du contrat et préalablement à toute procédure judiciaire, à soumettre leur différend à une procédure de médiation.");
+  gap(2);
+  para("Les différends seront soumis à la médiation conformément au règlement de médiation du Centre de Médiation et d'Arbitrage de la Réunion (CMAR) auquel les parties déclarent adhérer.");
+  gap(2);
+  para("Coordonnées du CMAR : Courriel : contact@cmar.re — Ordre des avocats du Barreau de Saint-Pierre, Palais de justice, 28 rue Archambaud 97410 — Tél. : 02 62 250 529 / 02 62 355 557");
+  gap(3);
+
+  artTitle("Article 10 : Juridiction compétente");
+  para("En cas d'échec de la médiation ou d'une demande relative au paiement du prix du loyer, la juridiction territorialement compétente est celle de Saint-Denis de la Réunion.");
+  gap(8);
+
+  // ── SIGNATURES ──
+  checkNewPage(55);
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...DARK);
+  doc.text(`FAIT EN DEUX EXEMPLAIRES, À ${(villeSign || '………………………………………').toUpperCase()}  LE ${dateSign}`, W/2, y, { align:'center' });
+  y += 14;
+
+  // Colonnes LOCATAIRE | LOUEUR
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
+  doc.text('Le LOCATAIRE :', 20, y);
+  doc.text('Le LOUEUR :', W/2 + 10, y);
+  y += 5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GREY);
+  doc.text('(Cachet de la structure)', 20, y);
+  doc.text('(Cachet de la structure)', W/2 + 10, y);
+  y += 24;
   doc.setDrawColor(...LGREY);
-  doc.line(20, y, 90, y);
-  doc.line(W-90, y, W-20, y);
+  doc.line(20, y, W/2 - 10, y);
+  doc.line(W/2 + 10, y, W - 20, y);
   y += 4;
-  doc.setFontSize(8); doc.setTextColor(...GREY);
-  doc.text('Signature + cachet LOUEUR', 20, y);
-  doc.text('Signature + cachet LOCATAIRE', W-20, y, { align:'right' });
+  doc.setFontSize(8);
+  doc.text('Signature + Nom lisible', 20, y);
+  doc.text('Signature + Nom lisible', W/2 + 10, y);
+  y += 10;
+
+  // Deuxième jeu (pour le 2e exemplaire)
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
+  doc.text('Le LOCATAIRE :', 20, y);
+  doc.text('Le LOUEUR :', W/2 + 10, y);
+  y += 5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GREY);
+  doc.text('(Cachet de la structure)', 20, y);
+  doc.text('(Cachet de la structure)', W/2 + 10, y);
+  y += 24;
+  doc.setDrawColor(...LGREY);
+  doc.line(20, y, W/2 - 10, y);
+  doc.line(W/2 + 10, y, W - 20, y);
+  y += 4;
+  doc.text('Signature + Nom lisible', 20, y);
+  doc.text('Signature + Nom lisible', W/2 + 10, y);
 
   addPageFooter();
 
-  // ════════════════ PAGE 2 — SEPA + ANNEXE ════════════════
+  // ════════════════ PAGE 2 — MANDAT SEPA + ANNEXE ════════════════
   doc.addPage();
   addPageHeader();
 
-  // Mandat SEPA
-  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(...DARK);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(...DARK);
   doc.text('MANDAT DE PRÉLÈVEMENT SEPA', W/2, y, { align:'center' });
-  y += 12;
+  y += 14;
 
   field('Titulaire du compte :', r.denomination_usuelle || '');
   field('IBAN :', '');
+  field('BIC :', '');
   field('Banque :', '');
   field('Fait à :', villeSign || r.commune || '');
   field('Le :', dateSign);
+  y += 8;
 
-  y += 10;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
+  doc.text('Signature du titulaire du compte :', 14, y);
+  doc.text('Cachet établissement :', W/2 + 10, y);
+  y += 26;
+  doc.setDrawColor(...LGREY);
+  doc.line(14, y, W/2 - 10, y);
+  doc.line(W/2 + 10, y, W - 14, y);
+  y += 14;
+
+  // ── PIÈCES OBLIGATOIRES ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...DARK);
+  doc.text('PIÈCES OBLIGATOIRES À FOURNIR :', 14, y);
+  y += 8;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GREY);
-  doc.text('Signature du titulaire du compte', 30, y);
-  doc.text('Cachet établissement', W-30, y, { align:'right' });
-  y += 28;
+  doc.text('☐  Relevé d\'identité bancaire.', 18, y); y += 14;
 
-  // Annexe matériel
+  // ── ANNEXE MATÉRIEL ──
   doc.setFillColor(...RED);
   doc.rect(14, y-6, W-28, 10, 'F');
   doc.setTextColor(255,255,255);
@@ -3787,22 +3881,37 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   doc.text('ANNEXE — MATÉRIEL MIS À DISPOSITION', W/2, y+0.5, { align:'center' });
   y += 14;
 
-  // Tableau annexe
-  const cols   = ['Marque / Modèle', 'N° de Série', 'Emplacement (site)'];
-  const colWs  = [60, 55, 67];
-  let cx       = 14;
+  // En-tête tableau
+  const cols  = ['Marque', 'Modèle', 'N° de Série', 'Emplacement (site)'];
+  const colWs = [30, 55, 50, 47];
+  let cx = 14;
   doc.setFillColor(...RED);
   doc.rect(14, y-5, W-28, 8, 'F');
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-  cols.forEach((col, i) => {
-    doc.text(col, cx+3, y-0.5);
-    cx += colWs[i];
-  });
+  cols.forEach((col, i) => { doc.text(col, cx+3, y-0.5); cx += colWs[i]; });
   y += 5;
 
-  for (let row = 0; row < 4; row++) {
-    doc.setFillColor(row%2===0 ? 248 : 255, row%2===0 ? 248 : 255, row%2===0 ? 248 : 255);
+  // Ligne ZOLL AED PLUS
+  doc.setFillColor(248,248,248);
+  doc.rect(14, y-4, W-28, 12, 'F');
+  cx = 14;
+  doc.setDrawColor(...LGREY);
+  colWs.forEach(cw => { doc.line(cx, y-4, cx, y+8); cx += cw; });
+  doc.line(cx, y-4, cx, y+8);
+  doc.line(14, y+8, W-14, y+8);
+  cx = 14;
+  doc.setTextColor(...DARK); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+  doc.text('ZOLL', cx+3, y+2); cx += colWs[0];
+  doc.text('AED PLUS - FULL AUTO', cx+3, y+2); cx += colWs[1];
+  doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
+  doc.text('A REMPLIR PAR STAR-AID', cx+3, y+2); cx += colWs[2];
+  doc.text('……………………………………………', cx+3, y+2);
+  y += 14;
+
+  // Lignes vides supplémentaires
+  for (let row = 0; row < 2; row++) {
+    doc.setFillColor(row%2===0?255:248, row%2===0?255:248, row%2===0?255:248);
     doc.rect(14, y-4, W-28, 10, 'F');
     cx = 14;
     doc.setDrawColor(...LGREY);
@@ -3811,30 +3920,22 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
     doc.line(14, y+6, W-14, y+6);
     y += 10;
   }
-
   y += 10;
 
-  // Informations signataire
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...DARK);
-  doc.text('INFORMATIONS SIGNATAIRE', 14, y);
-  y += 10;
-
-  field('Email :', r.email_crm || r.email_contact || '');
-  field('N° de mobile :', r.telephone_crm || r.telephone_google || '');
-  field('Contact sur site — Nom :', '');
-  field('Contact sur site — Email :', '');
-  field('Contact sur site — Mobile :', '');
-
-  y += 8;
-  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
-  doc.text('PIÈCES OBLIGATOIRES À FOURNIR :', 14, y);
-  y += 7;
-  ['Pièce d\'identité du signataire.', 'Extrait KBIS de moins de 3 mois.', 'Relevé d\'identité bancaire (RIB).'].forEach(item => {
+  // Infos responsable
+  const lig = (label, val) => {
     checkNewPage(7);
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GREY);
-    doc.text('☐  ' + item, 18, y);
-    y += 6;
-  });
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+    doc.text(label, 14, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
+    const lw = doc.getTextWidth(label);
+    doc.text(val || '……………………………………………………………………………………………………………', 14 + lw + 2, y);
+    doc.setDrawColor(...LGREY); doc.line(14 + lw + 2, y+1, W-14, y+1);
+    y += 8;
+  };
+  lig('Nom de la personne responsable :', '');
+  lig('Email :', r.email_crm || r.email_contact || '');
+  lig('Tél :', r.telephone_crm || r.telephone_google || '');
 
   addPageFooter();
   return doc;

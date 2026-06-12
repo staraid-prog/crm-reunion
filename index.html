@@ -648,7 +648,7 @@ body.demo-mode header{background:#b45309 !important;}
     </div>
     <div class="modal-foot">
       <button class="btn btn-grey" onclick="closeMailModal()">Fermer</button>
-      <button class="btn btn-red" onclick="sendMail()">📤 Ouvrir dans Gmail</button>
+      <button class="btn btn-red" onclick="sendMail()">📤 Envoyer le mail</button>
     </div>
   </div>
 </div>
@@ -848,12 +848,9 @@ body.demo-mode header{background:#b45309 !important;}
 <div id="toast"></div>
 
 <script>
-/* ─── EMAILJS / IONOS CONFIG ──────────────────────────────────────── */
-// Remplir avec vos identifiants EmailJS (https://www.emailjs.com)
-const EMAILJS_PUBLIC_KEY  = '';  // Votre Public Key EmailJS
-const EMAILJS_SERVICE_ID  = '';  // Service SMTP IONOS dans EmailJS
-const EMAILJS_TEMPLATE_ID = '';  // ID du template EmailJS
-const EMAIL_FROM          = 'contact@star-aid.re';  // Votre email IONOS
+/* ─── MAKE.COM WEBHOOK ──────────────────────────────────────────── */
+const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/n6sczdlu6oqdc37b6ydpj1xxze5oruyj';
+const EMAIL_FROM       = 'm.michon@star-aid.fr';
 
 /* ─── SUPABASE REST ─────────────────────────────────────── */
 const SUPA_URL = 'https://obnpzcebhcrkizycuipk.supabase.co/rest/v1';
@@ -2329,17 +2326,28 @@ function closeMailModal() {
   document.getElementById('mailModal').classList.add('hidden');
 }
 
-function sendMail() {
+async function sendMail() {
   const to      = document.getElementById('mail-to').value.trim();
   const subject = document.getElementById('mail-subject').value.trim();
   const body    = document.getElementById('mail-body').value.trim();
-  const url     = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.open(url, '_blank');
+  if (!to) { toast('Aucun destinataire renseigné', true); return; }
+
   closeMailModal();
-  toast('Gmail ouvert ✓');
-  // Auto-passer en "Devis envoyé" si mail envoyé depuis le CRM
-  if (_currentRecord && (_currentRecord.statut_crm == null || _currentRecord.statut_crm <= 1)) {
-    changeStatut(2);
+  toast('📤 Envoi en cours…');
+
+  try {
+    const res = await fetch(MAKE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: EMAIL_FROM, to, subject, body })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    toast('✅ Mail envoyé à ' + to);
+    if (_currentRecord && (_currentRecord.statut_crm == null || _currentRecord.statut_crm <= 1)) {
+      changeStatut(2);
+    }
+  } catch(e) {
+    toast('❌ Erreur envoi : ' + e.message, true);
   }
 }
 
@@ -2494,41 +2502,43 @@ async function sendOfferEmail() {
   const docState = _docState[r.siret] || {};
   const ds = docState.devis;
   const cs = docState.contrat;
-  if (!ds?.validated || !cs?.ready) { toast('Validez le devis et générez le contrat d\'abord', true); return; }
+  if (!ds?.validated || !cs?.ready) { toast('Validez le devis et le contrat d\'abord', true); return; }
 
   const to = r.email_crm || r.email_contact || '';
   if (!to) { toast('Aucun email pour ce prospect', true); return; }
 
-  // Generate both PDFs
+  // Générer les PDFs en base64
   const devisDoc   = buildDevisPdf(r, ds.qty, ds.type, ds.remiseCom);
   const contratDoc = buildContratPdf(r, cs.date, cs.ville);
+  const devisB64   = devisDoc.output('datauristring').split(',')[1];
+  const contratB64 = contratDoc.output('datauristring').split(',')[1];
+  const nom        = (r.denomination_usuelle || '').replace(/[^a-zA-Z0-9]/g, '_');
 
-  // Check if EmailJS is configured
-  if (!EMAILJS_PUBLIC_KEY || !EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID) {
-    openOfferFallbackModal(r, devisDoc, contratDoc);
-    return;
-  }
+  const subject = `Proposition commerciale — Location défibrillateur DAE — ${r.denomination_usuelle || ''}`;
+  const body    = buildMailBody('');
 
-  // Send via EmailJS
+  toast('📤 Envoi en cours…');
   try {
-    toast('📤 Envoi en cours…');
-    emailjs.init(EMAILJS_PUBLIC_KEY);
-    const devisB64   = devisDoc.output('datauristring').split(',')[1];
-    const contratB64 = contratDoc.output('datauristring').split(',')[1];
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email:     to,
-      to_name:      r.signataire || r.denomination_usuelle || '',
-      from_name:    'STAR aid',
-      denomination: r.denomination_usuelle || '',
-      devis_b64:    devisB64,
-      contrat_b64:  contratB64,
+    const res = await fetch(MAKE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from:    EMAIL_FROM,
+        to,
+        subject,
+        body,
+        attachments: [
+          { filename: `Devis_StarAid_${nom}.pdf`,   content: devisB64 },
+          { filename: `Contrat_StarAid_${nom}.pdf`, content: contratB64 }
+        ]
+      })
     });
-    toast('✅ Offre commerciale envoyée à ' + to);
-    // Update status to "Relance mail" (5)
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    toast('✅ Offre envoyée à ' + to);
     await dbUpdate('prospects', r.siret, { statut_crm: 5 });
     if (_currentRecord) { _currentRecord.statut_crm = 5; renderDetail(_currentRecord); renderFilters(); }
   } catch(e) {
-    toast('Erreur envoi : ' + (e.text || e.message || JSON.stringify(e)), true);
+    toast('❌ Erreur envoi : ' + e.message, true);
   }
 }
 

@@ -2062,12 +2062,43 @@ document.addEventListener('input', e => {
 function openCallModal(siret) {
   _callSiret = siret;
   const statut = _currentRecord?.statut_crm ?? null;
-  const isRelanceJ2 = statut === 2;
-  const isRelanceJ5 = statut === 3;
+  const isRelanceJ2  = statut === 2;
+  const isRelanceJ5  = statut === 3;
+  const isRelanceJ10 = statut === 4;
 
   // Adapter le contenu du modal selon le contexte
   const body = document.querySelector('#callModal .modal-body');
-  if (isRelanceJ2 || isRelanceJ5) {
+
+  if (isRelanceJ10) {
+    body.innerHTML = `
+      <p style="font-size:13px;color:var(--mid);margin-bottom:18px;text-align:center;">
+        Que s'est-il passé lors de ce rappel ?
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="logJ10Messagerie()"
+          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #fcd34d;
+                 background:#fffbeb;color:#b45309;font-size:13px;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;gap:10px;transition:background .15s;"
+          onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='#fffbeb'">
+          <span style="font-size:20px;">📵</span>
+          <div style="text-align:left;">
+            <div>Messagerie</div>
+            <div style="font-size:11px;font-weight:400;color:#92400e;margin-top:2px;">Envoie un mail de relance → Relance mail</div>
+          </div>
+        </button>
+        <button onclick="logPriseEnCharge()"
+          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #86efac;
+                 background:#f0fdf4;color:#16a34a;font-size:13px;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;gap:10px;transition:background .15s;"
+          onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+          <span style="font-size:20px;">✅</span>
+          <div style="text-align:left;">
+            <div>Pris en charge</div>
+            <div style="font-size:11px;font-weight:400;color:#15803d;margin-top:2px;">Enregistre l'appel — reste sur la fiche</div>
+          </div>
+        </button>
+      </div>`;
+  } else if (isRelanceJ2 || isRelanceJ5) {
     const nextLabel  = isRelanceJ2 ? 'J+5' : 'J+10';
     const fnMsg      = isRelanceJ2 ? 'logRelanceMessagerie(2)' : 'logRelanceMessagerie(3)';
     body.innerHTML = `
@@ -2248,6 +2279,80 @@ async function logMessagerie() {
 }
 
 // Appel 2 depuis Relance J+2 → messagerie → passe en Relance J+5
+function buildRelanceMailBody() {
+  return `Bonjour,
+
+Je me permets de revenir vers vous concernant notre proposition de location de défibrillateur ainsi que les éléments transmis précédemment.
+
+Avez-vous eu l'occasion d'étudier notre offre ?
+
+Si vous souhaitez donner suite ou simplement échanger sur votre projet, revenez vers nous rapidement. Nous serons ravis de répondre à vos questions et de vous accompagner dans la mise en place de votre équipement.
+
+Notre équipe peut intervenir sous 72 heures ouvrées pour l'installation et la mise en service de votre défibrillateur.
+
+Dans l'attente de votre retour,
+
+Bien cordialement,`;
+}
+
+// J+10 messagerie → envoie mail de relance à tous les contacts → Relance mail (statut 5)
+async function logJ10Messagerie() {
+  const siret = _callSiret;
+  closeCallModal();
+  if (!siret) return;
+  const r = _currentRecord;
+  if (!r) return;
+
+  // Collecter tous les emails du prospect
+  const emails = [];
+  if (r.email_crm)     emails.push(r.email_crm.trim());
+  if (r.email_contact) emails.push(r.email_contact.trim());
+  try {
+    const extras = JSON.parse(r.contacts_json || '[]');
+    extras.forEach(c => { if (c.mail) emails.push(c.mail.trim()); });
+  } catch {}
+  const uniqueEmails = [...new Set(emails.filter(Boolean))];
+
+  if (uniqueEmails.length === 0) {
+    toast('❌ Aucune adresse email trouvée pour ce prospect', true);
+    return;
+  }
+
+  const to      = uniqueEmails.join(',');
+  const subject = `Relance — Défibrillateur DAE — ${r.denomination_usuelle || ''}`;
+  const body    = buildRelanceMailBody();
+
+  toast('📤 Envoi du mail de relance…');
+  try {
+    const res = await fetch(MAKE_WEBHOOK_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ from: EMAIL_FROM, to, subject, body, attachments: [] })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const now        = _nowReunion();
+    const appelsJson = _appendAppel(r, 'msg');
+    const isOffre    = r.date_heure_appel?.startsWith('OFFRE:');
+    const base       = { statut_crm: 5 };
+    if (!isOffre) base.date_heure_appel = 'MSG:' + now;
+    if (currentUser) base.commercial = currentUser.prenom + ' ' + currentUser.nom;
+
+    await _saveWithAppels(siret, base, appelsJson);
+    toast('✅ Mail de relance envoyé à ' + to);
+    if (_currentRecord) {
+      if (!isOffre) _currentRecord.date_heure_appel = 'MSG:' + now;
+      _currentRecord.appels_json = appelsJson;
+      _currentRecord.statut_crm  = 5;
+      if (currentUser) _currentRecord.commercial = base.commercial;
+      renderDetail(_currentRecord);
+      renderFilters();
+    }
+  } catch(e) {
+    toast('❌ Erreur envoi : ' + e.message, true);
+  }
+}
+
 // Pris en charge depuis J+2 ou J+5 → enregistre l'appel, garde le statut
 async function logPriseEnCharge() {
   const siret = _callSiret;

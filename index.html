@@ -3120,7 +3120,7 @@ function openContratModal() {
   document.getElementById('ct-signataire').textContent   = r.signataire           || '…à renseigner dans la fiche Contact';
   document.getElementById('ct-siret').textContent        = r.siret                || '';
   document.getElementById('ct-adresse').textContent      = [r.adresse_voie, r.code_postal, r.commune].filter(Boolean).join(', ') || (r.adresse_google || '');
-  document.getElementById('ct-ville').value              = r.commune              || '';
+  document.getElementById('ct-ville').value              = 'Saint-Paul';
   document.getElementById('ct-date').value               = today;
   // Pré-sélectionner le prix du devis s'il existe, sinon 89€ par défaut
   const devisPrix = _docState[r.siret]?.devis?.prix || 89;
@@ -3135,7 +3135,7 @@ function closeContratModal() {
 function validerContrat() {
   const r = _currentRecord;
   if (!r) return;
-  const ville    = document.getElementById('ct-ville').value.trim() || r.commune || '';
+  const ville    = document.getElementById('ct-ville').value.trim() || 'Saint-Paul';
   const date     = document.getElementById('ct-date').value.trim() || new Date().toLocaleDateString('fr-FR');
   const prix     = parseInt(document.querySelector('.ct-prix-btn.sel')?.dataset.prix || '89');
   const nom      = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
@@ -3153,7 +3153,7 @@ function validerContrat() {
 function previewContrat() {
   const r = _currentRecord;
   if (!r) return;
-  const ville    = document.getElementById('ct-ville').value.trim() || r.commune || '';
+  const ville    = document.getElementById('ct-ville').value.trim() || 'Saint-Paul';
   const date     = document.getElementById('ct-date').value.trim() || new Date().toLocaleDateString('fr-FR');
   const prix     = parseInt(document.querySelector('.ct-prix-btn.sel')?.dataset.prix || '89');
   const doc      = buildContratPdf(r, date, ville, prix);

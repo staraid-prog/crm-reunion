@@ -352,6 +352,36 @@ body.demo-mode header{background:#b45309 !important;}
 .dash-empty .dei{font-size:36px;margin-bottom:8px;}
 .dash-section-title{font-size:11px;font-weight:700;color:var(--mid);text-transform:uppercase;
   letter-spacing:.3px;margin:10px 0 6px;display:flex;align-items:center;gap:6px;}
+
+/* CALENDAR GRID (vue agenda) */
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;padding:6px 0;}
+.cal-col{background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;min-width:0;display:flex;flex-direction:column;}
+.cal-head{padding:9px 12px 8px;border-bottom:2px solid var(--border);}
+.cal-head.today{background:var(--red);border-bottom-color:var(--red-dark);}
+.cal-head.past{background:#fff8dc;border-bottom-color:#f5d58a;}
+.cal-head-day{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--light);}
+.cal-head.today .cal-head-day{color:rgba(255,255,255,.75);}
+.cal-head.past .cal-head-day{color:#b8860b;}
+.cal-head-date{font-size:15px;font-weight:700;color:var(--dark);margin-top:1px;line-height:1.2;}
+.cal-head.today .cal-head-date{color:#fff;}
+.cal-head.past .cal-head-date{color:#7a5800;}
+.cal-head-badge{display:inline-block;font-size:10px;font-weight:700;background:rgba(0,0,0,.08);
+  border-radius:8px;padding:1px 7px;margin-top:5px;}
+.cal-head.today .cal-head-badge{background:rgba(255,255,255,.25);color:#fff;}
+.cal-body{padding:6px;flex:1;}
+.cal-card{padding:8px 9px;border-radius:5px;cursor:pointer;margin-bottom:4px;
+  border-left:3px solid var(--border);background:#f9f9f9;transition:background .12s;}
+.cal-card:last-child{margin-bottom:0;}
+.cal-card:hover{background:#f0f0f0;}
+.cal-card.j2{border-left-color:#06b6d4;background:#f0fcff;}
+.cal-card.j5{border-left-color:#8b5cf6;background:#faf5ff;}
+.cal-card.j10{border-left-color:#f97316;background:#fff9f5;}
+.cal-card-name{font-size:12px;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-card-tag{font-size:10px;color:var(--light);margin-top:2px;}
+.cal-nodate{border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin-top:12px;}
+.cal-nodate-head{font-size:11px;font-weight:700;color:var(--light);text-transform:uppercase;
+  letter-spacing:.3px;margin-bottom:8px;}
+.cal-nodate-list{display:flex;flex-direction:column;gap:4px;}
 </style>
 </head>
 <body>
@@ -1606,53 +1636,69 @@ async function renderDashCalendar(container) {
   const DOTS = { 2:'#06b6d4', 3:'#8b5cf6', 4:'#f97316' };
   const CLS  = { 2:'j2',      3:'j5',      4:'j10'     };
 
-  // Séparer : avec date planifiée / sans date
+  // Séparer : avec date ISO valide / sans date
   const withDate    = rows.filter(r => r.date_relance && /^\d{4}-\d{2}-\d{2}$/.test(r.date_relance));
   const withoutDate = rows.filter(r => !r.date_relance || !/^\d{4}-\d{2}-\d{2}$/.test(r.date_relance));
 
-  // Regrouper par date (triés chronologiquement)
+  // Regrouper par date
   const groups = {};
   withDate.forEach(r => {
     if (!groups[r.date_relance]) groups[r.date_relance] = [];
     groups[r.date_relance].push(r);
   });
 
-  function makeCalCard(r) {
-    return `<div class="dash-card ${CLS[r.statut_crm] || ''}" onclick="selectProspect('${esc(r.siret)}',null)">
-      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${DOTS[r.statut_crm]||'#ccc'};flex-shrink:0;"></span>
+  // Carte prospect pour la vue calendrier
+  function calCard(r) {
+    const label = STATUTS[r.statut_crm]?.label || '';
+    return `<div class="cal-card ${CLS[r.statut_crm]||''}" onclick="selectProspect('${esc(r.siret)}',null)">
+      <div class="cal-card-name">${esc(r.denomination_usuelle)}</div>
+      <div class="cal-card-tag" style="color:${DOTS[r.statut_crm]||'#ccc'};font-weight:600;">${label} · ${esc(r.commune||'—')}</div>
+    </div>`;
+  }
+
+  // Petite carte pour la section "non planifié"
+  function flatCard(r) {
+    return `<div class="dash-card ${CLS[r.statut_crm]||''}" onclick="selectProspect('${esc(r.siret)}',null)"
+              style="margin-bottom:4px;">
+      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${DOTS[r.statut_crm]||'#ccc'};flex-shrink:0;"></span>
       <div class="dash-card-body">
         <div class="dash-card-name">${esc(r.denomination_usuelle)}</div>
-        <div class="dash-card-meta">${esc(r.commune || '—')}</div>
+        <div class="dash-card-meta">${esc(r.commune||'—')}</div>
       </div>
-      <span style="font-size:10px;color:${DOTS[r.statut_crm]||'#ccc'};font-weight:700;white-space:nowrap;flex-shrink:0;">${STATUTS[r.statut_crm]?.label || ''}</span>
+      <span style="font-size:10px;color:${DOTS[r.statut_crm]||'#ccc'};font-weight:700;white-space:nowrap;flex-shrink:0;">${STATUTS[r.statut_crm]?.label||''}</span>
       <span style="color:#ccc;font-size:16px;">›</span>
     </div>`;
   }
 
-  let html = '';
+  let html = '<div class="cal-grid">';
 
-  // Blocs par date (passé → aujourd'hui → futur)
+  // Colonnes calendrier, triées chronologiquement
   Object.keys(groups).sort().forEach(dt => {
     const isPast  = dt < today;
     const isToday = dt === today;
-    const label   = fmtDateLabel(dt);
+    const parts   = fmtDateLabel(dt).split(' '); // ["LUNDI","16","JUIN"]
+    const dayName = parts[0];
+    const dayDate = parts.slice(1).join(' ');
     const group   = groups[dt];
-    const headExtra = isPast ? ' style="background:#fff3cd;color:#856404;"' : '';
-    html += `<div class="dash-day">
-      <div class="dash-day-label${isToday ? ' today' : ''}"${headExtra}>
-        ${isPast ? '⚠️ ' : isToday ? '📅 ' : ''}${label}<span style="font-weight:400;opacity:.65;"> — ${group.length} prospect${group.length > 1 ? 's' : ''}</span>
+    const headCls = isPast ? ' past' : isToday ? ' today' : '';
+
+    html += `<div class="cal-col">
+      <div class="cal-head${headCls}">
+        <div class="cal-head-day">${isPast?'⚠️ ':''}${dayName}</div>
+        <div class="cal-head-date">${dayDate}</div>
+        <div class="cal-head-badge">${group.length} relance${group.length>1?'s':''}</div>
       </div>
-      ${group.map(makeCalCard).join('')}
+      <div class="cal-body">${group.map(calCard).join('')}</div>
     </div>`;
   });
 
-  // Prospects sans date de relance (anciens, avant la mise à jour)
+  html += '</div>';
+
+  // Section "date non définie" sous le calendrier
   if (withoutDate.length > 0) {
-    html += `<div class="dash-day">
-      <div class="dash-day-label" style="background:#f0f0f0;color:#888;">
-        📋 Date de relance non définie — ${withoutDate.length} prospect${withoutDate.length > 1 ? 's' : ''}
-      </div>
-      ${withoutDate.map(makeCalCard).join('')}
+    html += `<div class="cal-nodate">
+      <div class="cal-nodate-head">📋 Date de relance non définie — ${withoutDate.length} prospect${withoutDate.length>1?'s':''}</div>
+      <div class="cal-nodate-list">${withoutDate.map(flatCard).join('')}</div>
     </div>`;
   }
 

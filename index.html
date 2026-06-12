@@ -2423,12 +2423,15 @@ function closeDevisModal() {
 function validerDevis() {
   const r = _currentRecord;
   if (!r) return;
-  const qty = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
-  const type = document.querySelector('input[name="dv-type"]:checked')?.value || 'Full automatique';
+  const qty       = Math.max(1, parseInt(document.getElementById('dv-qty').value) || 1);
+  const type      = document.querySelector('input[name="dv-type"]:checked')?.value || 'Full automatique';
   const remiseCom = Math.max(0, parseFloat(document.getElementById('dv-remise-com')?.value) || 0);
+  const nom       = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
+  const filename  = `Devis_StarAid_${nom}.pdf`;
+  const b64       = buildDevisPdf(r, qty, type, remiseCom).output('datauristring').split(',')[1];
 
   if (!_docState[r.siret]) _docState[r.siret] = {};
-  _docState[r.siret].devis = { qty, type, remiseCom, validated: true };
+  _docState[r.siret].devis = { qty, type, remiseCom, validated: true, pdfBase64: b64, filename };
 
   closeDevisModal();
   toast('✅ Devis validé — prêt à envoyer');
@@ -2518,11 +2521,14 @@ function closeContratModal() {
 function validerContrat() {
   const r = _currentRecord;
   if (!r) return;
-  const ville = document.getElementById('ct-ville').value.trim() || r.commune || '';
-  const date  = document.getElementById('ct-date').value.trim() || new Date().toLocaleDateString('fr-FR');
+  const ville    = document.getElementById('ct-ville').value.trim() || r.commune || '';
+  const date     = document.getElementById('ct-date').value.trim() || new Date().toLocaleDateString('fr-FR');
+  const nom      = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
+  const filename = `Contrat_StarAid_${nom}.pdf`;
+  const b64      = buildContratPdf(r, date, ville).output('datauristring').split(',')[1];
 
   if (!_docState[r.siret]) _docState[r.siret] = {};
-  _docState[r.siret].contrat = { ville, date, ready: true };
+  _docState[r.siret].contrat = { ville, date, ready: true, pdfBase64: b64, filename };
 
   closeContratModal();
   toast('✅ Contrat validé — prêt à envoyer');

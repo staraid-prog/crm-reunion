@@ -1791,6 +1791,8 @@ function renderDetail(r) {
   const docState  = _docState[r.siret] || {};
   const devisOk   = !isLocked && docState.devis?.validated;
   const contratOk = !isLocked && docState.contrat?.ready;
+  const offreSent = r.date_heure_appel?.startsWith('OFFRE:');
+  const offreDateStr = offreSent ? r.date_heure_appel.slice(6) : '';
   const offerBtnHtml = isLocked ? '' : `
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
@@ -1799,7 +1801,25 @@ function renderDetail(r) {
         <span style="font-size:11px;color:${contratOk?'#16a34a':'var(--light)'};">
           ${contratOk ? '✅' : '⬜'} Contrat</span>
       </div>
-      ${(devisOk && contratOk) ? `
+      ${offreSent ? `
+        <div style="background:#eff6ff;border:1.5px solid #2563eb;border-radius:8px;
+                    padding:10px 14px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">📧</span>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.4px;">
+              Offre commerciale envoyée
+            </div>
+            <div style="font-size:13px;color:#1d4ed8;font-weight:600;margin-top:2px;">
+              le ${esc(offreDateStr)}
+            </div>
+          </div>
+        </div>
+        <button onclick="sendOfferEmail()" style="width:100%;margin-top:8px;padding:9px;border-radius:6px;
+          border:1.5px solid #2563eb;background:#fff;color:#2563eb;font-size:12px;
+          font-weight:600;cursor:pointer;">
+          🔁 Renvoyer l'offre commerciale
+        </button>` :
+      (devisOk && contratOk) ? `
         <button onclick="sendOfferEmail()" style="width:100%;padding:12px;border-radius:6px;
           border:1.5px solid var(--red);background:var(--red);color:#fff;font-size:13px;
           font-weight:700;cursor:pointer;">

@@ -4105,45 +4105,43 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   cols.forEach((col, i) => { doc.text(col, cx+3, y-0.5); cx += colWs[i]; });
   y += 5;
 
-  // Ligne ZOLL AED PLUS
-  doc.setFillColor(248,248,248);
-  doc.rect(14, y-4, W-28, 12, 'F');
-  cx = 14;
-  doc.setDrawColor(...LGREY);
-  colWs.forEach(cw => { doc.line(cx, y-4, cx, y+8); cx += cw; });
-  doc.line(cx, y-4, cx, y+8);
-  doc.line(14, y+8, W-14, y+8);
-  cx = 14;
-  doc.setTextColor(...DARK); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-  doc.text('ZOLL', cx+3, y+2); cx += colWs[0];
-  doc.text('AED PLUS - FULL AUTO', cx+3, y+2); cx += colWs[1];
-  // Cellules à remplir → fond jaune
-  doc.setFillColor(...YELLOW);
-  doc.rect(cx, y-4, colWs[2], 12, 'F');
-  doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
-  doc.text('A REMPLIR PAR STAR-AID', cx+3, y+2); cx += colWs[2];
-  doc.setFillColor(...YELLOW);
-  doc.rect(cx, y-4, colWs[3] || (W-14-cx), 12, 'F');
-  // Redessiner les bordures par-dessus les fonds jaunes
-  doc.setDrawColor(...LGREY);
-  doc.line(cx - colWs[2], y-4, cx - colWs[2], y+8); // bord gauche N° série
-  doc.line(cx, y-4, cx, y+8);                         // séparation N° série / Emplacement
-  doc.line(W-14, y-4, W-14, y+8);                     // bord droit Emplacement
-  doc.line(cx - colWs[2], y+8, W-14, y+8);            // bord bas des deux cellules
-  y += 14;
-
-  // Lignes vides supplémentaires
-  for (let row = 0; row < 2; row++) {
-    doc.setFillColor(row%2===0?255:248, row%2===0?255:248, row%2===0?255:248);
-    doc.rect(14, y-4, W-28, 10, 'F');
+  // 7 lignes de données (ligne 1 = ZOLL pré-remplie, lignes 2-7 = vides)
+  for (let row = 0; row < 7; row++) {
+    const rowBg = row % 2 === 0 ? [255,255,255] : [248,248,248];
+    doc.setFillColor(...rowBg);
+    doc.rect(14, y-4, W-28, 12, 'F');
     cx = 14;
     doc.setDrawColor(...LGREY);
-    colWs.forEach(cw => { doc.line(cx, y-4, cx, y+6); cx += cw; });
-    doc.line(cx, y-4, cx, y+6);
-    doc.line(14, y+6, W-14, y+6);
-    y += 10;
+    colWs.forEach(cw => { doc.line(cx, y-4, cx, y+8); cx += cw; });
+    doc.line(cx, y-4, cx, y+8);
+    doc.line(14, y+8, W-14, y+8);
+    cx = 14;
+    if (row === 0) {
+      // Ligne ZOLL pré-remplie
+      doc.setTextColor(...DARK); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+      doc.text('ZOLL', cx+3, y+2); cx += colWs[0];
+      doc.text('AED PLUS - FULL AUTO', cx+3, y+2); cx += colWs[1];
+    } else {
+      cx += colWs[0] + colWs[1];
+    }
+    // N° de Série → fond jaune
+    doc.setFillColor(...YELLOW);
+    doc.rect(cx, y-4, colWs[2], 12, 'F');
+    doc.setFont('helvetica','normal'); doc.setTextColor(...GREY); doc.setFontSize(7.5);
+    if (row === 0) doc.text('A REMPLIR PAR STAR-AID', cx+3, y+2);
+    cx += colWs[2];
+    // Emplacement (site) → fond jaune
+    doc.setFillColor(...YELLOW);
+    doc.rect(cx, y-4, colWs[3] || (W-14-cx), 12, 'F');
+    // Redessiner les bordures par-dessus les fonds jaunes
+    doc.setDrawColor(...LGREY);
+    doc.line(cx - colWs[2], y-4, cx - colWs[2], y+8);
+    doc.line(cx, y-4, cx, y+8);
+    doc.line(W-14, y-4, W-14, y+8);
+    doc.line(cx - colWs[2], y+8, W-14, y+8);
+    y += 13;
   }
-  y += 10;
+  y += 6;
 
   // Infos responsable — fond jaune sur les zones à remplir
   const lig = (label, val) => {

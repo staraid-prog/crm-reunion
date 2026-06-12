@@ -2246,6 +2246,19 @@ function toggleRecipient(idx) {
   }
 }
 
+function plainToHtml(text) {
+  return text
+    .split('\n\n')
+    .map(para => {
+      const escaped = para
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\n/g, '<br>')
+        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1">$1</a>');
+      return `<p style="margin:0 0 12px 0;">${escaped}</p>`;
+    })
+    .join('');
+}
+
 function buildMailBody(contactName) {
   return `Bonjour,
 
@@ -2339,7 +2352,7 @@ async function sendMail() {
     const res = await fetch(MAKE_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: EMAIL_FROM, to, subject, body, attachments: [] })
+      body: JSON.stringify({ from: EMAIL_FROM, to, subject, body: plainToHtml(body), attachments: [] })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     toast('✅ Mail envoyé à ' + to);
@@ -2514,8 +2527,8 @@ async function sendOfferEmail() {
   const contratB64 = contratDoc.output('datauristring').split(',')[1];
   const nom        = (r.denomination_usuelle || '').replace(/[^a-zA-Z0-9]/g, '_');
 
-  const subject = `Proposition commerciale — Location défibrillateur DAE — ${r.denomination_usuelle || ''}`;
-  const body    = buildMailBody('');
+  const subject  = `Proposition commerciale — Location défibrillateur DAE — ${r.denomination_usuelle || ''}`;
+  const bodyHtml = plainToHtml(buildMailBody(''));
 
   toast('📤 Envoi en cours…');
   try {
@@ -2526,7 +2539,7 @@ async function sendOfferEmail() {
         from:    EMAIL_FROM,
         to,
         subject,
-        body,
+        body:    bodyHtml,
         attachments: [
           { filename: `Devis_StarAid_${nom}.pdf`,   content: devisB64 },
           { filename: `Contrat_StarAid_${nom}.pdf`, content: contratB64 }

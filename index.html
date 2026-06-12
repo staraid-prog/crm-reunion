@@ -2180,21 +2180,32 @@ function _appendAppel(record, type) {
   return JSON.stringify(appels);
 }
 
+async function _saveWithAppels(siret, baseUpdates, appelsJson) {
+  // Essaie avec appels_json, repli sans si la colonne n'existe pas encore
+  const withAppels = { ...baseUpdates, appels_json: appelsJson };
+  let ok = await dbUpdate('prospects', siret, withAppels);
+  if (!ok) {
+    ok = await dbUpdate('prospects', siret, baseUpdates);  // repli sans appels_json
+  } else if (_currentRecord) {
+    _currentRecord.appels_json = appelsJson;
+  }
+  return ok;
+}
+
 async function logAppel() {
   const siret = _callSiret;
   closeCallModal();
   if (!siret) return;
-  const now       = _nowReunion();
+  const now        = _nowReunion();
   const appelsJson = _appendAppel(_currentRecord, 'appel');
-  const updates = { date_heure_appel: now, appels_json: appelsJson };
-  if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
-  const ok = await dbUpdate('prospects', siret, updates);
+  const base = { date_heure_appel: now };
+  if (currentUser) base.commercial = currentUser.prenom + ' ' + currentUser.nom;
+  const ok = await _saveWithAppels(siret, base, appelsJson);
   if (ok) {
     toast('📞 Appel enregistré — ' + now);
     if (_currentRecord) {
       _currentRecord.date_heure_appel = now;
-      _currentRecord.appels_json = appelsJson;
-      if (currentUser) _currentRecord.commercial = updates.commercial;
+      if (currentUser) _currentRecord.commercial = base.commercial;
     }
     const upd = await dbUpdate('prospects', siret, { statut_crm: 1 });
     if (upd && _currentRecord) {
@@ -2209,17 +2220,16 @@ async function logMessagerie() {
   const siret = _callSiret;
   closeCallModal();
   if (!siret) return;
-  const now       = _nowReunion();
+  const now        = _nowReunion();
   const appelsJson = _appendAppel(_currentRecord, 'msg');
-  const updates = { date_heure_appel: 'MSG:' + now, appels_json: appelsJson };
-  if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
-  const ok = await dbUpdate('prospects', siret, updates);
+  const base = { date_heure_appel: 'MSG:' + now };
+  if (currentUser) base.commercial = currentUser.prenom + ' ' + currentUser.nom;
+  const ok = await _saveWithAppels(siret, base, appelsJson);
   if (ok) {
     toast('📵 Messagerie enregistrée — ' + now);
     if (_currentRecord) {
       _currentRecord.date_heure_appel = 'MSG:' + now;
-      _currentRecord.appels_json = appelsJson;
-      if (currentUser) _currentRecord.commercial = updates.commercial;
+      if (currentUser) _currentRecord.commercial = base.commercial;
     }
     const upd = await dbUpdate('prospects', siret, { statut_crm: 0 });
     if (upd && _currentRecord) {
@@ -2237,16 +2247,15 @@ async function logRelanceJ2Messagerie() {
   if (!siret) return;
   const now        = _nowReunion();
   const appelsJson = _appendAppel(_currentRecord, 'msg');
-  const updates = { date_heure_appel: 'MSG:' + now, appels_json: appelsJson, statut_crm: 3 };
-  if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
-  const ok = await dbUpdate('prospects', siret, updates);
+  const base = { date_heure_appel: 'MSG:' + now, statut_crm: 3 };
+  if (currentUser) base.commercial = currentUser.prenom + ' ' + currentUser.nom;
+  const ok = await _saveWithAppels(siret, base, appelsJson);
   if (ok) {
     toast('📵 Messagerie enregistrée — passage en Relance J+5');
     if (_currentRecord) {
       _currentRecord.date_heure_appel = 'MSG:' + now;
-      _currentRecord.appels_json = appelsJson;
       _currentRecord.statut_crm = 3;
-      if (currentUser) _currentRecord.commercial = updates.commercial;
+      if (currentUser) _currentRecord.commercial = base.commercial;
       renderDetail(_currentRecord);
       renderFilters();
     }

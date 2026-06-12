@@ -194,6 +194,11 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
   background:#f9f9f9;font-size:22px;font-weight:700;color:var(--mid);cursor:pointer;transition:.15s;}
 .dv-prix-btn:hover{border-color:var(--red);color:var(--red);background:#fff5f5;}
 .dv-prix-btn.sel{border-color:var(--red);background:var(--red);color:#fff;}
+.ct-prix-btn{flex:1;padding:10px 0;border-radius:8px;border:2px solid var(--border);
+  background:#f9f9f9;font-size:18px;font-weight:700;color:var(--mid);cursor:pointer;transition:.15s;}
+.ct-prix-btn:hover{border-color:var(--red);color:var(--red);background:#fff5f5;}
+.ct-prix-btn.sel{border-color:var(--red);background:var(--red);color:#fff;}
+.ct-prix-label{font-size:10px;font-weight:400;display:block;margin-top:2px;}
 .act-contrat{background:#fff7ed;color:#c2410c;border-color:#fdba74;}
 .act-contrat:hover{background:#ffedd5;}
 .act-sep{height:1px;background:var(--border);margin:2px 0;}
@@ -828,6 +833,17 @@ body.demo-mode header{background:#b45309 !important;}
         <div><strong>Représentant :</strong> <span id="ct-signataire" style="color:var(--dark);"></span></div>
         <div><strong>SIRET :</strong> <span id="ct-siret" style="color:var(--mid);font-family:monospace;font-size:12px;"></span></div>
         <div><strong>Adresse :</strong> <span id="ct-adresse" style="color:var(--dark);"></span></div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:8px;">Prix mensuel HT / appareil</label>
+        <div style="display:flex;gap:10px;">
+          <button class="ct-prix-btn" data-prix="79" onclick="selectContratPrix(79)">
+            79 €<span class="ct-prix-label" style="color:inherit;">soit 85,72 € TTC</span>
+          </button>
+          <button class="ct-prix-btn sel" data-prix="89" onclick="selectContratPrix(89)">
+            89 €<span class="ct-prix-label" style="color:inherit;">soit 96,57 € TTC</span>
+          </button>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="mrow" style="margin-bottom:0;">
@@ -3090,6 +3106,12 @@ function sendDevisByGmail() {
 }
 
 /* ─── MODAL CONTRAT ─────────────────────────────────────── */
+function selectContratPrix(prix) {
+  document.querySelectorAll('.ct-prix-btn').forEach(b => b.classList.remove('sel'));
+  const btn = document.querySelector(`.ct-prix-btn[data-prix="${prix}"]`);
+  if (btn) btn.classList.add('sel');
+}
+
 function openContratModal() {
   const r = _currentRecord;
   if (!r) return;
@@ -3100,6 +3122,9 @@ function openContratModal() {
   document.getElementById('ct-adresse').textContent      = [r.adresse_voie, r.code_postal, r.commune].filter(Boolean).join(', ') || (r.adresse_google || '');
   document.getElementById('ct-ville').value              = r.commune              || '';
   document.getElementById('ct-date').value               = today;
+  // Pré-sélectionner le prix du devis s'il existe, sinon 89€ par défaut
+  const devisPrix = _docState[r.siret]?.devis?.prix || 89;
+  selectContratPrix(devisPrix);
   document.getElementById('contratModal').classList.remove('hidden');
 }
 
@@ -3112,12 +3137,13 @@ function validerContrat() {
   if (!r) return;
   const ville    = document.getElementById('ct-ville').value.trim() || r.commune || '';
   const date     = document.getElementById('ct-date').value.trim() || new Date().toLocaleDateString('fr-FR');
+  const prix     = parseInt(document.querySelector('.ct-prix-btn.sel')?.dataset.prix || '89');
   const nom      = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
   const filename = `Contrat_StarAid_${nom}.pdf`;
-  const b64      = buildContratPdf(r, date, ville).output('datauristring').split(',')[1];
+  const b64      = buildContratPdf(r, date, ville, prix).output('datauristring').split(',')[1];
 
   if (!_docState[r.siret]) _docState[r.siret] = {};
-  _docState[r.siret].contrat = { ville, date, ready: true, pdfBase64: b64, filename };
+  _docState[r.siret].contrat = { ville, date, prix, ready: true, pdfBase64: b64, filename };
 
   closeContratModal();
   toast('✅ Contrat validé — prêt à envoyer');
@@ -3129,14 +3155,15 @@ function previewContrat() {
   if (!r) return;
   const ville    = document.getElementById('ct-ville').value.trim() || r.commune || '';
   const date     = document.getElementById('ct-date').value.trim() || new Date().toLocaleDateString('fr-FR');
-  const doc      = buildContratPdf(r, date, ville);
+  const prix     = parseInt(document.querySelector('.ct-prix-btn.sel')?.dataset.prix || '89');
+  const doc      = buildContratPdf(r, date, ville, prix);
   const nom      = (r.denomination_usuelle||'').replace(/[^a-zA-Z0-9]/g,'_');
   const filename = `Contrat_StarAid_${nom}.pdf`;
   const b64      = doc.output('datauristring').split(',')[1];
 
   // Auto-validation + stockage du PDF
   if (!_docState[r.siret]) _docState[r.siret] = {};
-  _docState[r.siret].contrat = { ville, date, ready: true, pdfBase64: b64, filename };
+  _docState[r.siret].contrat = { ville, date, prix, ready: true, pdfBase64: b64, filename };
 
   const url = doc.output('bloburl');
   _pdfUrl   = url;
@@ -3444,7 +3471,7 @@ function buildDevisPdf(r, qty, type, prix = 89) {
 }
 
 /* ─── GÉNÉRATION PDF — CONTRAT ──────────────────────────── */
-function buildContratPdf(r, dateSign, villeSign) {
+function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   const { jsPDF } = window.jspdf;
   const doc  = new jsPDF({ unit: 'mm', format: 'a4' });
   const W    = 210;
@@ -3550,7 +3577,18 @@ function buildContratPdf(r, dateSign, villeSign) {
   gap();
 
   artTitle('Le LOCATAIRE :');
-  para('La société : ' + (r.denomination_usuelle || '………………………………………………………………………………'));
+  // Nom de la société en rouge
+  const societeNom = r.denomination_usuelle || '………………………………………………………………………………';
+  checkNewPage(6);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  doc.setTextColor(...GREY);
+  doc.text('La société : ', 14, y);
+  const labelW = doc.getTextWidth('La société : ');
+  doc.setTextColor(...RED);
+  doc.setFont('helvetica','bold');
+  doc.text(societeNom, 14 + labelW, y);
+  y += 4.5;
+  doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
   para('Représentée par : ' + (r.signataire || '……………………………………………………………………………………'));
   para('Fonction : ' + (r.fonction || '………………………………………') + '    N° SIRET : ' + (r.siret || '………………………………'));
   para('Sise : ' + ([r.adresse_voie, r.code_postal ? r.code_postal + ' ' + r.commune : r.commune].filter(Boolean).join(', ') || '……………………………………………………………………………………………………'));
@@ -3599,7 +3637,20 @@ function buildContratPdf(r, dateSign, villeSign) {
   gap();
 
   artTitle('Article 3 — Loyer');
-  para('Le prix du loyer est fixé à 89 EUR HT par mois et par appareil (soit 96,57 EUR TTC/mois, TVA 8,5% DOM).');
+  // Texte prix dynamique selon le tarif sélectionné
+  if (prix === 79) {
+    para('Le prix du loyer est fixé mensuellement à :');
+    checkNewPage(6);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
+    doc.text('Défibrillateur STAR LIFE : ', 14, y);
+    const lw79 = doc.getTextWidth('Défibrillateur STAR LIFE : ');
+    doc.setTextColor(...RED); doc.setFont('helvetica','bold');
+    doc.text('(79 € HT (soit 85,72 € TTC) par appareil, au lieu de 89 € HT.)', 14 + lw79, y);
+    y += 4.5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
+  } else {
+    para('Le prix du loyer est fixé à 89 EUR HT par mois et par appareil (soit 96,57 EUR TTC/mois, TVA 8,5% DOM).');
+  }
   gap(2);
   para('Le loyer est payable mensuellement et d\'avance (terme à échoir). Le règlement s\'effectue exclusivement par');
   para('Prélèvement Automatique SEPA, conformément au mandat signé par le LOCATAIRE.');

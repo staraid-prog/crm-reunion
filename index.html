@@ -1928,10 +1928,12 @@ function renderDetail(r) {
     </div><!-- /detail-body -->
   `;
 
-  // Restaurer la position de scroll
+  // Restaurer la position de scroll après rendu du DOM
   if (_scrollY > 0) {
-    const body = detail.querySelector('.detail-body');
-    if (body) body.scrollTop = _scrollY;
+    requestAnimationFrame(() => {
+      const body = detail.querySelector('.detail-body');
+      if (body) body.scrollTop = _scrollY;
+    });
   }
 }
 

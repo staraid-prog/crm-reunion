@@ -2248,13 +2248,15 @@ async function logPriseEnCharge() {
   if (!siret) return;
   const now        = _nowReunion();
   const appelsJson = _appendAppel(_currentRecord, 'appel');
-  const base = { date_heure_appel: now };
+  // Ne pas écraser date_heure_appel si c'est une OFFRE: — on ne met à jour que appels_json
+  const base = {};
+  if (!_currentRecord?.date_heure_appel?.startsWith('OFFRE:')) base.date_heure_appel = now;
   if (currentUser) base.commercial = currentUser.prenom + ' ' + currentUser.nom;
   const ok = await _saveWithAppels(siret, base, appelsJson);
   if (ok) {
     toast('📞 Appel enregistré — ' + now);
     if (_currentRecord) {
-      _currentRecord.date_heure_appel = now;
+      if (!_currentRecord.date_heure_appel?.startsWith('OFFRE:')) _currentRecord.date_heure_appel = now;
       _currentRecord.appels_json = appelsJson;
       if (currentUser) _currentRecord.commercial = base.commercial;
       renderDetail(_currentRecord);
@@ -2271,13 +2273,16 @@ async function logRelanceMessagerie(fromStatut) {
   const nextLabel  = fromStatut === 2 ? 'J+5' : 'J+10';
   const now        = _nowReunion();
   const appelsJson = _appendAppel(_currentRecord, 'msg');
-  const base = { date_heure_appel: 'MSG:' + now, statut_crm: nextStatut };
+  // Ne pas écraser date_heure_appel si c'est une OFFRE:
+  const isOffre = _currentRecord?.date_heure_appel?.startsWith('OFFRE:');
+  const base = { statut_crm: nextStatut };
+  if (!isOffre) base.date_heure_appel = 'MSG:' + now;
   if (currentUser) base.commercial = currentUser.prenom + ' ' + currentUser.nom;
   const ok = await _saveWithAppels(siret, base, appelsJson);
   if (ok) {
     toast(`📵 Messagerie enregistrée — passage en Relance ${nextLabel}`);
     if (_currentRecord) {
-      _currentRecord.date_heure_appel = 'MSG:' + now;
+      if (!isOffre) _currentRecord.date_heure_appel = 'MSG:' + now;
       _currentRecord.appels_json = appelsJson;
       _currentRecord.statut_crm = nextStatut;
       if (currentUser) _currentRecord.commercial = base.commercial;

@@ -564,33 +564,7 @@ body.demo-mode header{background:#b45309 !important;}
       <button class="cls" onclick="closeCallModal()">✕</button>
     </div>
     <div class="modal-body" style="padding:20px 18px;">
-      <p style="font-size:13px;color:var(--mid);margin-bottom:18px;text-align:center;">
-        Enregistrez le résultat de votre appel
-      </p>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <button onclick="logAppel()"
-          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #86efac;
-                 background:#f0fdf4;color:#16a34a;font-size:13px;font-weight:700;cursor:pointer;
-                 display:flex;align-items:center;gap:10px;transition:background .15s;"
-          onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
-          <span style="font-size:20px;">✅</span>
-          <div style="text-align:left;">
-            <div>Prospect pris en charge</div>
-            <div style="font-size:11px;font-weight:400;color:#15803d;margin-top:2px;">Joint — prospect assigné à vous</div>
-          </div>
-        </button>
-        <button onclick="logMessagerie()"
-          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #fcd34d;
-                 background:#fffbeb;color:#b45309;font-size:13px;font-weight:700;cursor:pointer;
-                 display:flex;align-items:center;gap:10px;transition:background .15s;"
-          onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='#fffbeb'">
-          <span style="font-size:20px;">📵</span>
-          <div style="text-align:left;">
-            <div>Messagerie</div>
-            <div style="font-size:11px;font-weight:400;color:#92400e;margin-top:2px;">Message laissé — à relancer</div>
-          </div>
-        </button>
-      </div>
+      <!-- contenu injecté dynamiquement par openCallModal() -->
     </div>
     <div class="modal-foot">
       <button class="btn btn-grey" onclick="closeCallModal()">Annuler</button>
@@ -2088,6 +2062,71 @@ document.addEventListener('input', e => {
 /* ─── MODAL APPEL / MESSAGERIE ──────────────────────────── */
 function openCallModal(siret) {
   _callSiret = siret;
+  const statut = _currentRecord?.statut_crm ?? null;
+  const isRelanceJ2 = statut === 2;
+
+  // Adapter le contenu du modal selon le contexte
+  const body = document.querySelector('#callModal .modal-body');
+  if (isRelanceJ2) {
+    body.innerHTML = `
+      <p style="font-size:13px;color:var(--mid);margin-bottom:18px;text-align:center;">
+        Que s'est-il passé lors de ce rappel ?
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="logRelanceJ2Messagerie()"
+          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #fcd34d;
+                 background:#fffbeb;color:#b45309;font-size:13px;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;gap:10px;transition:background .15s;"
+          onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='#fffbeb'">
+          <span style="font-size:20px;">📵</span>
+          <div style="text-align:left;">
+            <div>Messagerie</div>
+            <div style="font-size:11px;font-weight:400;color:#92400e;margin-top:2px;">Enregistre l'heure et la date — reste en Relance J+2</div>
+          </div>
+        </button>
+        <button onclick="closeCallModal()"
+          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #86efac;
+                 background:#f0fdf4;color:#16a34a;font-size:13px;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;gap:10px;transition:background .15s;"
+          onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+          <span style="font-size:20px;">✅</span>
+          <div style="text-align:left;">
+            <div>Pris en charge</div>
+            <div style="font-size:11px;font-weight:400;color:#15803d;margin-top:2px;">Fermer — rester sur la fiche</div>
+          </div>
+        </button>
+      </div>`;
+  } else {
+    body.innerHTML = `
+      <p style="font-size:13px;color:var(--mid);margin-bottom:18px;text-align:center;">
+        Enregistrez le résultat de votre appel
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="logAppel()"
+          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #86efac;
+                 background:#f0fdf4;color:#16a34a;font-size:13px;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;gap:10px;transition:background .15s;"
+          onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+          <span style="font-size:20px;">✅</span>
+          <div style="text-align:left;">
+            <div>Prospect pris en charge</div>
+            <div style="font-size:11px;font-weight:400;color:#15803d;margin-top:2px;">Joint — prospect assigné à vous</div>
+          </div>
+        </button>
+        <button onclick="logMessagerie()"
+          style="width:100%;padding:14px;border-radius:6px;border:1.5px solid #fcd34d;
+                 background:#fffbeb;color:#b45309;font-size:13px;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;gap:10px;transition:background .15s;"
+          onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='#fffbeb'">
+          <span style="font-size:20px;">📵</span>
+          <div style="text-align:left;">
+            <div>Messagerie</div>
+            <div style="font-size:11px;font-weight:400;color:#92400e;margin-top:2px;">Message laissé — à relancer</div>
+          </div>
+        </button>
+      </div>`;
+  }
+
   document.getElementById('callModal').classList.remove('hidden');
 }
 function closeCallModal() {
@@ -2161,6 +2200,26 @@ async function logMessagerie() {
         renderDetail(_currentRecord);
         renderFilters();
       }
+    }
+  }
+}
+
+// Appel 2 depuis Relance J+2 → messagerie (garde statut J+2, enregistre date+MSG:)
+async function logRelanceJ2Messagerie() {
+  const siret = _callSiret;
+  closeCallModal();
+  if (!siret) return;
+  const now    = _nowReunion();
+  const stored = 'MSG:' + now;
+  const updates = { date_heure_appel: stored };
+  if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
+  const ok = await dbUpdate('prospects', siret, updates);
+  if (ok) {
+    toast('📵 Messagerie enregistrée — ' + now);
+    if (_currentRecord) {
+      _currentRecord.date_heure_appel = stored;
+      if (currentUser) _currentRecord.commercial = updates.commercial;
+      renderDetail(_currentRecord);
     }
   }
 }

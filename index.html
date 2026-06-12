@@ -3623,13 +3623,10 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   y += 5;
   doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
 
-  // Champs à remplir → fond jaune
-  const repPar = r.signataire || '';
-  paraYellow('représentée par ' + repPar);
-  const fonc = r.fonction || '';
-  paraYellow('de nationalité …………………………………    Fonction ' + fonc);
-  const adresse = [r.adresse_voie, r.code_postal ? r.code_postal + ' ' + r.commune : r.commune].filter(Boolean).join(', ') || '';
-  paraYellow('Sise ' + adresse);
+  // Champs à remplir → fond jaune — tout laissé vide (sauf le nom déjà affiché en rouge)
+  paraYellow('représentée par');
+  paraYellow('de nationalité ……………………………………………    Fonction');
+  paraYellow('Sise');
   para('(Ci-après dénommé « LOCATAIRE »)');
   gap(4);
 

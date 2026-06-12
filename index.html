@@ -1827,15 +1827,7 @@ function renderDetail(r) {
             ${extraBadge}
           </button>
         </div>
-        <div class="call-log-txt" id="call-log-txt">${
-          r.date_heure_appel
-            ? r.date_heure_appel.startsWith('MSG:')
-              ? `📵 Messagerie&nbsp;: <span>${esc(r.date_heure_appel.slice(4))}</span>`
-              : r.date_heure_appel.startsWith('OFFRE:')
-              ? `📧 Offre envoyée le&nbsp;: <span style="color:#2563eb;">${esc(r.date_heure_appel.slice(6))}</span>`
-              : `📞 Dernier appel&nbsp;: <span>${esc(r.date_heure_appel)}</span>`
-            : 'Aucun appel enregistré'
-        }</div>
+        <div class="call-log-txt" id="call-log-txt">${_buildCallLogHtml(r)}</div>
         ${r.commercial
           ? `<div style="font-size:11px;color:var(--mid);margin-top:5px;">
                👤 Assigné à : <strong style="color:var(--dark);">${esc(r.commercial)}</strong>
@@ -2141,65 +2133,88 @@ function _nowReunion() {
   });
 }
 
-function _updateCallLog(dateStr, isMessagerie) {
-  const el = document.getElementById('call-log-txt');
-  if (!el) return;
-  el.innerHTML = isMessagerie
-    ? `📵 Messagerie&nbsp;: <span>${dateStr}</span>`
-    : `📞 Dernier appel&nbsp;: <span>${dateStr}</span>`;
+// ── Historique appels ──────────────────────────────────────
+function _parseAppels(json) {
+  try { const a = JSON.parse(json || '[]'); return Array.isArray(a) ? a : []; }
+  catch { return []; }
+}
+
+function _buildCallLogHtml(r) {
+  const appels = _parseAppels(r.appels_json);
+
+  if (appels.length > 0) {
+    return appels.map((a, i) => {
+      const isMsg = a.t === 'msg';
+      return `<div style="line-height:1.9;">`
+        + `${isMsg ? '📵' : '📞'}&nbsp;`
+        + `<span style="color:var(--mid);">Appel ${i+1}&nbsp;:&nbsp;</span>`
+        + `<span style="color:var(--green);font-weight:700;">${esc(a.d)}</span>`
+        + (isMsg ? `&nbsp;<span style="color:#b45309;font-weight:600;">Messagerie</span>` : '')
+        + `</div>`;
+    }).join('');
+  }
+
+  // Fallback ancien format
+  if (!r.date_heure_appel) return 'Aucun appel enregistré';
+  if (r.date_heure_appel.startsWith('MSG:'))
+    return `📵 Messagerie&nbsp;: <span>${esc(r.date_heure_appel.slice(4))}</span>`;
+  if (r.date_heure_appel.startsWith('OFFRE:'))
+    return `📧 Offre envoyée le&nbsp;: <span style="color:#2563eb;">${esc(r.date_heure_appel.slice(6))}</span>`;
+  return `📞 Dernier appel&nbsp;: <span>${esc(r.date_heure_appel)}</span>`;
+}
+
+function _appendAppel(record, type) {
+  const appels = _parseAppels(record?.appels_json);
+  appels.push({ d: _nowReunion(), t: type });
+  return JSON.stringify(appels);
 }
 
 async function logAppel() {
-  const siret = _callSiret;  // sauvegarder avant closeCallModal (qui remet _callSiret à null)
+  const siret = _callSiret;
   closeCallModal();
   if (!siret) return;
-  const now = _nowReunion();
-  const updates = { date_heure_appel: now };
+  const now       = _nowReunion();
+  const appelsJson = _appendAppel(_currentRecord, 'appel');
+  const updates = { date_heure_appel: now, appels_json: appelsJson };
   if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
   const ok = await dbUpdate('prospects', siret, updates);
   if (ok) {
-    _updateCallLog(now, false);
     toast('📞 Appel enregistré — ' + now);
     if (_currentRecord) {
       _currentRecord.date_heure_appel = now;
+      _currentRecord.appels_json = appelsJson;
       if (currentUser) _currentRecord.commercial = updates.commercial;
     }
-    // Basculer en "Prospect pris en charge" (statut 1)
-    if (_currentRecord) {
-      const upd = await dbUpdate('prospects', siret, { statut_crm: 1 });
-      if (upd && _currentRecord) {
-        _currentRecord.statut_crm = 1;
-        renderDetail(_currentRecord);
-        renderFilters();
-      }
+    const upd = await dbUpdate('prospects', siret, { statut_crm: 1 });
+    if (upd && _currentRecord) {
+      _currentRecord.statut_crm = 1;
+      renderDetail(_currentRecord);
+      renderFilters();
     }
   }
 }
 
 async function logMessagerie() {
-  const siret = _callSiret;  // sauvegarder avant closeCallModal (qui remet _callSiret à null)
+  const siret = _callSiret;
   closeCallModal();
   if (!siret) return;
-  const now = _nowReunion();
-  const stored = 'MSG:' + now;
-  const updates = { date_heure_appel: stored };
+  const now       = _nowReunion();
+  const appelsJson = _appendAppel(_currentRecord, 'msg');
+  const updates = { date_heure_appel: 'MSG:' + now, appels_json: appelsJson };
   if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
   const ok = await dbUpdate('prospects', siret, updates);
   if (ok) {
-    _updateCallLog(now, true);
     toast('📵 Messagerie enregistrée — ' + now);
     if (_currentRecord) {
-      _currentRecord.date_heure_appel = stored;
+      _currentRecord.date_heure_appel = 'MSG:' + now;
+      _currentRecord.appels_json = appelsJson;
       if (currentUser) _currentRecord.commercial = updates.commercial;
     }
-    // Basculer en "À relancer messagerie" (statut 0)
-    if (_currentRecord) {
-      const upd = await dbUpdate('prospects', siret, { statut_crm: 0 });
-      if (upd && _currentRecord) {
-        _currentRecord.statut_crm = 0;
-        renderDetail(_currentRecord);
-        renderFilters();
-      }
+    const upd = await dbUpdate('prospects', siret, { statut_crm: 0 });
+    if (upd && _currentRecord) {
+      _currentRecord.statut_crm = 0;
+      renderDetail(_currentRecord);
+      renderFilters();
     }
   }
 }
@@ -2209,15 +2224,16 @@ async function logRelanceJ2Messagerie() {
   const siret = _callSiret;
   closeCallModal();
   if (!siret) return;
-  const now    = _nowReunion();
-  const stored = 'MSG:' + now;
-  const updates = { date_heure_appel: stored, statut_crm: 3 };
+  const now        = _nowReunion();
+  const appelsJson = _appendAppel(_currentRecord, 'msg');
+  const updates = { date_heure_appel: 'MSG:' + now, appels_json: appelsJson, statut_crm: 3 };
   if (currentUser) updates.commercial = currentUser.prenom + ' ' + currentUser.nom;
   const ok = await dbUpdate('prospects', siret, updates);
   if (ok) {
     toast('📵 Messagerie enregistrée — passage en Relance J+5');
     if (_currentRecord) {
-      _currentRecord.date_heure_appel = stored;
+      _currentRecord.date_heure_appel = 'MSG:' + now;
+      _currentRecord.appels_json = appelsJson;
       _currentRecord.statut_crm = 3;
       if (currentUser) _currentRecord.commercial = updates.commercial;
       renderDetail(_currentRecord);

@@ -3276,21 +3276,25 @@ async function doSendOffer() {
 
   closeOfferModal();
   toast('📤 Envoi en cours…');
+  const _payload = {
+    type:             'offre',
+    from:             EMAIL_FROM,
+    to,
+    subject,
+    body,
+    devis_filename:   ds?.filename,
+    devis_content:    ds?.pdfBase64,
+    contrat_filename: cs?.filename,
+    contrat_content:  cs?.pdfBase64
+  };
+  console.log('[doSendOffer] payload type=', _payload.type,
+    '| devis_content length=', (_payload.devis_content||'').length,
+    '| contrat_content length=', (_payload.contrat_content||'').length);
   try {
     const res = await fetch(MAKE_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type:             'offre',
-        from:             EMAIL_FROM,
-        to,
-        subject,
-        body,
-        devis_filename:   ds.filename,
-        devis_content:    ds.pdfBase64,
-        contrat_filename: cs.filename,
-        contrat_content:  cs.pdfBase64
-      })
+      body: JSON.stringify(_payload)
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const now = new Date().toLocaleString('fr-FR', { timeZone: 'Indian/Reunion', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });

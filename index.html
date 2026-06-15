@@ -476,6 +476,8 @@ body.demo-mode header{background:#b45309 !important;}
   </div>
   <button id="teamBtn" class="btn btn-outline btn-sm" onclick="openUsersModal()"
           title="Gérer l'équipe" style="display:none;">⚙️ Équipe</button>
+  <button id="suiviBtn" class="btn btn-outline btn-sm" onclick="openSuiviModal()"
+          title="Suivi commercial équipe" style="display:none;">📈 Suivi</button>
   <button class="btn btn-outline btn-sm" onclick="doLogout()" title="Se déconnecter">🚪</button>
   <button class="btn btn-white btn-sm" onclick="toggleDemoMode()" id="demoBtn" title="Tester sans impacter la base">🧪 Démo</button>
 </header>
@@ -896,6 +898,29 @@ body.demo-mode header{background:#b45309 !important;}
 </div>
 
 <!-- ═══════════════════════════════════════════════════
+     MODAL — SUIVI COMMERCIAUX (admin)
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="suiviCommModal" onclick="if(event.target===this)closeSuiviModal()">
+  <div class="modal-box" style="width:min(980px,97vw);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+    <div class="modal-head" style="flex-shrink:0;">
+      <h3>📈 Suivi commercial — Vue équipe</h3>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="loadSuiviCommerciaux()" style="font-size:11px;padding:4px 10px;">🔄 Actualiser</button>
+        <button class="cls" onclick="closeSuiviModal()">✕</button>
+      </div>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:0;">
+      <div id="suivi-comm-body" style="padding:20px 24px 24px;">
+        <div style="text-align:center;color:var(--mid);padding:40px;">⏳ Chargement…</div>
+      </div>
+    </div>
+    <div class="modal-foot" style="flex-shrink:0;">
+      <button class="btn btn-grey" onclick="closeSuiviModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
      MODAL — GESTION ÉQUIPE (admin)
 ════════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden" id="usersModal">
@@ -1159,6 +1184,7 @@ function renderUserBadge() {
   document.getElementById('ub-role').textContent  = currentUser.role === 'admin' ? 'Admin' : 'Commercial';
   document.getElementById('userBadge').style.display = '';
   document.getElementById('teamBtn').style.display   = currentUser.role === 'admin' ? '' : 'none';
+  document.getElementById('suiviBtn').style.display  = currentUser.role === 'admin' ? '' : 'none';
 }
 
 // Afficher l'écran de connexion ou de premier accès
@@ -1254,6 +1280,7 @@ function doLogout() {
   document.getElementById('demoBtn').textContent  = '🧪 Démo';
   document.getElementById('userBadge').style.display = 'none';
   document.getElementById('teamBtn').style.display   = 'none';
+  document.getElementById('suiviBtn').style.display  = 'none';
   closeSidebar();
   showLoginScreen('login');
 }
@@ -1359,6 +1386,184 @@ function deleteUser(id, name) {
     },
     '🗑️ Supprimer'
   );
+}
+
+/* ─── SUIVI COMMERCIAUX DASHBOARD (admin) ───────────────── */
+function openSuiviModal() {
+  document.getElementById('suiviCommModal').classList.remove('hidden');
+  loadSuiviCommerciaux();
+}
+function closeSuiviModal() {
+  document.getElementById('suiviCommModal').classList.add('hidden');
+}
+
+async function loadSuiviCommerciaux() {
+  const el = document.getElementById('suivi-comm-body');
+  el.innerHTML = '<div style="text-align:center;color:var(--mid);padding:40px 20px;">⏳ Chargement des données…</div>';
+
+  // ── 1. Liste des commerciaux ──
+  let commercials = [];
+  if (DEMO_MODE) {
+    const names = [...new Set(_demoDb.map(p => p.commercial).filter(c => c && c.trim()))];
+    commercials = names.map(n => ({ name: n }));
+  } else {
+    try {
+      const { data: users } = await dbSelect('crm_users', { cols: 'prenom,nom,role', order: 'nom', limit: 100 });
+      commercials = (users || []).filter(u => u.role === 'commercial').map(u => ({ name: u.prenom + ' ' + u.nom }));
+    } catch(e) {
+      el.innerHTML = `<div style="padding:24px;color:#d73a49;">❌ Erreur : ${esc(e.message)}</div>`; return;
+    }
+  }
+
+  if (!commercials.length) {
+    el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--mid);">
+      <div style="font-size:32px;margin-bottom:12px;">👥</div>
+      <div style="font-weight:700;">Aucun commercial trouvé</div>
+      <div style="font-size:12px;margin-top:6px;">Créez des comptes commerciaux dans ⚙️ Équipe</div></div>`;
+    return;
+  }
+
+  // ── 2. Récupérer tous les prospects assignés (commercial + statut_crm) ──
+  let allProspects = [];
+  if (DEMO_MODE) {
+    allProspects = _demoDb.filter(p => p.commercial && p.commercial.trim()).map(p => ({ commercial: p.commercial, statut_crm: p.statut_crm }));
+  } else {
+    try {
+      const { data } = await dbSelect('prospects', {
+        cols: 'commercial,statut_crm',
+        filters: ['commercial=not.is.null', 'commercial=neq.'],
+        limit: 200000,
+        order: 'commercial'
+      });
+      allProspects = (data || []);
+    } catch(e) {
+      el.innerHTML = `<div style="padding:24px;color:#d73a49;">❌ Erreur : ${esc(e.message)}</div>`; return;
+    }
+  }
+
+  // ── 3. Colonnes statuts ──
+  const COLS = [
+    { id: 1, short: 'Pris en charge', color: '#0ea5e9' },
+    { id: 0, short: 'Messagerie',     color: '#f59e0b' },
+    { id: 2, short: 'Relance J+2',    color: '#06b6d4' },
+    { id: 3, short: 'Relance J+5',    color: '#8b5cf6' },
+    { id: 4, short: 'Relance J+10',   color: '#f97316' },
+    { id: 5, short: 'Relance mail',   color: '#6366f1' },
+    { id: 6, short: 'Signé',          color: '#16a34a' },
+    { id: 7, short: 'Perdu',          color: '#dc2626' },
+  ];
+  const IN_PROGRESS_IDS = new Set([0, 1, 2, 3, 4, 5]);
+
+  // ── 4. Calculer les stats par commercial ──
+  const rows = commercials.map(c => {
+    const mine = allProspects.filter(p => p.commercial === c.name);
+    const counts = {};
+    COLS.forEach(col => { counts[col.id] = mine.filter(p => p.statut_crm === col.id).length; });
+    const total   = mine.length;
+    const enCours = [...IN_PROGRESS_IDS].reduce((a, id) => a + (counts[id] || 0), 0);
+    const initials = c.name.split(' ').map(w => w.charAt(0).toUpperCase()).slice(0, 2).join('');
+    return { ...c, counts, total, enCours, initials };
+  });
+  rows.sort((a, b) => b.total - a.total);
+
+  // ── 5. Totaux colonnes ──
+  const totaux = {};
+  COLS.forEach(col => { totaux[col.id] = rows.reduce((a, r) => a + (r.counts[col.id] || 0), 0); });
+  const grandTotal   = rows.reduce((a, r) => a + r.total, 0);
+  const grandEnCours = rows.reduce((a, r) => a + r.enCours, 0);
+  const maxTotal     = Math.max(...rows.map(r => r.total), 1);
+
+  // ── 6. Rendu ──
+  const pct = (n) => Math.round((n / maxTotal) * 100);
+
+  const cellStyle = (cnt, color) => cnt > 0
+    ? `background:${color}18;color:${color};font-weight:700;`
+    : 'color:#d0d0d0;';
+
+  el.innerHTML = `
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px;">
+      <thead>
+        <tr style="position:sticky;top:0;z-index:2;background:#fff;border-bottom:2.5px solid var(--border);">
+          <th style="padding:12px 14px;text-align:left;font-weight:700;color:var(--dark);min-width:160px;">Commercial</th>
+          ${COLS.map(c => `
+            <th style="padding:12px 10px;text-align:center;white-space:nowrap;">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;
+                           background:${c.color};margin-right:5px;"></span>
+              <span style="color:${c.color};font-weight:700;font-size:11px;">${c.short}</span>
+            </th>`).join('')}
+          <th style="padding:12px 10px;text-align:center;font-weight:700;color:var(--mid);white-space:nowrap;">En cours</th>
+          <th style="padding:12px 10px;text-align:left;font-weight:700;color:var(--dark);min-width:120px;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((r, i) => `
+        <tr style="border-bottom:1px solid var(--border);${i % 2 === 1 ? 'background:#fafafa;' : ''}"
+            onmouseenter="this.style.background='#f0f4ff'" onmouseleave="this.style.background='${i%2===1?'#fafafa':'#fff'}'">
+          <td style="padding:10px 14px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--red);color:#fff;
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:12px;font-weight:800;flex-shrink:0;letter-spacing:-0.5px;">
+                ${r.initials}
+              </div>
+              <div>
+                <div style="font-weight:700;color:var(--dark);">${esc(r.name)}</div>
+                <div style="font-size:10px;color:var(--light);">${r.total} prospect${r.total>1?'s':''} assigné${r.total>1?'s':''}</div>
+              </div>
+            </div>
+          </td>
+          ${COLS.map(c => {
+            const cnt = r.counts[c.id] || 0;
+            return `<td style="padding:10px;text-align:center;">
+              <span style="display:inline-block;min-width:28px;padding:3px 8px;border-radius:12px;
+                           font-size:13px;${cellStyle(cnt, c.color)}">
+                ${cnt > 0 ? cnt : '—'}
+              </span>
+            </td>`;
+          }).join('')}
+          <td style="padding:10px;text-align:center;">
+            <span style="display:inline-block;min-width:28px;padding:3px 10px;border-radius:12px;
+                         font-size:13px;font-weight:700;
+                         ${r.enCours > 0 ? 'background:#6366f118;color:#6366f1;' : 'color:#d0d0d0;'}">
+              ${r.enCours > 0 ? r.enCours : '—'}
+            </span>
+          </td>
+          <td style="padding:10px 14px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="flex:1;max-width:80px;background:#f0f0f0;border-radius:4px;height:8px;overflow:hidden;">
+                <div style="width:${pct(r.total)}%;height:100%;background:var(--red);border-radius:4px;transition:width .4s;"></div>
+              </div>
+              <span style="font-weight:800;color:var(--dark);font-size:14px;">${r.total}</span>
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:#f4f4f4;border-top:2.5px solid var(--border);font-weight:800;">
+          <td style="padding:12px 14px;color:var(--dark);font-weight:800;">TOTAL ÉQUIPE</td>
+          ${COLS.map(c => {
+            const t = totaux[c.id] || 0;
+            return `<td style="padding:12px 10px;text-align:center;">
+              <span style="color:${t > 0 ? c.color : '#ccc'};font-weight:800;">${t > 0 ? t : '—'}</span>
+            </td>`;
+          }).join('')}
+          <td style="padding:12px 10px;text-align:center;color:#6366f1;font-weight:800;">${grandEnCours || '—'}</td>
+          <td style="padding:12px 14px;font-size:15px;font-weight:800;color:var(--dark);">${grandTotal}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div style="margin-top:16px;padding:14px 16px;background:#f8f8f8;border-radius:8px;
+              display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+    <div style="font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;
+                letter-spacing:.3px;margin-right:4px;">Légende :</div>
+    ${COLS.map(c => `
+      <div style="display:flex;align-items:center;gap:5px;">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c.color};"></span>
+        <span style="font-size:11px;color:var(--dark);">${c.short}</span>
+      </div>`).join('')}
+  </div>`;
 }
 
 /* ─── STATISTIQUES COMMERCIAUX (admin) ──────────────────── */

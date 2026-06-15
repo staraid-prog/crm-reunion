@@ -1485,8 +1485,8 @@ async function init() {
 /* ─── STATS ─────────────────────────────────────────────── */
 function buildStatsFilters() {
   const f = [];
-  if (filterTel  === 'oui') f.push(`or=(telephone_crm.neq.,telephone_google.not.is.null)`);
-  if (filterTel  === 'non') f.push(`and=(telephone_crm.eq.,telephone_google.is.null)`);
+  if (filterTel  === 'oui') f.push(`or=(telephone_crm.not.is.null,telephone_google.not.is.null)`);
+  if (filterTel  === 'non') f.push(`telephone_crm=is.null`, `telephone_google=is.null`);
   if (filterDae5 === 'non') f.push(`dae_5e_categorie=eq.Non`);
   if (filterType)            f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
   return f;
@@ -1915,8 +1915,8 @@ function buildFilters(statut = filterStatut) {
   }
 
   if (filterDae5 === 'non') f.push(`dae_5e_categorie=eq.Non`);
-  if (filterTel === 'oui') f.push(`or=(telephone_crm.neq.,telephone_google.not.is.null)`);
-  if (filterTel === 'non') f.push(`and=(telephone_crm.eq.,telephone_google.is.null)`);
+  if (filterTel === 'oui') f.push(`or=(telephone_crm.not.is.null,telephone_google.not.is.null)`);
+  if (filterTel === 'non') f.push(`telephone_crm=is.null`, `telephone_google=is.null`);
   if (searchQ) f.push(`or=(denomination_usuelle.ilike.%25${encodeURIComponent(searchQ)}%25,commune.ilike.%25${encodeURIComponent(searchQ)}%25)`);
   return f;
 }

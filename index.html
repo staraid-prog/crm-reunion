@@ -3493,7 +3493,7 @@ function buildDevisPdf(r, qty, type, prix = 89) {
   const tva = Math.round(ht * 0.085 * 100) / 100;
   const ttc = ht + tva;
   const now = new Date();
-  const num = 'D' + now.toISOString().slice(0,10).replace(/-/g,'') + '-' + ('00000'+(r.siret||'').slice(-5)).slice(-5);
+  const num = 'D' + now.toISOString().slice(0,10).replace(/-/g,'') + '-' + String(10000 + (Date.now() % 90000));
   const dStr= now.toLocaleDateString('fr-FR');
   const vStr= new Date(+now+30*86400e3).toLocaleDateString('fr-FR');
   const fm  = n => n.toFixed(2).replace('.',',')+' €';

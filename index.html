@@ -4346,16 +4346,14 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
     } else {
       cx += colWs[0] + colWs[1];
     }
-    // N° de Série → fond jaune
-    doc.setFillColor(...YELLOW);
+    // N° de Série → fond blanc (pré-rempli par STAR-AID)
+    doc.setFillColor(...rowBg);
     doc.rect(cx, y-4, colWs[2], 12, 'F');
-    doc.setFont('helvetica','normal'); doc.setTextColor(...GREY); doc.setFontSize(7.5);
-    if (row === 0) doc.text('A REMPLIR PAR STAR-AID', cx+3, y+2);
     cx += colWs[2];
-    // Emplacement (site) → fond jaune
+    // Emplacement (site) → fond jaune (à remplir par le loueur sur site)
     doc.setFillColor(...YELLOW);
     doc.rect(cx, y-4, colWs[3] || (W-14-cx), 12, 'F');
-    // Redessiner les bordures par-dessus les fonds jaunes
+    // Redessiner les bordures par-dessus les fonds colorés
     doc.setDrawColor(...LGREY);
     doc.line(cx - colWs[2], y-4, cx - colWs[2], y+8);
     doc.line(cx, y-4, cx, y+8);
@@ -4363,7 +4361,16 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
     doc.line(cx - colWs[2], y+8, W-14, y+8);
     y += 13;
   }
-  y += 6;
+  y += 4;
+
+  // ── Légende ──
+  doc.setFillColor(...YELLOW);
+  doc.rect(14, y - 3.5, 4.5, 4.5, 'F');
+  doc.setDrawColor(...LGREY);
+  doc.rect(14, y - 3.5, 4.5, 4.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+  doc.text('À remplir par le loueur', 21, y);
+  y += 8;
 
   // Infos responsable — fond jaune sur les zones à remplir
   const lig = (label, val) => {

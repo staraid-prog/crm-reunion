@@ -4390,6 +4390,16 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   lig('Email :', '');
   lig('Tél :', '');
 
+  y += 4;
+
+  // ── Responsable sur site ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
+  doc.text('Responsable sur site à contacter pour l\'installation :', 14, y);
+  y += 8;
+  lig('Nom :', '');
+  lig('Prénom :', '');
+  lig('Tél :', '');
+
   addPageFooter();
 
   // ── Pagination X / Y sur toutes les pages ──

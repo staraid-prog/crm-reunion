@@ -4396,6 +4396,17 @@ function buildContratPdf(r, dateSign, villeSign, prix = 89) {
   lig('Tél :', '');
 
   addPageFooter();
+
+  // ── Pagination X / Y sur toutes les pages ──
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`Page ${p} / ${totalPages}`, W - 14, 290, { align: 'right' });
+  }
+
   return doc;
 }
 

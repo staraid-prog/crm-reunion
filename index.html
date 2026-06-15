@@ -1071,6 +1071,22 @@ function toggleDemoMode() {
   DEMO_MODE = !DEMO_MODE;
   _demoDb   = DEMO_DATA.map(p => ({ ...p })); // copie fraîche
 
+  if (DEMO_MODE) {
+    // ── Initialiser les date_relance pour le suivi commercial ──
+    const joursMap = { 2: 2, 3: 5, 4: 10 };
+    let firstJ2 = true;
+    _demoDb.forEach(r => {
+      if ([2, 3, 4].includes(r.statut_crm)) {
+        if (r.statut_crm === 2 && firstJ2) {
+          r.date_relance = todayISO(); // 1 prospect dû aujourd'hui
+          firstJ2 = false;
+        } else {
+          r.date_relance = calcRelanceDate(joursMap[r.statut_crm] || 2);
+        }
+      }
+    });
+  }
+
   const banner = document.getElementById('demo-banner');
   const btn    = document.getElementById('demoBtn');
 
@@ -1078,7 +1094,7 @@ function toggleDemoMode() {
     banner.classList.add('show');
     document.body.classList.add('demo-mode');
     btn.textContent      = '🔴 Quitter démo';
-    toast('🧪 Mode Démo activé — 10 prospects fictifs chargés');
+    toast('🧪 Mode Démo activé — prospects fictifs chargés');
   } else {
     banner.classList.remove('show');
     document.body.classList.remove('demo-mode');
@@ -1983,15 +1999,10 @@ function buildFilters(statut = filterStatut) {
     }
   } else if (currentUser) {
     // ── Admin ────────────────────────────────────────────────
+    // Sans type sélectionné : tous les prospects visibles (pas de filtre obligatoire)
     const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
-    if (filterType) {
-      // Type sélectionné : tous les prospects de ce type
-      f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
-      if (filterMine) f.push(`commercial=eq.${myName}`);
-    } else {
-      // Sans type : ses propres prospects assignés (même logique que commercial)
-      f.push(`commercial=eq.${myName}`);
-    }
+    if (filterType) f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
+    if (filterMine) f.push(`commercial=eq.${myName}`);
   }
 
   if (filterDae5 === 'non') f.push(`dae_5e_categorie=eq.Non`);

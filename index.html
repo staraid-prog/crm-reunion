@@ -294,6 +294,130 @@ body.demo-mode header{background:#b45309 !important;}
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
 
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE — TABLET  (≤ 900px)
+══════════════════════════════════════════════════════ */
+@media (max-width:900px){
+  header input[type=search]{width:160px;}
+  #main.narrow{width:220px;min-width:220px;}
+  .modal-box{width:calc(100vw - 32px)!important;}
+  .cal-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE  (≤ 640px)
+══════════════════════════════════════════════════════ */
+@media (max-width:640px){
+
+  /* ── Header ── */
+  header{padding:0 8px;gap:5px;height:48px;}
+  .logo em{display:none;}
+  .logo{font-size:14px;}
+  /* Barre de recherche cachée par défaut → icône */
+  header input[type=search]{display:none;}
+  header input[type=search].mob-open{
+    display:block;position:fixed;top:48px;left:0;right:0;width:100%;
+    border-radius:0;border:none;border-bottom:2px solid rgba(255,255,255,.4);
+    background:var(--red);color:#fff;font-size:14px;padding:10px 16px;z-index:400;
+  }
+  header input[type=search].mob-open::placeholder{color:rgba(255,255,255,.6);}
+  .hbadge{display:none;}
+  /* Boutons header : icône uniquement */
+  #dashBtn .btn-text,#teamBtn .btn-text,#suiviBtn .btn-text{display:none;}
+  .user-badge{padding:4px 7px;gap:5px;}
+  #ub-name{display:none;}
+  .ub-role{display:none;}
+  .btn-sm{padding:4px 8px;font-size:13px;}
+  /* Textes des boutons header : cachés sur mobile */
+  .btn-text{display:none;}
+  /* Bouton démo : caché sur mobile (gain de place) */
+  #demoBtn{display:none!important;}
+  /* Bouton loupe : visible sur mobile */
+  .mob-search-btn{display:inline-flex!important;}
+
+  /* ── Body overflow ── */
+  body{overflow:hidden;}
+
+  /* ── Sidebar ── */
+  #sidebar{width:88vw;max-width:320px;}
+
+  /* ── Layout principal ── */
+  .layout{position:relative;}
+
+  /* Liste prospects : plein écran */
+  #main{width:100%!important;min-width:100%!important;flex:1!important;}
+
+  /* Quand la fiche est ouverte → cacher la liste */
+  #main.narrow{display:none!important;}
+
+  /* Fiche détail : plein écran par-dessus */
+  #detail{
+    position:fixed;inset:48px 0 0 0;
+    z-index:200;width:100%!important;min-width:100%!important;
+  }
+
+  /* ── Bouton retour mobile ── */
+  .mob-back{
+    display:flex!important;
+    align-items:center;gap:6px;
+    background:rgba(0,0,0,.18);border:none;color:#fff;
+    font-size:13px;font-weight:700;cursor:pointer;
+    padding:6px 12px;border-radius:4px;margin-bottom:8px;
+    white-space:nowrap;
+  }
+
+  /* ── En-tête de fiche ── */
+  .detail-header{padding:10px 14px;}
+  .detail-header h2{font-size:14px;}
+
+  /* ── Sections ── */
+  .dsec{padding:12px 14px;}
+
+  /* ── Rangées formulaire : empiler label + valeur ── */
+  .frow{flex-direction:column;gap:3px;}
+  .frow label{width:auto;font-size:10px;padding-top:0;color:var(--mid);}
+  .frow .fval{font-size:13px;}
+  .frow input,.frow select,.frow textarea{font-size:14px;padding:8px 10px;}
+
+  /* ── Numéro de tél ── */
+  .phone-big{font-size:14px;padding:9px 14px;}
+
+  /* ── Modals : plein écran ── */
+  .modal-overlay{align-items:flex-end;}
+  .modal-box{
+    width:100%!important;
+    max-height:94vh!important;
+    border-radius:14px 14px 0 0!important;
+    margin:0!important;
+  }
+
+  /* ── Login ── */
+  .login-box{width:calc(100vw - 20px);padding:24px 18px;}
+
+  /* ── Dashboard tabs : défilable ── */
+  .dash-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;}
+  .dash-tab{flex-shrink:0;padding:10px 10px;font-size:11px;}
+
+  /* ── Tableau suivi commerciaux ── */
+  #suiviTableWrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+  /* ── Prospect item ── */
+  .prospect-item{padding:10px 12px;}
+  .pi-name{font-size:13px;}
+
+  /* ── Boutons action ── */
+  .act-btn{padding:10px 12px;font-size:12px;}
+  .act-btn .act-icon{font-size:17px;}
+
+  /* ── Toast ── */
+  #toast{bottom:10px;right:10px;left:10px;max-width:none;text-align:center;}
+
+  /* ── Tunnel statut 2 colonnes sur mobile ── */
+  .tun-grid-mobile{grid-template-columns:1fr 1fr!important;}
+}
+/* Bouton retour : caché par défaut (desktop) */
+.mob-back{display:none;}
+
 /* ──────────────── ÉCRAN DE CONNEXION ──────────────── */
 #loginScreen{position:fixed;inset:0;background:var(--red);display:flex;align-items:center;
   justify-content:center;z-index:9999;flex-direction:column;gap:20px;}
@@ -465,8 +589,9 @@ body.demo-mode header{background:#b45309 !important;}
 <header>
   <button class="menu-btn" onclick="toggleSidebar()" id="menuBtn" title="Filtres & statuts">☰</button>
   <div class="logo">CRM Réunion <em>STAR aid</em></div>
-  <button class="btn btn-outline btn-sm" onclick="showDashboard()" id="dashBtn" title="Tableau de bord">📊 Dashboard</button>
+  <button class="btn btn-outline btn-sm" onclick="showDashboard()" id="dashBtn" title="Tableau de bord">📊 <span class="btn-text">Dashboard</span></button>
   <div class="spacer"></div>
+  <button class="btn btn-outline btn-sm mob-search-btn" onclick="toggleMobileSearch()" title="Rechercher" style="display:none;">🔍</button>
   <input type="search" id="searchInput" placeholder="🔍 Rechercher un prospect..." oninput="onSearch()">
   <span class="hbadge" id="totalBadge">…</span>
   <div id="userBadge" class="user-badge" style="display:none;">
@@ -475,9 +600,9 @@ body.demo-mode header{background:#b45309 !important;}
     <span class="ub-role" id="ub-role">—</span>
   </div>
   <button id="teamBtn" class="btn btn-outline btn-sm" onclick="openUsersModal()"
-          title="Gérer l'équipe" style="display:none;">⚙️ Équipe</button>
+          title="Gérer l'équipe" style="display:none;">⚙️ <span class="btn-text">Équipe</span></button>
   <button id="suiviBtn" class="btn btn-outline btn-sm" onclick="openSuiviModal()"
-          title="Suivi commercial équipe" style="display:none;">📈 Suivi</button>
+          title="Suivi commercial équipe" style="display:none;">📈 <span class="btn-text">Suivi</span></button>
   <button class="btn btn-outline btn-sm" onclick="doLogout()" title="Se déconnecter">🚪</button>
   <button class="btn btn-white btn-sm" onclick="toggleDemoMode()" id="demoBtn" title="Tester sans impacter la base">🧪 Démo</button>
 </header>
@@ -1879,6 +2004,19 @@ function closeSidebar() {
   document.getElementById('menuBtn').style.opacity = '';
 }
 
+/* ─── NAVIGATION MOBILE ─────────────────────────────────── */
+function closeMobileDetail() {
+  document.getElementById('detail').classList.add('hidden');
+  document.getElementById('main').classList.remove('narrow');
+  currentSiret = null;
+  document.querySelectorAll('.prospect-item').forEach(e => e.classList.remove('active'));
+}
+function toggleMobileSearch() {
+  const inp = document.getElementById('searchInput');
+  inp.classList.toggle('mob-open');
+  if (inp.classList.contains('mob-open')) { inp.focus(); }
+}
+
 /* ─── INIT ──────────────────────────────────────────────── */
 async function init() {
   try {
@@ -2583,6 +2721,7 @@ function renderDetail(r) {
   detail.innerHTML = `
     <!-- EN-TÊTE -->
     <div class="detail-header">
+      <button class="mob-back" onclick="closeMobileDetail()">← Retour</button>
       <h2>${esc(r.denomination_usuelle)}</h2>
       <div class="sub">${esc(r.type_erp||'')} — ${esc(r.libelle_type_erp||'')}
         <br>${esc(r.commune||'')} ${esc(r.code_postal||'')}</div>

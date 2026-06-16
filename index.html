@@ -961,6 +961,10 @@ body.demo-mode header{background:#b45309 !important;}
         <label>Mot de passe initial</label>
         <input id="nu-password" type="password" placeholder="Minimum 6 caractères">
       </div>
+      <div class="mrow" style="margin-top:12px;">
+        <label>🔗 URL Webhook Make.com <span style="font-weight:400;color:var(--mid);font-size:11px;">(optionnel — pour envoi depuis son adresse)</span></label>
+        <input id="nu-webhook" type="url" placeholder="https://hook.eu1.make.com/…">
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-grey" onclick="closeUsersModal()">Fermer</button>
@@ -975,6 +979,10 @@ body.demo-mode header{background:#b45309 !important;}
 /* ─── MAKE.COM WEBHOOK ──────────────────────────────────────────── */
 const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/n6sczdlu6oqdc37b6ydpj1xxze5oruyj';
 const EMAIL_FROM = 'm.michon@star-aid.fr';
+
+// Webhook et expéditeur actifs (propre à chaque utilisateur, fallback global)
+function getWebhook()     { return (currentUser && currentUser.webhook_url) || MAKE_WEBHOOK_URL; }
+function getSenderEmail() { return (currentUser && currentUser.email)       || EMAIL_FROM; }
 
 /* ─── SUPABASE REST ─────────────────────────────────────── */
 const SUPA_URL = 'https://obnpzcebhcrkizycuipk.supabase.co/rest/v1';
@@ -1214,7 +1222,7 @@ async function doLogin() {
   try {
     const hash = await sha256(password);
     const { data } = await dbSelect('crm_users', {
-      cols:    'id,prenom,nom,email,role',
+      cols:    'id,prenom,nom,email,role,webhook_url',
       filters: [`email=eq.${encodeURIComponent(email)}`, `password_hash=eq.${hash}`, 'actif=eq.true'],
       order:   'id',
       limit: 1
@@ -1347,21 +1355,22 @@ function renderUsers(users) {
 }
 
 async function addUser() {
-  const prenom   = document.getElementById('nu-prenom').value.trim();
-  const nom      = document.getElementById('nu-nom').value.trim();
-  const email    = document.getElementById('nu-email').value.trim().toLowerCase();
-  const role     = document.getElementById('nu-role').value;
-  const password = document.getElementById('nu-password').value;
+  const prenom      = document.getElementById('nu-prenom').value.trim();
+  const nom         = document.getElementById('nu-nom').value.trim();
+  const email       = document.getElementById('nu-email').value.trim().toLowerCase();
+  const role        = document.getElementById('nu-role').value;
+  const password    = document.getElementById('nu-password').value;
+  const webhook_url = document.getElementById('nu-webhook').value.trim() || null;
   if (!prenom || !nom || !email || !password) { toast('Renseignez tous les champs', true); return; }
   if (password.length < 6) { toast('Mot de passe : 6 caractères minimum', true); return; }
   const hash = await sha256(password);
   const res = await fetch(`${SUPA_URL}/crm_users`, {
     method:  'POST',
     headers: { ...H, 'Prefer': 'return=minimal' },
-    body:    JSON.stringify({ prenom, nom, email, password_hash: hash, role, actif: true })
+    body:    JSON.stringify({ prenom, nom, email, password_hash: hash, role, actif: true, webhook_url })
   });
   if (res.ok) {
-    ['nu-prenom','nu-nom','nu-email','nu-password'].forEach(id => document.getElementById(id).value='');
+    ['nu-prenom','nu-nom','nu-email','nu-password','nu-webhook'].forEach(id => document.getElementById(id).value='');
     toast(`Compte créé — ${prenom} ${nom} peut maintenant se connecter ✓`);
     loadCommercialStats();
     loadUsers();
@@ -2979,10 +2988,10 @@ async function logJ10Messagerie() {
 
   toast('📤 Envoi du mail de relance…');
   try {
-    const res = await fetch(MAKE_WEBHOOK_URL, {
+    const res = await fetch(getWebhook(), {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ type: 'relance', from: EMAIL_FROM, to, subject, body })
+      body:    JSON.stringify({ type: 'relance', from: getSenderEmail(), to, subject, body })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
 
@@ -3327,10 +3336,10 @@ async function sendMail() {
   toast('📤 Envoi en cours…');
 
   try {
-    const res = await fetch(MAKE_WEBHOOK_URL, {
+    const res = await fetch(getWebhook(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'message', from: EMAIL_FROM, to, subject, body, attachments: [] })
+      body: JSON.stringify({ type: 'message', from: getSenderEmail(), to, subject, body, attachments: [] })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     toast('✅ Mail envoyé à ' + to);
@@ -3439,12 +3448,12 @@ async function sendDevisByGmail() {
     + 'Veuillez trouver en pièce jointe notre devis pour la location d\'un défibrillateur DAE.\n\nCordialement,\nSTAR aid';
   toast('📤 Envoi en cours…');
   try {
-    const res = await fetch(MAKE_WEBHOOK_URL, {
+    const res = await fetch(getWebhook(), {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
         type:           'devis',
-        from:           EMAIL_FROM,
+        from:           getSenderEmail(),
         to,
         subject,
         body,
@@ -3612,7 +3621,7 @@ async function doSendOffer() {
   toast('📤 Envoi en cours…');
   const _payload = {
     type:             'offre',
-    from:             EMAIL_FROM,
+    from:             getSenderEmail(),
     to,
     subject,
     body,
@@ -3625,7 +3634,7 @@ async function doSendOffer() {
     '| devis_content length=', (_payload.devis_content||'').length,
     '| contrat_content length=', (_payload.contrat_content||'').length);
   try {
-    const res = await fetch(MAKE_WEBHOOK_URL, {
+    const res = await fetch(getWebhook(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(_payload)

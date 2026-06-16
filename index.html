@@ -1330,18 +1330,18 @@ function toggleDemoMode() {
     });
   }
 
-  const banner = document.getElementById('demo-banner');
-  const btn    = document.getElementById('demoBtn');
+  const banner  = document.getElementById('demo-banner');
+  const umDemo  = document.getElementById('um-demo');
 
   if (DEMO_MODE) {
     banner.classList.add('show');
     document.body.classList.add('demo-mode');
-    btn.textContent      = '🔴 Quitter démo';
+    if (umDemo) umDemo.textContent = '🔴 Quitter démo';
     toast('🧪 Mode Démo activé — prospects fictifs chargés');
   } else {
     banner.classList.remove('show');
     document.body.classList.remove('demo-mode');
-    btn.textContent = '🧪 Démo';
+    if (umDemo) umDemo.textContent = '🧪 Mode Démo';
     toast('Mode Démo désactivé — retour base réelle');
   }
 
@@ -1520,7 +1520,7 @@ function doLogout() {
   _currentRecord = null;
   document.body.classList.remove('demo-mode');
   document.getElementById('demo-banner').classList.remove('show');
-  document.getElementById('demoBtn').textContent  = '🧪 Démo';
+  const _ud = document.getElementById('um-demo'); if (_ud) _ud.textContent = '🧪 Mode Démo';
   document.getElementById('userBadge').style.display = 'none';
   document.getElementById('teamBtn').style.display   = 'none';
   document.getElementById('suiviBtn').style.display  = 'none';

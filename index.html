@@ -3912,16 +3912,16 @@ function buildDevisPdf(r, qty, type, prix = 89) {
 
   y=tRow(y,'974-LOC-DEF-LIFE-MENS',[
     {b:true, t:'974 - LOCATION DEFIBRILLATEUR MENSUELLE STAR LIFE'},
-    {b:false,t:'1x Défibrillateur.Electrodes adulte/enfant.'},
-    {b:false,t:'1x Alimentation LiThium.'},
-    {b:false,t:'1x Kit de préparation à la RCP.'},
+    {b:false,t:qty+'x Défibrillateur.Electrodes adulte/enfant.'},
+    {b:false,t:qty+'x Alimentation LiThium.'},
+    {b:false,t:qty+'x Kit de préparation à la RCP.'},
     {b:false,t:"Notice d'utilisation en français."},
     {b:false,t:'Maintenance préventive (visite annuelle) offerte.'},
     {b:false,t:'Maintenance curative sur appel offerte.'},
     {b:false,t:'Remplacement batteries ou piles DAE offert.'},
     {b:false,t:'Remplacement électrodes offert.'},
     {b:false,t:'Matériel de prêt en cas de retour atelier du DAE offert.'},
-    {b:false,t:'1x information aux gestes de secours offerte.'},
+    {b:false,t:qty+'x information aux gestes de secours offerte.'},
   ],fm(prix),String(qty||1),'',fm(ht),'8,50%',[255,255,255]);
 
   y=tRow(y,'974-FORM-DEMAT-DEF',[
@@ -3929,13 +3929,13 @@ function buildDevisPdf(r, qty, type, prix = 89) {
     {b:false,t:"Vidéo d'initiation"},
     {b:false,t:"E Book + QCM d'évaluation"},
     {b:true, t:'Offerte'},
-  ],'','1','','','8,50%',[248,248,248]);
+  ],'',String(qty||1),'','','8,50%',[248,248,248]);
 
   y=tRow(y,'974-DEF-WAP-M2',[
     {b:true, t:'974 - ARMOIRE DAE AVEC ALARME SONORE - METAL / JAUNE'},
     {b:false,t:'Armoire de rangement DAE universelle en métal à fixer au mur'},
     {b:true, t:'offerte (hors pose)'},
-  ],'159,00 €','1','-100,00 %','0,00 €','8,50%',[255,255,255]);
+  ],'159,00 €',String(qty||1),'-100,00 %','0,00 €','8,50%',[255,255,255]);
 
   pftr(1,2);
 
@@ -3945,17 +3945,17 @@ function buildDevisPdf(r, qty, type, prix = 89) {
   y=tRow(y,'974-DEF-SIGNAL-KIT',[
     {b:true,t:'974 - KIT DE SIGNALETIQUE SUPPORT ABS - 6 PIECES'},
     {b:true,t:'offert (hors pose)'},
-  ],'59,00 €','1','-100,00 %','0,00 €','8,50%',[248,248,248]);
+  ],'59,00 €',String(qty||1),'-100,00 %','0,00 €','8,50%',[248,248,248]);
 
   y=tRow(y,'974-DEF-REG-MAINT-DEF',[
     {b:true,t:'974 - REGISTRE DE SUIVI DE MAINTENANCE DEFIBRILLATEUR'},
     {b:true,t:'offert'},
-  ],'39,90 €','1','-100,00 %','0,00 €','8,50%',[255,255,255]);
+  ],'39,90 €',String(qty||1),'-100,00 %','0,00 €','8,50%',[255,255,255]);
 
   y=tRow(y,'974-SERV-INSTALL',[
     {b:true,t:'974 - INSTALLATION ARMOIRE et/ou SIGNALETIQUE DEFIBRILLATEUR'},
     {b:true,t:'offerte'},
-  ],'90,00 €','1','-100,00 %','0,00 €','8,50%',[248,248,248]);
+  ],'90,00 €',String(qty||1),'-100,00 %','0,00 €','8,50%',[248,248,248]);
 
   y+=8;
   const lX=14,lW=90,tX=W/2+8,tW=W-14-tX;

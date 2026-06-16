@@ -323,7 +323,7 @@ body.demo-mode header{background:#b45309 !important;}
   header input[type=search].mob-open::placeholder{color:rgba(255,255,255,.6);}
   .hbadge{display:none;}
   /* Boutons header : icône uniquement */
-  #dashBtn .btn-text,#teamBtn .btn-text,#suiviBtn .btn-text{display:none;}
+  #teamBtn .btn-text,#suiviBtn .btn-text{display:none;}
   .user-badge{padding:4px 7px;gap:5px;}
   #ub-name{display:none;}
   .ub-role{display:none;}
@@ -437,6 +437,34 @@ body.demo-mode header{background:#b45309 !important;}
   font-size:12px;color:#fff;white-space:nowrap;}
 .ub-role{font-size:9px;background:rgba(255,255,255,.2);border-radius:3px;
   padding:1px 5px;text-transform:uppercase;letter-spacing:.3px;}
+
+/* DROPDOWN UTILISATEUR */
+.user-dropdown-wrap{position:relative;cursor:pointer;user-select:none;}
+.user-dropdown-wrap:hover{background:rgba(255,255,255,.22);}
+.ub-arrow{font-size:10px;opacity:.7;margin-left:2px;transition:transform .2s;}
+.user-dropdown-wrap.open .ub-arrow{transform:rotate(180deg);}
+.user-menu{
+  position:absolute;top:calc(100% + 8px);right:0;
+  background:#fff;border-radius:10px;min-width:200px;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);
+  z-index:1200;overflow:hidden;
+  animation:dropIn .18s ease;
+}
+.user-menu.hidden{display:none;}
+@keyframes dropIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.um-user-info{padding:12px 16px 10px;background:#fafafa;border-bottom:1px solid #f0f0f0;}
+.um-name{font-size:13px;font-weight:700;color:var(--dark);}
+.um-role{font-size:10px;color:var(--light);text-transform:uppercase;letter-spacing:.3px;margin-top:2px;}
+.um-sep{height:1px;background:#f0f0f0;margin:4px 0;}
+.um-item{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:10px 16px;border:none;background:none;
+  font-size:13px;color:var(--dark);cursor:pointer;text-align:left;
+  transition:background .12s;
+}
+.um-item:hover{background:#f5f5f5;}
+.um-logout{color:#dc2626;}
+.um-logout:hover{background:#fef2f2;}
 
 /* ──────────────── PANEL ADMIN — lignes utilisateur ─ */
 .user-row{display:flex;align-items:center;gap:12px;padding:10px 14px;
@@ -589,22 +617,34 @@ body.demo-mode header{background:#b45309 !important;}
 <header>
   <button class="menu-btn" onclick="toggleSidebar()" id="menuBtn" title="Filtres & statuts">☰</button>
   <div class="logo">CRM Réunion <em>STAR aid</em></div>
-  <button class="btn btn-outline btn-sm" onclick="showDashboard()" id="dashBtn" title="Tableau de bord">📊 <span class="btn-text">Dashboard</span></button>
   <div class="spacer"></div>
   <button class="btn btn-outline btn-sm mob-search-btn" onclick="toggleMobileSearch()" title="Rechercher" style="display:none;">🔍</button>
   <input type="search" id="searchInput" placeholder="🔍 Rechercher un prospect..." oninput="onSearch()">
   <span class="hbadge" id="totalBadge">…</span>
-  <div id="userBadge" class="user-badge" style="display:none;">
-    <span>👤</span>
-    <span id="ub-name">—</span>
-    <span class="ub-role" id="ub-role">—</span>
-  </div>
   <button id="teamBtn" class="btn btn-outline btn-sm" onclick="openUsersModal()"
           title="Gérer l'équipe" style="display:none;">⚙️ <span class="btn-text">Équipe</span></button>
   <button id="suiviBtn" class="btn btn-outline btn-sm" onclick="openSuiviModal()"
           title="Suivi commercial équipe" style="display:none;">📈 <span class="btn-text">Suivi</span></button>
-  <button class="btn btn-outline btn-sm" onclick="doLogout()" title="Se déconnecter">🚪</button>
-  <button class="btn btn-white btn-sm" onclick="toggleDemoMode()" id="demoBtn" title="Tester sans impacter la base">🧪 Démo</button>
+
+  <!-- BADGE UTILISATEUR + DROPDOWN -->
+  <div id="userBadge" class="user-badge user-dropdown-wrap" style="display:none;" onclick="toggleUserMenu(event)">
+    <span>👤</span>
+    <span id="ub-name">—</span>
+    <span class="ub-role" id="ub-role">—</span>
+    <span class="ub-arrow">▾</span>
+    <!-- Menu déroulant -->
+    <div class="user-menu hidden" id="userMenu">
+      <div class="um-user-info">
+        <div class="um-name" id="um-name">—</div>
+        <div class="um-role" id="um-role">—</div>
+      </div>
+      <div class="um-sep"></div>
+      <button class="um-item" onclick="showDashboard();closeUserMenu()">📊 Dashboard</button>
+      <button class="um-item" id="um-demo" onclick="toggleDemoMode();closeUserMenu()">🧪 Mode Démo</button>
+      <div class="um-sep"></div>
+      <button class="um-item um-logout" onclick="doLogout()">🚪 Déconnexion</button>
+    </div>
+  </div>
 </header>
 
 <!-- Fond derrière le sidebar -->
@@ -1358,11 +1398,36 @@ function clearSession() {
 // Affichage du badge utilisateur dans le header
 function renderUserBadge() {
   if (!currentUser) return;
-  document.getElementById('ub-name').textContent  = currentUser.prenom + ' ' + currentUser.nom;
-  document.getElementById('ub-role').textContent  = currentUser.role === 'admin' ? 'Admin' : 'Commercial';
+  const fullName = currentUser.prenom + ' ' + currentUser.nom;
+  const roleLabel = currentUser.role === 'admin' ? 'Admin' : 'Commercial';
+  document.getElementById('ub-name').textContent  = fullName;
+  document.getElementById('ub-role').textContent  = roleLabel;
+  document.getElementById('um-name').textContent  = fullName;
+  document.getElementById('um-role').textContent  = roleLabel;
   document.getElementById('userBadge').style.display = '';
   document.getElementById('teamBtn').style.display   = currentUser.role === 'admin' ? '' : 'none';
   document.getElementById('suiviBtn').style.display  = currentUser.role === 'admin' ? '' : 'none';
+}
+
+/* ─── DROPDOWN UTILISATEUR ──────────────────────────────── */
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  const wrap = document.getElementById('userBadge');
+  const menu = document.getElementById('userMenu');
+  const isOpen = !menu.classList.contains('hidden');
+  if (isOpen) { closeUserMenu(); return; }
+  menu.classList.remove('hidden');
+  wrap.classList.add('open');
+  // Fermer au clic extérieur
+  setTimeout(() => document.addEventListener('click', _closeUserMenuOutside), 0);
+}
+function closeUserMenu() {
+  document.getElementById('userMenu').classList.add('hidden');
+  document.getElementById('userBadge').classList.remove('open');
+  document.removeEventListener('click', _closeUserMenuOutside);
+}
+function _closeUserMenuOutside(e) {
+  if (!document.getElementById('userBadge').contains(e.target)) closeUserMenu();
 }
 
 // Afficher l'écran de connexion ou de premier accès

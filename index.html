@@ -944,6 +944,8 @@ body.demo-mode header{background:#b45309 !important;}
             <option value="admin">Administrateur</option>
           </select>
         </div>
+        <div class="mrow" style="margin-bottom:0;"><label>📞 Téléphone</label>
+          <input id="eu-telephone" type="tel" placeholder="0692 …"></div>
       </div>
       <div class="mrow" style="margin-top:12px;">
         <label>🔗 URL Webhook Make.com <span style="font-weight:400;color:var(--mid);font-size:11px;">(laisser vide pour utiliser le webhook global)</span></label>
@@ -997,6 +999,8 @@ body.demo-mode header{background:#b45309 !important;}
             <option value="admin">Administrateur</option>
           </select>
         </div>
+        <div class="mrow" style="margin-bottom:0;"><label>📞 Téléphone</label>
+          <input id="nu-telephone" type="tel" placeholder="0692 …"></div>
       </div>
       <div class="mrow" style="margin-top:12px;">
         <label>Mot de passe initial</label>
@@ -1363,7 +1367,7 @@ function closeUsersModal() {
 
 async function loadUsers() {
   const { data } = await dbSelect('crm_users', {
-    cols: 'id,prenom,nom,email,role,actif,webhook_url,created_at',
+    cols: 'id,prenom,nom,email,role,actif,telephone,webhook_url,created_at',
     order: 'created_at', limit: 50
   });
   renderUsers(data || []);
@@ -1382,16 +1386,16 @@ function renderUsers(users) {
     return `
       <div class="user-row${isMe?' me':''}${u.role==='admin'?' is-admin':''}">
         <div class="ur-avatar">${esc(initials.toUpperCase())}</div>
-        <div class="ur-info" style="cursor:pointer;" onclick="openEditUser(${u.id},'${esc(u.prenom)}','${esc(u.nom)}','${esc(u.email)}','${u.role}','${esc(u.webhook_url||'')}')">
+        <div class="ur-info" style="cursor:pointer;" onclick="openEditUser(${u.id},'${esc(u.prenom)}','${esc(u.nom)}','${esc(u.email)}','${u.role}','${esc(u.webhook_url||"")}','${esc(u.telephone||"")}')">
           <div class="ur-name">${esc(u.prenom)} ${esc(u.nom)}
             ${isMe?'<span style="font-size:10px;color:var(--red);margin-left:4px;">(vous)</span>':''}
             ${hasWebhook?`<span title="Webhook configuré" style="margin-left:4px;font-size:11px;">🔗</span>`:''}
           </div>
-          <div class="ur-meta">${esc(u.email)}</div>
+          <div class="ur-meta">${esc(u.email)}${u.telephone ? ' · ' + esc(u.telephone) : ''}</div>
         </div>
         <span class="ur-role-tag">${u.role==='admin'?'Admin':'Commercial'}</span>
         <button class="ur-del" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;color:var(--mid);"
-                onclick="openEditUser(${u.id},'${esc(u.prenom)}','${esc(u.nom)}','${esc(u.email)}','${u.role}','${esc(u.webhook_url||'')}')"
+                onclick="openEditUser(${u.id},'${esc(u.prenom)}','${esc(u.nom)}','${esc(u.email)}','${u.role}','${esc(u.webhook_url||"")}','${esc(u.telephone||"")}')"
                 title="Modifier ce compte">✏️</button>
         ${!isMe
           ? `<button class="ur-del" onclick="deleteUser(${u.id},'${esc(u.prenom+' '+u.nom)}')" title="Supprimer ce compte">✕</button>`
@@ -1400,13 +1404,14 @@ function renderUsers(users) {
   }).join('');
 }
 
-function openEditUser(id, prenom, nom, email, role, webhook_url) {
+function openEditUser(id, prenom, nom, email, role, webhook_url, telephone) {
   document.getElementById('eu-id').value          = id;
   document.getElementById('eu-prenom').value      = prenom;
   document.getElementById('eu-nom').value         = nom;
   document.getElementById('eu-email').value       = email;
   document.getElementById('eu-role').value        = role;
   document.getElementById('eu-webhook').value     = webhook_url || '';
+  document.getElementById('eu-telephone').value   = telephone || '';
   document.getElementById('eu-password').value    = '';
   document.getElementById('editUserModal').classList.remove('hidden');
 }
@@ -1421,10 +1426,11 @@ async function saveEditUser() {
   const email       = document.getElementById('eu-email').value.trim().toLowerCase();
   const role        = document.getElementById('eu-role').value;
   const webhook_url = document.getElementById('eu-webhook').value.trim() || null;
+  const telephone   = document.getElementById('eu-telephone').value.trim() || null;
   const password    = document.getElementById('eu-password').value;
   if (!prenom || !nom || !email) { toast('Renseignez prénom, nom et email', true); return; }
 
-  const updates = { prenom, nom, email, role, webhook_url };
+  const updates = { prenom, nom, email, role, webhook_url, telephone };
   if (password) {
     if (password.length < 6) { toast('Mot de passe : 6 caractères minimum', true); return; }
     updates.password_hash = await sha256(password);
@@ -1442,7 +1448,7 @@ async function saveEditUser() {
     loadCommercialStats();
     // Mettre à jour la session si c'est l'utilisateur courant
     if (currentUser && parseInt(id) === currentUser.id) {
-      currentUser = { ...currentUser, prenom, nom, email, role, webhook_url };
+      currentUser = { ...currentUser, prenom, nom, email, role, webhook_url, telephone };
       saveSession(currentUser);
       renderUserBadge();
     }
@@ -1459,16 +1465,17 @@ async function addUser() {
   const role        = document.getElementById('nu-role').value;
   const password    = document.getElementById('nu-password').value;
   const webhook_url = document.getElementById('nu-webhook').value.trim() || null;
+  const telephone   = document.getElementById('nu-telephone').value.trim() || null;
   if (!prenom || !nom || !email || !password) { toast('Renseignez tous les champs', true); return; }
   if (password.length < 6) { toast('Mot de passe : 6 caractères minimum', true); return; }
   const hash = await sha256(password);
   const res = await fetch(`${SUPA_URL}/crm_users`, {
     method:  'POST',
     headers: { ...H, 'Prefer': 'return=minimal' },
-    body:    JSON.stringify({ prenom, nom, email, password_hash: hash, role, actif: true, webhook_url })
+    body:    JSON.stringify({ prenom, nom, email, password_hash: hash, role, actif: true, webhook_url, telephone })
   });
   if (res.ok) {
-    ['nu-prenom','nu-nom','nu-email','nu-password','nu-webhook'].forEach(id => document.getElementById(id).value='');
+    ['nu-prenom','nu-nom','nu-email','nu-password','nu-webhook','nu-telephone'].forEach(id => document.getElementById(id).value='');
     toast(`Compte créé — ${prenom} ${nom} peut maintenant se connecter ✓`);
     loadCommercialStats();
     loadUsers();

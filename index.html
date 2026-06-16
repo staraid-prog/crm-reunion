@@ -921,6 +921,47 @@ body.demo-mode header{background:#b45309 !important;}
 </div>
 
 <!-- ═══════════════════════════════════════════════════
+     MODAL — ÉDITION UTILISATEUR (admin)
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="editUserModal" onclick="if(event.target===this)closeEditUser()">
+  <div class="modal-box" style="width:500px;">
+    <div class="modal-head">
+      <h3>✏️ Modifier le compte</h3>
+      <button class="cls" onclick="closeEditUser()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="eu-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="mrow" style="margin-bottom:0;"><label>Prénom</label>
+          <input id="eu-prenom" type="text" placeholder="Prénom"></div>
+        <div class="mrow" style="margin-bottom:0;"><label>Nom</label>
+          <input id="eu-nom" type="text" placeholder="Nom"></div>
+        <div class="mrow" style="margin-bottom:0;"><label>Email</label>
+          <input id="eu-email" type="email" placeholder="email@star-aid.re"></div>
+        <div class="mrow" style="margin-bottom:0;"><label>Rôle</label>
+          <select id="eu-role">
+            <option value="commercial">Commercial</option>
+            <option value="admin">Administrateur</option>
+          </select>
+        </div>
+      </div>
+      <div class="mrow" style="margin-top:12px;">
+        <label>🔗 URL Webhook Make.com <span style="font-weight:400;color:var(--mid);font-size:11px;">(laisser vide pour utiliser le webhook global)</span></label>
+        <input id="eu-webhook" type="url" placeholder="https://hook.eu1.make.com/…">
+      </div>
+      <div class="mrow" style="margin-top:12px;">
+        <label>Nouveau mot de passe <span style="font-weight:400;color:var(--mid);font-size:11px;">(laisser vide pour ne pas changer)</span></label>
+        <input id="eu-password" type="password" placeholder="Minimum 6 caractères">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-grey" onclick="closeEditUser()">Annuler</button>
+      <button class="btn btn-red" onclick="saveEditUser()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
      MODAL — GESTION ÉQUIPE (admin)
 ════════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden" id="usersModal">
@@ -1322,7 +1363,7 @@ function closeUsersModal() {
 
 async function loadUsers() {
   const { data } = await dbSelect('crm_users', {
-    cols: 'id,prenom,nom,email,role,actif,created_at',
+    cols: 'id,prenom,nom,email,role,actif,webhook_url,created_at',
     order: 'created_at', limit: 50
   });
   renderUsers(data || []);
@@ -1337,21 +1378,78 @@ function renderUsers(users) {
   el.innerHTML = users.map(u => {
     const isMe     = u.id === currentUser?.id;
     const initials = ((u.prenom||'')[0]||'') + ((u.nom||'')[0]||'');
+    const hasWebhook = u.webhook_url ? '🔗' : '';
     return `
       <div class="user-row${isMe?' me':''}${u.role==='admin'?' is-admin':''}">
         <div class="ur-avatar">${esc(initials.toUpperCase())}</div>
-        <div class="ur-info">
+        <div class="ur-info" style="cursor:pointer;" onclick="openEditUser(${u.id},'${esc(u.prenom)}','${esc(u.nom)}','${esc(u.email)}','${u.role}','${esc(u.webhook_url||'')}')">
           <div class="ur-name">${esc(u.prenom)} ${esc(u.nom)}
             ${isMe?'<span style="font-size:10px;color:var(--red);margin-left:4px;">(vous)</span>':''}
+            ${hasWebhook?`<span title="Webhook configuré" style="margin-left:4px;font-size:11px;">🔗</span>`:''}
           </div>
           <div class="ur-meta">${esc(u.email)}</div>
         </div>
         <span class="ur-role-tag">${u.role==='admin'?'Admin':'Commercial'}</span>
+        <button class="ur-del" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;color:var(--mid);"
+                onclick="openEditUser(${u.id},'${esc(u.prenom)}','${esc(u.nom)}','${esc(u.email)}','${u.role}','${esc(u.webhook_url||'')}')"
+                title="Modifier ce compte">✏️</button>
         ${!isMe
           ? `<button class="ur-del" onclick="deleteUser(${u.id},'${esc(u.prenom+' '+u.nom)}')" title="Supprimer ce compte">✕</button>`
           : '<span style="width:19px;display:inline-block;"></span>'}
       </div>`;
   }).join('');
+}
+
+function openEditUser(id, prenom, nom, email, role, webhook_url) {
+  document.getElementById('eu-id').value          = id;
+  document.getElementById('eu-prenom').value      = prenom;
+  document.getElementById('eu-nom').value         = nom;
+  document.getElementById('eu-email').value       = email;
+  document.getElementById('eu-role').value        = role;
+  document.getElementById('eu-webhook').value     = webhook_url || '';
+  document.getElementById('eu-password').value    = '';
+  document.getElementById('editUserModal').classList.remove('hidden');
+}
+function closeEditUser() {
+  document.getElementById('editUserModal').classList.add('hidden');
+}
+
+async function saveEditUser() {
+  const id          = document.getElementById('eu-id').value;
+  const prenom      = document.getElementById('eu-prenom').value.trim();
+  const nom         = document.getElementById('eu-nom').value.trim();
+  const email       = document.getElementById('eu-email').value.trim().toLowerCase();
+  const role        = document.getElementById('eu-role').value;
+  const webhook_url = document.getElementById('eu-webhook').value.trim() || null;
+  const password    = document.getElementById('eu-password').value;
+  if (!prenom || !nom || !email) { toast('Renseignez prénom, nom et email', true); return; }
+
+  const updates = { prenom, nom, email, role, webhook_url };
+  if (password) {
+    if (password.length < 6) { toast('Mot de passe : 6 caractères minimum', true); return; }
+    updates.password_hash = await sha256(password);
+  }
+
+  const res = await fetch(`${SUPA_URL}/crm_users?id=eq.${id}`, {
+    method:  'PATCH',
+    headers: { ...H, 'Prefer': 'return=minimal' },
+    body:    JSON.stringify(updates)
+  });
+  if (res.ok) {
+    toast(`✅ Compte de ${prenom} ${nom} mis à jour`);
+    closeEditUser();
+    loadUsers();
+    loadCommercialStats();
+    // Mettre à jour la session si c'est l'utilisateur courant
+    if (currentUser && parseInt(id) === currentUser.id) {
+      currentUser = { ...currentUser, prenom, nom, email, role, webhook_url };
+      saveSession(currentUser);
+      renderUserBadge();
+    }
+  } else {
+    const txt = await res.text();
+    toast('Erreur : ' + (txt.includes('duplicate') ? 'Email déjà utilisé' : txt.slice(0,80)), true);
+  }
 }
 
 async function addUser() {

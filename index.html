@@ -1267,7 +1267,7 @@ async function doLogin() {
   try {
     const hash = await sha256(password);
     const { data } = await dbSelect('crm_users', {
-      cols:    'id,prenom,nom,email,role,webhook_url',
+      cols:    'id,prenom,nom,email,role,webhook_url,telephone',
       filters: [`email=eq.${encodeURIComponent(email)}`, `password_hash=eq.${hash}`, 'actif=eq.true'],
       order:   'id',
       limit: 1
@@ -3874,7 +3874,10 @@ function buildDevisPdf(r, qty, type, prix = 89) {
   ].forEach(l=>{doc.text(l,14,yL);yL+=3.5;});
   yL+=4;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...DARK);
-  ['STAR group - STAR aid','4 allée des Primevères','Le Moufia','97490 SAINTE CLOTILDE','La Réunion','Mathieu MICHON','m.michon@star-aid.fr','0262 150 950','0692 39 49 83']
+  const _commNom   = currentUser ? (currentUser.prenom + ' ' + currentUser.nom.toUpperCase()) : 'Mathieu MICHON';
+  const _commEmail = currentUser ? currentUser.email : 'm.michon@star-aid.fr';
+  const _commTel   = (currentUser && currentUser.telephone) ? currentUser.telephone : '0692 39 49 83';
+  ['STAR group - STAR aid','4 allée des Primevères','Le Moufia','97490 SAINTE CLOTILDE','La Réunion', _commNom, _commEmail, '0262 150 950', _commTel]
     .forEach(l=>{doc.text(l,14,yL);yL+=5;});
 
   // Droite : titre Devis + encadré client

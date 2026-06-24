@@ -1240,7 +1240,7 @@ async function addToAlloDial() {
 
     const res = await fetch(`${ALLO_API_BASE}/v2/api/dialing-queues/numbers`, {
       method:  'POST',
-      headers: { 'Authorization': `Bearer ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'X-API-Key': ALLO_API_KEY, 'Content-Type': 'application/json' },
       body:    JSON.stringify(payload)
     });
 
@@ -1284,7 +1284,7 @@ async function syncAlloCall() {
 
     const res = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {
       method:  'POST',
-      headers: { 'Authorization': `Bearer ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'X-API-Key': ALLO_API_KEY, 'Content-Type': 'application/json' },
       body:    JSON.stringify(body)
     });
     if (!res.ok) throw new Error('Allo API ' + res.status);

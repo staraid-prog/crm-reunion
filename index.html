@@ -1218,6 +1218,7 @@ function phoneToE164(phone) {
 async function addToAlloDial() {
   const r = _currentRecord;
   if (!r) return;
+  if (DEMO_MODE) { toast('📲 [Démo] Numéro ajouté à la file Allo !'); return; }
   const phone = r.telephone_crm || r.telephone_google;
   if (!phone) { toast('Aucun numéro pour ce prospect', true); return; }
   const e164 = phoneToE164(phone);
@@ -1269,6 +1270,7 @@ async function addToAlloDial() {
 async function syncAlloCall() {
   const r = _currentRecord;
   if (!r) return;
+  if (DEMO_MODE) { toast('🔄 [Démo] Sync Allo simulé !'); return; }
   const phone = r.telephone_crm || r.telephone_google;
   if (!phone) { toast('Aucun numéro pour ce prospect', true); return; }
   const e164 = phoneToE164(phone);

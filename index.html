@@ -1190,6 +1190,104 @@ body.demo-mode header{background:#b45309 !important;}
 const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/n6sczdlu6oqdc37b6ydpj1xxze5oruyj';
 const EMAIL_FROM = 'm.michon@star-aid.fr';
 
+/* ─── ALLO ──────────────────────────────────────────────────────── */
+const ALLO_API_KEY  = 'oat-16C93B9F37E50D8E208330752404B20898F7C6A0';
+const ALLO_API_BASE = 'https://api.withallo.com';
+// ID Allo par utilisateur CRM (clé = email CRM)
+const ALLO_USER_MAP = {
+  'contact@smatchup.fr': 'usr-16C65D69CB83BED493366458205682E7FA5FB804', // Mathieu Michon
+};
+function getAlloUserId() {
+  return currentUser ? (ALLO_USER_MAP[currentUser.email] || null) : null;
+}
+
+/* Convertit un numéro français/réunionnais en E.164 */
+function phoneToE164(phone) {
+  if (!phone) return null;
+  let p = phone.replace(/[\s\-\.\(\)]/g, '');
+  if (p.startsWith('+')) return p;
+  if (p.startsWith('00')) return '+' + p.slice(2);
+  // La Réunion : 0262x, 0263x, 0692x, 0693x
+  if (/^0(262|263|692|693)/.test(p)) return '+262' + p.slice(1);
+  // France métropolitaine
+  if (p.startsWith('0')) return '+33' + p.slice(1);
+  return p;
+}
+
+/* Sync le dernier appel Allo pour le prospect courant */
+async function syncAlloCall() {
+  const r = _currentRecord;
+  if (!r) return;
+  const phone = r.telephone_crm || r.telephone_google;
+  if (!phone) { toast('Aucun numéro pour ce prospect', true); return; }
+  const e164 = phoneToE164(phone);
+  if (!e164) { toast('Numéro non reconnu', true); return; }
+
+  const btn = document.getElementById('allo-sync-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
+
+  try {
+    const body = { contact_number: e164, type: 'CALL', size: 5, sort: 'DATE' };
+    const uid = getAlloUserId();
+    if (uid) body.user_id = uid;
+
+    const res = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('Allo API ' + res.status);
+    const json = await res.json();
+    const calls = json.data || [];
+
+    if (calls.length === 0) { toast('Aucun appel Allo trouvé pour ce numéro', true); return; }
+
+    const c = calls[0];
+    const dt = new Date(c.created_at || c.started_at);
+    const dateStr = dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    const duree   = c.duration ? Math.round(c.duration / 60) + ' min' : '';
+    const result  = c.result   ? ({ ANSWERED:'Répondu', VOICEMAIL:'Messagerie', TRANSFERRED:'Transféré' }[c.result] || c.result) : '';
+    const summary = c.summary?.content || c.summary?.text || '';
+
+    const alloNote = `📞 Allo — ${dateStr}${duree ? ' · ' + duree : ''}${result ? ' · ' + result : ''}${summary ? '\n' + summary : ''}`;
+    const newNotes = r.notes ? r.notes + '\n\n' + alloNote : alloNote;
+
+    await dbUpdate('prospects', r.siret, { date_heure_appel: dateStr, notes: newNotes });
+    _currentRecord.date_heure_appel = dateStr;
+    _currentRecord.notes = newNotes;
+
+    const logEl = document.getElementById('call-log-txt');
+    if (logEl) logEl.innerHTML = _buildCallLogHtml(_currentRecord);
+    const ntEl = document.getElementById('notes-txt');
+    if (ntEl) ntEl.value = newNotes;
+
+    // Afficher mini-historique Allo
+    renderAlloHistory(calls);
+    toast('✅ Sync Allo : ' + dateStr + (duree ? ' · ' + duree : ''));
+  } catch(e) {
+    console.error('Allo sync:', e);
+    toast('Erreur Allo : ' + e.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync Allo'; }
+  }
+}
+
+function renderAlloHistory(calls) {
+  const el = document.getElementById('allo-history');
+  if (!el) return;
+  el.innerHTML = calls.slice(0, 5).map(c => {
+    const dt = new Date(c.created_at || c.started_at);
+    const dateStr = dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    const duree   = c.duration ? Math.round(c.duration / 60) + ' min' : '—';
+    const result  = { ANSWERED:'✅ Répondu', VOICEMAIL:'📬 Messagerie', TRANSFERRED:'↗️ Transféré' }[c.result] || c.result || '—';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px;">
+      <span style="color:var(--light);white-space:nowrap;">${dateStr}</span>
+      <span style="flex:1;color:var(--mid);">${result}</span>
+      <span style="color:var(--light);">${duree}</span>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--light);padding:5px 0;">Aucun appel</div>';
+}
+
 // Webhook et expéditeur actifs (propre à chaque utilisateur, fallback global)
 function getWebhook()     { return (currentUser && currentUser.webhook_url) || MAKE_WEBHOOK_URL; }
 function getSenderEmail() { return (currentUser && currentUser.email)       || EMAIL_FROM; }
@@ -2812,8 +2910,15 @@ function renderDetail(r) {
             👤 Contact
             ${extraBadge}
           </button>
+          <button id="allo-sync-btn" onclick="syncAlloCall()"
+            style="display:inline-flex;align-items:center;gap:6px;background:#f0f4ff;color:#3b5bdb;
+                   font-size:12px;font-weight:700;padding:9px 14px;border-radius:6px;
+                   border:1.5px solid #b0c4f8;cursor:pointer;transition:background .15s;white-space:nowrap;">
+            🔄 Sync Allo
+          </button>
         </div>
         <div class="call-log-txt" id="call-log-txt">${_buildCallLogHtml(r)}</div>
+        <div id="allo-history" style="margin-top:6px;"></div>
         ${r.commercial
           ? `<div style="font-size:11px;color:var(--mid);margin-top:5px;">
                👤 Assigné à : <strong style="color:var(--dark);">${esc(r.commercial)}</strong>

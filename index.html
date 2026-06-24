@@ -1248,18 +1248,25 @@ async function addToAlloDial() {
       body:    JSON.stringify(payload)
     });
 
-    if (!res.ok) throw new Error('Allo API ' + res.status);
+    if (!res.ok) {
+      let errMsg = 'Allo API ' + res.status;
+      try { const errJson = await res.json(); errMsg += ' – ' + (errJson?.message || errJson?.error || ''); } catch(_){}
+      throw new Error(errMsg);
+    }
     const json = await res.json();
-    const added   = json.data?.added   ?? json.added   ?? 0;
-    const skipped = json.data?.skipped ?? json.skipped ?? [];
+    /* L'API peut renvoyer added comme tableau [{...}] ou comme nombre 1 */
+    const addedRaw   = json.data?.added   ?? json.added   ?? 0;
+    const skippedRaw = json.data?.skipped ?? json.skipped ?? [];
+    const addedCount = Array.isArray(addedRaw)   ? addedRaw.length   : (Number(addedRaw)   || 0);
+    const skippedList= Array.isArray(skippedRaw) ? skippedRaw : [];
 
-    if (added > 0) {
+    if (addedCount > 0) {
       toast('✅ Ajouté à la file Allo — ouvre ton app pour appeler !');
-    } else if (skipped.length > 0) {
-      const reason = skipped[0]?.reason || 'inconnu';
+    } else if (skippedList.length > 0) {
+      const reason = skippedList[0]?.reason || skippedList[0] || 'inconnu';
       toast('⚠️ Non ajouté : ' + reason, true);
     } else {
-      toast('Réponse Allo inattendue', true);
+      toast('Réponse Allo inattendue – ' + JSON.stringify(json).slice(0,80), true);
     }
   } catch(e) {
     console.error('Allo dial:', e);
@@ -1313,7 +1320,11 @@ async function syncAlloCall() {
       headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify(body)
     });
-    if (!res.ok) throw new Error('Allo API ' + res.status);
+    if (!res.ok) {
+      let errMsg = 'Allo API ' + res.status;
+      try { const errJson = await res.json(); errMsg += ' – ' + (errJson?.message || errJson?.error || ''); } catch(_){}
+      throw new Error(errMsg);
+    }
     const json = await res.json();
     const calls = json.data || [];
 

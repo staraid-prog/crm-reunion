@@ -1214,6 +1214,57 @@ function phoneToE164(phone) {
   return p;
 }
 
+/* Ajoute le prospect dans la file Power Dialer Allo */
+async function addToAlloDial() {
+  const r = _currentRecord;
+  if (!r) return;
+  const phone = r.telephone_crm || r.telephone_google;
+  if (!phone) { toast('Aucun numéro pour ce prospect', true); return; }
+  const e164 = phoneToE164(phone);
+  if (!e164) { toast('Numéro non reconnu', true); return; }
+
+  const btn = document.getElementById('allo-dial-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
+
+  try {
+    const payload = {
+      numbers: [{
+        number:  e164,
+        name:    r.signataire || r.denomination_usuelle || '',
+        company: r.denomination_usuelle || '',
+        emails:  r.email_crm ? [r.email_crm] : [],
+      }]
+    };
+    const uid = getAlloUserId();
+    if (uid) payload.user_id = uid;
+
+    const res = await fetch(`${ALLO_API_BASE}/v2/api/dialing-queues/numbers`, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+
+    if (!res.ok) throw new Error('Allo API ' + res.status);
+    const json = await res.json();
+    const added   = json.data?.added   ?? json.added   ?? 0;
+    const skipped = json.data?.skipped ?? json.skipped ?? [];
+
+    if (added > 0) {
+      toast('✅ Ajouté à la file Allo — ouvre ton app pour appeler !');
+    } else if (skipped.length > 0) {
+      const reason = skipped[0]?.reason || 'inconnu';
+      toast('⚠️ Non ajouté : ' + reason, true);
+    } else {
+      toast('Réponse Allo inattendue', true);
+    }
+  } catch(e) {
+    console.error('Allo dial:', e);
+    toast('Erreur Allo : ' + e.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📲 File Allo'; }
+  }
+}
+
 /* Sync le dernier appel Allo pour le prospect courant */
 async function syncAlloCall() {
   const r = _currentRecord;
@@ -2910,11 +2961,17 @@ function renderDetail(r) {
             👤 Contact
             ${extraBadge}
           </button>
-          <button id="allo-sync-btn" onclick="syncAlloCall()"
+          <button id="allo-dial-btn" onclick="addToAlloDial()"
             style="display:inline-flex;align-items:center;gap:6px;background:#f0f4ff;color:#3b5bdb;
                    font-size:12px;font-weight:700;padding:9px 14px;border-radius:6px;
                    border:1.5px solid #b0c4f8;cursor:pointer;transition:background .15s;white-space:nowrap;">
-            🔄 Sync Allo
+            📲 File Allo
+          </button>
+          <button id="allo-sync-btn" onclick="syncAlloCall()"
+            style="display:inline-flex;align-items:center;gap:6px;background:#f8f9fa;color:#6b7280;
+                   font-size:11px;font-weight:700;padding:7px 10px;border-radius:6px;
+                   border:1.5px solid #e5e7eb;cursor:pointer;white-space:nowrap;">
+            🔄
           </button>
         </div>
         <div class="call-log-txt" id="call-log-txt">${_buildCallLogHtml(r)}</div>

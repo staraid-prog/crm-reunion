@@ -1218,7 +1218,10 @@ function phoneToE164(phone) {
 async function addToAlloDial() {
   const r = _currentRecord;
   if (!r) return;
-  if (DEMO_MODE) { toast('📲 [Démo] Numéro ajouté à la file Allo !'); return; }
+  if (DEMO_MODE) {
+    toast('📲 Ajouté à la file Allo — ouvre ton app pour appeler !');
+    return;
+  }
   const phone = r.telephone_crm || r.telephone_google;
   if (!phone) { toast('Aucun numéro pour ce prospect', true); return; }
   const e164 = phoneToE164(phone);
@@ -1270,7 +1273,28 @@ async function addToAlloDial() {
 async function syncAlloCall() {
   const r = _currentRecord;
   if (!r) return;
-  if (DEMO_MODE) { toast('🔄 [Démo] Sync Allo simulé !'); return; }
+  if (DEMO_MODE) {
+    // Simulation d'un appel Allo en démo
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('fr-FR') + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    const fakeSummary = `Le prospect a montré de l'intérêt pour la location de défibrillateur. Rappel prévu la semaine prochaine pour finaliser l'offre.`;
+    const alloNote = `📞 Allo — ${dateStr} · 4 min · Répondu\n${fakeSummary}`;
+    const newNotes = _currentRecord.notes ? _currentRecord.notes + '\n\n' + alloNote : alloNote;
+    await dbUpdate('prospects', _currentRecord.siret, { date_heure_appel: dateStr, notes: newNotes });
+    _currentRecord.date_heure_appel = dateStr;
+    _currentRecord.notes = newNotes;
+    const logEl = document.getElementById('call-log-txt');
+    if (logEl) logEl.innerHTML = _buildCallLogHtml(_currentRecord);
+    const ntEl = document.getElementById('notes-txt');
+    if (ntEl) ntEl.value = newNotes;
+    const fakeCalls = [
+      { created_at: now.toISOString(), duration: 240, result: 'ANSWERED', summary: { content: fakeSummary } },
+      { created_at: new Date(now - 86400000*3).toISOString(), duration: 90, result: 'VOICEMAIL', summary: { content: 'Messagerie — rappel laissé.' } },
+    ];
+    renderAlloHistory(fakeCalls);
+    toast('✅ Sync Allo : ' + dateStr + ' · 4 min — résumé ajouté');
+    return;
+  }
   const phone = r.telephone_crm || r.telephone_google;
   if (!phone) { toast('Aucun numéro pour ce prospect', true); return; }
   const e164 = phoneToE164(phone);

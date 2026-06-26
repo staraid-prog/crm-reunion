@@ -1305,13 +1305,26 @@ async function syncAlloCall() {
     const ntEl = document.getElementById('notes-txt');
     if (ntEl) ntEl.value = newNotes;
     const fakeCalls = [
-      { created_at: now.toISOString(), duration: 240, result: 'ANSWERED', summary: { content: fakeSummary } },
-      { created_at: new Date(now - 86400000*3).toISOString(), duration: 90, result: 'VOICEMAIL', summary: { content: 'Messagerie — rappel laissé.' } },
+      {
+        id:'demo-1', date: now.toISOString(), duration: 247, result: 'ANSWERED',
+        summary: `# Appel de prospection — ${r.denomination_usuelle}\n\n## Détails\n- Interlocuteur : Responsable disponible\n- Intérêt : Fort intérêt pour la location de défibrillateur\n- Prix proposé : 89 € HT/mois maintenance incluse\n- Décision : Rappel prévu la semaine prochaine pour finaliser l'offre\n`,
+        recording_url: '',
+        transcript: [
+          { source:'EXTERNAL', text: r.denomination_usuelle + ', bonjour.' },
+          { source:'USER',     text: 'Bonjour, je vous contacte concernant la réglementation défibrillateur. Êtes-vous actuellement équipé ?' },
+          { source:'EXTERNAL', text: 'Non, pas encore. On en a parlé mais on n\'a pas encore fait la démarche.' },
+          { source:'USER',     text: 'Très bien. Nous proposons la location à 89 € HT par mois, avec maintenance et assistance 24h/24.' },
+          { source:'EXTERNAL', text: 'C\'est intéressant. Pouvez-vous me rappeler la semaine prochaine avec un devis ?' },
+          { source:'USER',     text: 'Bien sûr, je note un rappel. Bonne journée !' },
+        ]
+      },
+      { id:'demo-2', date: new Date(now - 86400000*3).toISOString(), duration: 18, result:'VOICEMAIL', summary:'Messagerie vocale — message laissé pour rappel.', recording_url:'', transcript:[] },
     ];
-    renderAlloHistory(fakeCalls);
+    renderAlloHistory(fakeCalls, fakeCalls[0]);
     toast('✅ Sync Allo : ' + dateStr + ' · 4 min — résumé ajouté');
     return;
   }
+
   const phone = r.telephone_crm || r.telephone_google;
   if (!phone) { toast('Aucun numéro pour ce prospect', true); return; }
   const e164 = phoneToE164(phone);
@@ -1321,33 +1334,40 @@ async function syncAlloCall() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
 
   try {
-    const body = { contact_number: e164, type: 'CALL', size: 5, sort: 'DATE' };
-    const uid = getAlloUserId();
-    if (uid) body.user_id = uid;
-
-    const res = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {
-      method:  'POST',
+    // ── 1. Recherche des appels pour ce numéro ──
+    const searchBody = { contact_number: e164, type: 'CALL', size: 5, sort: 'DATE' };
+    const searchRes = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {
+      method: 'POST',
       headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body)
+      body: JSON.stringify(searchBody)
     });
-    if (!res.ok) {
-      let errMsg = 'Allo API ' + res.status;
-      try { const errJson = await res.json(); errMsg += ' – ' + (errJson?.message || errJson?.error || ''); } catch(_){}
-      throw new Error(errMsg);
+    if (!searchRes.ok) {
+      let e = 'Allo API ' + searchRes.status;
+      try { const j = await searchRes.json(); e += ' – ' + (j?.message || j?.error || ''); } catch(_){}
+      throw new Error(e);
     }
-    const json = await res.json();
-    const calls = json.data || [];
-
+    const calls = (await searchRes.json()).data || [];
     if (calls.length === 0) { toast('Aucun appel Allo trouvé pour ce numéro', true); return; }
 
-    const c = calls[0];
-    const dt = new Date(c.created_at || c.started_at);
-    const dateStr = dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-    const duree   = c.duration ? Math.round(c.duration / 60) + ' min' : '';
-    const result  = c.result   ? ({ ANSWERED:'Répondu', VOICEMAIL:'Messagerie', TRANSFERRED:'Transféré' }[c.result] || c.result) : '';
-    const summary = c.summary?.content || c.summary?.text || '';
+    // ── 2. Détail complet du dernier appel (transcription incluse) ──
+    let detail = calls[0];
+    try {
+      const detailRes = await fetch(
+        `${ALLO_API_BASE}/v2/api/conversations/items/${detail.id}?extend=transcript`,
+        { headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}` } }
+      );
+      if (detailRes.ok) detail = (await detailRes.json()).data || detail;
+    } catch(_) { /* on garde le résultat de la recherche */ }
 
-    const alloNote = `📞 Allo — ${dateStr}${duree ? ' · ' + duree : ''}${result ? ' · ' + result : ''}${summary ? '\n' + summary : ''}`;
+    // ── 3. Formatage note Supabase ──
+    const dt      = new Date(detail.date || detail.created_at);
+    const dateStr = dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    const secTot  = detail.duration || 0;
+    const duree   = secTot >= 60 ? Math.floor(secTot/60) + 'min ' + (secTot%60) + 's' : (secTot ? secTot + 's' : '');
+    const result  = { ANSWERED:'Répondu', VOICEMAIL:'Messagerie', TRANSFERRED:'Transféré' }[detail.result] || '';
+    const summary = typeof detail.summary === 'string' ? detail.summary : (detail.summary?.content || '');
+
+    const alloNote = `📞 Allo — ${dateStr}${duree?' · '+duree:''}${result?' · '+result:''}\n${summary}`;
     const newNotes = r.notes ? r.notes + '\n\n' + alloNote : alloNote;
 
     await dbUpdate('prospects', r.siret, { date_heure_appel: dateStr, notes: newNotes });
@@ -1359,31 +1379,70 @@ async function syncAlloCall() {
     const ntEl = document.getElementById('notes-txt');
     if (ntEl) ntEl.value = newNotes;
 
-    // Afficher mini-historique Allo
-    renderAlloHistory(calls);
-    toast('✅ Sync Allo : ' + dateStr + (duree ? ' · ' + duree : ''));
+    renderAlloHistory(calls, detail);
+    toast('✅ Sync Allo : ' + dateStr + (duree?' · '+duree:''));
   } catch(e) {
     console.error('Allo sync:', e);
     toast('Erreur Allo : ' + e.message, true);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync Allo'; }
+    if (btn) { btn.disabled = false; btn.textContent = '🔄'; }
   }
 }
 
-function renderAlloHistory(calls) {
+function renderAlloHistory(calls, fullDetail) {
   const el = document.getElementById('allo-history');
   if (!el) return;
-  el.innerHTML = calls.slice(0, 5).map(c => {
-    const dt = new Date(c.created_at || c.started_at);
+  const ICON  = { ANSWERED:'✅', VOICEMAIL:'📬', TRANSFERRED:'↗️' };
+  const LABEL = { ANSWERED:'Répondu', VOICEMAIL:'Messagerie', TRANSFERRED:'Transféré' };
+  let html = '';
+
+  calls.slice(0, 5).forEach((c, i) => {
+    const d   = (i === 0 && fullDetail) ? fullDetail : c;
+    const dt  = new Date(d.date || c.date || c.created_at);
     const dateStr = dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-    const duree   = c.duration ? Math.round(c.duration / 60) + ' min' : '—';
-    const result  = { ANSWERED:'✅ Répondu', VOICEMAIL:'📬 Messagerie', TRANSFERRED:'↗️ Transféré' }[c.result] || c.result || '—';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px;">
-      <span style="color:var(--light);white-space:nowrap;">${dateStr}</span>
-      <span style="flex:1;color:var(--mid);">${result}</span>
-      <span style="color:var(--light);">${duree}</span>
+    const sec = d.duration || 0;
+    const duree = sec >= 60 ? Math.floor(sec/60)+'min '+(sec%60)+'s' : (sec ? sec+'s' : '—');
+    const icon  = ICON[d.result] || '📞';
+    const label = LABEL[d.result] || d.result || '—';
+    const summary = typeof d.summary === 'string' ? d.summary : (d.summary?.content || '');
+    const transcript = d.transcript || [];
+    const rec = d.recording_url || '';
+    const uid = 'ac' + i + Date.now();
+
+    const trHtml = transcript.map(t => {
+      const isU = t.source === 'USER';
+      return `<div style="margin:4px 0;display:flex;gap:8px;align-items:flex-start;">
+        <span style="flex-shrink:0;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;margin-top:1px;
+          background:${isU?'#dbeafe':'#f3f4f6'};color:${isU?'#1d4ed8':'#555'};">${isU?'Vous':'Prospect'}</span>
+        <span style="font-size:11px;color:#333;line-height:1.5;">${esc(t.text)}</span>
+      </div>`;
+    }).join('');
+
+    html += `<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:#f9fafb;">
+        <span style="font-size:13px;">${icon}</span>
+        <span style="font-size:12px;font-weight:700;color:#111;flex:1;">${label}</span>
+        <span style="font-size:11px;color:#6b7280;">${dateStr}</span>
+        <span style="font-size:11px;color:#9ca3af;margin-left:4px;">⏱ ${duree}</span>
+        ${rec ? `<a href="${rec}" target="_blank" title="🎧 Écouter l'enregistrement"
+          style="margin-left:6px;font-size:13px;text-decoration:none;">🎧</a>` : ''}
+      </div>
+      ${summary ? `<div style="padding:8px 10px;background:#fff;border-top:1px solid #f3f4f6;${transcript.length?'border-bottom:1px solid #f3f4f6;':''}">
+        <div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">📋 Résumé IA</div>
+        <div style="font-size:11px;color:#374151;line-height:1.6;white-space:pre-wrap;">${esc(summary)}</div>
+      </div>` : ''}
+      ${transcript.length ? `<div>
+        <div onclick="var t=document.getElementById('${uid}');var open=t.style.display!=='none';t.style.display=open?'none':'block';this.querySelector('span').textContent=open?'▼':'▲';"
+          style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;cursor:pointer;background:#fafafa;user-select:none;">
+          <span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">🎙️ Transcription · ${transcript.length} répliques</span>
+          <span style="font-size:10px;color:#9ca3af;">▼</span>
+        </div>
+        <div id="${uid}" style="display:none;padding:8px 10px;background:#fff;max-height:260px;overflow-y:auto;">${trHtml}</div>
+      </div>` : ''}
     </div>`;
-  }).join('') || '<div style="font-size:12px;color:var(--light);padding:5px 0;">Aucun appel</div>';
+  });
+
+  el.innerHTML = html || '<div style="font-size:12px;color:var(--light);padding:5px 0;">Aucun appel synchronisé</div>';
 }
 
 // Webhook et expéditeur actifs (propre à chaque utilisateur, fallback global)

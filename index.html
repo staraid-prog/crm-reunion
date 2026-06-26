@@ -1346,7 +1346,9 @@ async function syncAlloCall() {
       try { const j = await searchRes.json(); e += ' – ' + (j?.message || j?.error || ''); } catch(_){}
       throw new Error(e);
     }
-    const calls = (await searchRes.json()).data || [];
+    const searchJson = await searchRes.json();
+    console.log('[Allo search]', JSON.stringify(searchJson).slice(0, 400));
+    const calls = searchJson.data || [];
     if (calls.length === 0) { toast('Aucun appel Allo trouvé pour ce numéro', true); return; }
 
     // ── 2. Détail complet du dernier appel (transcription incluse) ──
@@ -1356,12 +1358,20 @@ async function syncAlloCall() {
         `${ALLO_API_BASE}/v2/api/conversations/items/${detail.id}?extend=transcript`,
         { headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}` } }
       );
-      if (detailRes.ok) detail = (await detailRes.json()).data || detail;
+      if (detailRes.ok) {
+        const dj = await detailRes.json();
+        console.log('[Allo detail]', JSON.stringify(dj).slice(0, 600));
+        detail = dj.data || detail;
+      }
     } catch(_) { /* on garde le résultat de la recherche */ }
 
     // ── 3. Formatage note Supabase ──
-    const dt      = new Date(detail.date || detail.created_at);
-    const dateStr = dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    // L'API peut retourner date, created_at, started_at ou start_time selon la version
+    const rawDate = detail.date || detail.created_at || detail.started_at || detail.start_time
+                 || calls[0].date || calls[0].created_at || calls[0].started_at;
+    const dt      = rawDate ? new Date(rawDate) : new Date();
+    const dateStr = isNaN(dt) ? 'Date inconnue'
+                  : dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
     const secTot  = detail.duration || 0;
     const duree   = secTot >= 60 ? Math.floor(secTot/60) + 'min ' + (secTot%60) + 's' : (secTot ? secTot + 's' : '');
     const result  = { ANSWERED:'Répondu', VOICEMAIL:'Messagerie', TRANSFERRED:'Transféré' }[detail.result] || '';
@@ -1398,8 +1408,12 @@ function renderAlloHistory(calls, fullDetail) {
 
   calls.slice(0, 5).forEach((c, i) => {
     const d   = (i === 0 && fullDetail) ? fullDetail : c;
-    const dt  = new Date(d.date || c.date || c.created_at);
-    const dateStr = dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    const rawD = d.date || d.created_at || d.started_at || d.start_time
+              || c.date || c.created_at || c.started_at;
+    const dt  = rawD ? new Date(rawD) : null;
+    const dateStr = (dt && !isNaN(dt))
+      ? dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})
+      : 'Date inconnue';
     const sec = d.duration || 0;
     const duree = sec >= 60 ? Math.floor(sec/60)+'min '+(sec%60)+'s' : (sec ? sec+'s' : '—');
     const icon  = ICON[d.result] || '📞';

@@ -1417,7 +1417,17 @@ async function loadAlloHistoryAuto(r) {
     });
     if (!res.ok) { el.innerHTML = ''; return; }
     const calls = (await res.json()).data || [];
-    renderAlloHistory(calls, null);
+    if (!calls.length) { el.innerHTML = '<div style="font-size:12px;color:var(--light);padding:5px 0;">Aucun appel enregistré</div>'; return; }
+
+    // Fetch détail complet du dernier appel (résumé + transcription à la demande)
+    let fullDetail = calls[0];
+    try {
+      const dr = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/${calls[0].id}`,
+        { headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}` } });
+      if (dr.ok) fullDetail = (await dr.json()).data || calls[0];
+    } catch(_) {}
+
+    renderAlloHistory(calls, fullDetail);
   } catch(_) { el.innerHTML = ''; }
 }
 

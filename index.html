@@ -1374,8 +1374,7 @@ async function syncAlloCall() {
     // Simulation d'un appel Allo en démo
     const now = new Date();
     const dateStr = now.toLocaleDateString('fr-FR') + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-    const fakeSummary = `Le prospect a montré de l'intérêt pour la location de défibrillateur. Rappel prévu la semaine prochaine pour finaliser l'offre.`;
-    const alloNote = `📞 Allo — ${dateStr} · 4 min · Répondu\n${fakeSummary}`;
+    const alloNote = `📞 Allo — ${dateStr} · 4 min · Répondu`;
     const newNotes = _currentRecord.notes ? _currentRecord.notes + '\n\n' + alloNote : alloNote;
     await dbUpdate('prospects', _currentRecord.siret, { date_heure_appel: dateStr, notes: newNotes });
     _currentRecord.date_heure_appel = dateStr;
@@ -1457,7 +1456,8 @@ async function syncAlloCall() {
     const result  = { ANSWERED:'Répondu', VOICEMAIL:'Messagerie', TRANSFERRED:'Transféré' }[detail.result] || '';
     const summary = typeof detail.summary === 'string' ? detail.summary : (detail.summary?.content || '');
 
-    const alloNote = `📞 Allo — ${dateStr}${duree?' · '+duree:''}${result?' · '+result:''}\n${summary}`;
+    // On met seulement l'en-tête dans les Notes (pas le résumé IA — disponible dans le widget Allo)
+    const alloNote = `📞 Allo — ${dateStr}${duree?' · '+duree:''}${result?' · '+result:''}`;
     const newNotes = r.notes ? r.notes + '\n\n' + alloNote : alloNote;
 
     await dbUpdate('prospects', r.siret, { date_heure_appel: dateStr, notes: newNotes });

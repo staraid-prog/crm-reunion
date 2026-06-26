@@ -1399,6 +1399,53 @@ async function syncAlloCall() {
   }
 }
 
+/* Chargement auto à l'ouverture de la fiche (recherche légère, pas de transcription) */
+async function loadAlloHistoryAuto(r) {
+  const el = document.getElementById('allo-history');
+  if (!el) return;
+  if (DEMO_MODE) return; // la démo n'a pas de vrais appels
+  const phone = r.telephone_crm || r.telephone_google;
+  if (!phone) return;
+  const e164 = phoneToE164(phone);
+  if (!e164) return;
+  el.innerHTML = '<div style="font-size:11px;color:#aaa;padding:4px 0;">⏳ Chargement…</div>';
+  try {
+    const res = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {
+      method: 'POST',
+      headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contact_number: e164, type: 'CALL', size: 5, sort: 'DATE' })
+    });
+    if (!res.ok) { el.innerHTML = ''; return; }
+    const calls = (await res.json()).data || [];
+    renderAlloHistory(calls, null);
+  } catch(_) { el.innerHTML = ''; }
+}
+
+/* Charge la transcription d'un appel au clic */
+async function loadAlloTranscript(callId, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:11px;color:#aaa;padding:6px;">⏳ Chargement…</div>';
+  el.style.display = 'block';
+  try {
+    const res = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/${callId}?extend=transcript`, {
+      headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}` }
+    });
+    if (!res.ok) { el.innerHTML = '<div style="font-size:11px;color:#d73a49;padding:6px;">Erreur chargement</div>'; return; }
+    const detail = (await res.json()).data || {};
+    const transcript = detail.transcript || [];
+    if (!transcript.length) { el.innerHTML = '<div style="font-size:11px;color:#aaa;padding:6px;">Pas de transcription disponible</div>'; return; }
+    el.innerHTML = transcript.map(t => {
+      const isU = t.source === 'USER';
+      return `<div style="margin:4px 0;display:flex;gap:8px;align-items:flex-start;">
+        <span style="flex-shrink:0;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;margin-top:1px;
+          background:${isU?'#dbeafe':'#f3f4f6'};color:${isU?'#1d4ed8':'#555'};">${isU?'Vous':'Prospect'}</span>
+        <span style="font-size:11px;color:#333;line-height:1.5;">${esc(t.text)}</span>
+      </div>`;
+    }).join('');
+  } catch(_) { el.innerHTML = '<div style="font-size:11px;color:#d73a49;padding:6px;">Erreur</div>'; }
+}
+
 function renderAlloHistory(calls, fullDetail) {
   const el = document.getElementById('allo-history');
   if (!el) return;
@@ -1419,18 +1466,8 @@ function renderAlloHistory(calls, fullDetail) {
     const icon  = ICON[d.result] || '📞';
     const label = LABEL[d.result] || d.result || '—';
     const summary = typeof d.summary === 'string' ? d.summary : (d.summary?.content || '');
-    const transcript = d.transcript || [];
     const rec = d.recording_url || '';
-    const uid = 'ac' + i + Date.now();
-
-    const trHtml = transcript.map(t => {
-      const isU = t.source === 'USER';
-      return `<div style="margin:4px 0;display:flex;gap:8px;align-items:flex-start;">
-        <span style="flex-shrink:0;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;margin-top:1px;
-          background:${isU?'#dbeafe':'#f3f4f6'};color:${isU?'#1d4ed8':'#555'};">${isU?'Vous':'Prospect'}</span>
-        <span style="font-size:11px;color:#333;line-height:1.5;">${esc(t.text)}</span>
-      </div>`;
-    }).join('');
+    const uid = 'ac' + i + '_' + (d.id||'x').slice(-6);
 
     html += `<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:#f9fafb;">
@@ -1441,17 +1478,17 @@ function renderAlloHistory(calls, fullDetail) {
         ${rec ? `<a href="${rec}" target="_blank" title="🎧 Écouter l'enregistrement"
           style="margin-left:6px;font-size:13px;text-decoration:none;">🎧</a>` : ''}
       </div>
-      ${summary ? `<div style="padding:8px 10px;background:#fff;border-top:1px solid #f3f4f6;${transcript.length?'border-bottom:1px solid #f3f4f6;':''}">
+      ${summary ? `<div style="padding:8px 10px;background:#fff;border-top:1px solid #f3f4f6;">
         <div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">📋 Résumé IA</div>
         <div style="font-size:11px;color:#374151;line-height:1.6;white-space:pre-wrap;">${esc(summary)}</div>
       </div>` : ''}
-      ${transcript.length ? `<div>
-        <div onclick="var t=document.getElementById('${uid}');var open=t.style.display!=='none';t.style.display=open?'none':'block';this.querySelector('span').textContent=open?'▼':'▲';"
-          style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;cursor:pointer;background:#fafafa;user-select:none;">
-          <span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">🎙️ Transcription · ${transcript.length} répliques</span>
-          <span style="font-size:10px;color:#9ca3af;">▼</span>
+      ${d.id ? `<div>
+        <div onclick="var box=document.getElementById('${uid}');if(box.dataset.loaded){box.style.display=box.style.display==='none'?'block':'none';}else{box.dataset.loaded='1';loadAlloTranscript('${d.id}','${uid}');}"
+          style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;cursor:pointer;background:#fafafa;border-top:1px solid #f3f4f6;user-select:none;">
+          <span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">🎙️ Transcription</span>
+          <span style="font-size:10px;color:#9ca3af;">▼ Voir</span>
         </div>
-        <div id="${uid}" style="display:none;padding:8px 10px;background:#fff;max-height:260px;overflow-y:auto;">${trHtml}</div>
+        <div id="${uid}" style="display:none;padding:8px 10px;background:#fff;max-height:260px;overflow-y:auto;"></div>
       </div>` : ''}
     </div>`;
   });
@@ -2935,6 +2972,8 @@ async function selectProspect(siret, el) {
   if (!data || !data[0]) { toast('Erreur chargement', true); return; }
   _currentRecord = data[0];
   renderDetail(_currentRecord);
+  // Chargement auto de l'historique Allo (sans transcription)
+  loadAlloHistoryAuto(_currentRecord);
 }
 
 /* ─── DETAIL ────────────────────────────────────────────── */

@@ -6,6 +6,7 @@
 <title>CRM Réunion — STAR aid</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 <style>
 :root{
   --red:#AB1E2E;--red-dark:#8a1624;--red-light:#fdf0f1;
@@ -294,6 +295,21 @@ body.demo-mode header{background:#b45309 !important;}
 
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:#ddd;border-radius:3px;}
+
+/* ── Markdown viewer (résumé IA Allo) ── */
+.md-body{font-size:11.5px;color:#374151;line-height:1.65;}
+.md-body h1{font-size:13px;font-weight:700;color:#111827;margin:8px 0 4px;border-bottom:1px solid #e5e7eb;padding-bottom:3px;}
+.md-body h2{font-size:12px;font-weight:700;color:#1f2937;margin:7px 0 3px;}
+.md-body h3{font-size:11.5px;font-weight:700;color:#374151;margin:5px 0 2px;}
+.md-body p{margin:3px 0 5px;}
+.md-body ul,.md-body ol{margin:3px 0 5px;padding-left:16px;}
+.md-body li{margin:1px 0;}
+.md-body strong{font-weight:700;color:#111827;}
+.md-body em{font-style:italic;color:#6b7280;}
+.md-body code{background:#f3f4f6;border-radius:3px;padding:1px 4px;font-size:10.5px;font-family:monospace;}
+.md-body blockquote{border-left:3px solid #d1d5db;margin:4px 0;padding:2px 8px;color:#6b7280;font-style:italic;}
+.md-body hr{border:none;border-top:1px solid #e5e7eb;margin:6px 0;}
+.md-body a{color:#3b82f6;text-decoration:underline;}
 
 /* ══════════════════════════════════════════════════════
    RESPONSIVE — TABLET  (≤ 900px)
@@ -1211,6 +1227,21 @@ function getAlloUserId() {
   return currentUser ? (ALLO_USER_MAP[currentUser.email] || null) : null;
 }
 
+/* Convertit du Markdown en HTML sécurisé pour les résumés IA */
+function renderMd(text) {
+  if (!text) return '';
+  if (typeof marked === 'undefined') {
+    // Fallback si marked.js pas encore chargé
+    return '<span style="white-space:pre-wrap">' + esc(text) + '</span>';
+  }
+  try {
+    const html = marked.parse(text, { breaks: true, gfm: true });
+    return `<div class="md-body">${html}</div>`;
+  } catch(e) {
+    return '<span style="white-space:pre-wrap">' + esc(text) + '</span>';
+  }
+}
+
 /* Convertit un numéro français/réunionnais en E.164 */
 function phoneToE164(phone) {
   if (!phone) return null;
@@ -1557,7 +1588,7 @@ function renderAlloHistory(calls, fullDetail) {
       </div>
       ${summary ? `<div style="padding:8px 10px;background:#fff;border-top:1px solid #f3f4f6;">
         <div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">📋 Résumé IA</div>
-        <div style="font-size:11px;color:#374151;line-height:1.6;white-space:pre-wrap;">${esc(summary)}</div>
+        ${renderMd(summary)}
       </div>` : ''}
       ${d.id ? `<div>
         <div onclick="var box=document.getElementById('${uid}');if(box.dataset.loaded){box.style.display=box.style.display==='none'?'block':'none';}else{box.dataset.loaded='1';loadAlloTranscript('${d.id}','${uid}');}"

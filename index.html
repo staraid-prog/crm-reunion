@@ -700,12 +700,12 @@ body.demo-mode header{background:#b45309 !important;}
       </div>
     </div>
 
-    <!-- Filtre Association -->
+    <!-- Filtre Dénomination (Association / Club) -->
     <div class="dae5-filter">
-      <div class="dae5-filter-label">🏷️ Dénomination</div>
+      <div class="dae5-filter-label">🏷️ Masquer</div>
       <div class="dae5-btns">
-        <button class="dae5-btn" id="assoc-btn-all" onclick="setAssocFilter(false)">Tout</button>
-        <button class="dae5-btn on" id="assoc-btn-excl" onclick="setAssocFilter(true)" style="background:#7c3aed;border-color:#7c3aed;color:#fff;">🚫 Sans associations</button>
+        <button class="dae5-btn on" id="assoc-btn-excl" onclick="toggleAssocFilter()" style="background:#7c3aed;border-color:#7c3aed;color:#fff;">🚫 Associations</button>
+        <button class="dae5-btn" id="club-btn-excl" onclick="toggleClubFilter()">🚫 Clubs</button>
       </div>
     </div>
 
@@ -1494,6 +1494,10 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
     if (f === 'denomination_usuelle=not.ilike.%25association%25') {
       rows = rows.filter(r => !(r.denomination_usuelle||'').toLowerCase().includes('association'));
     }
+    // denomination_usuelle=not.ilike.club%25 → masquer clubs
+    if (f === 'denomination_usuelle=not.ilike.club%25') {
+      rows = rows.filter(r => !(r.denomination_usuelle||'').toLowerCase().startsWith('club'));
+    }
   });
 
   if (order === 'denomination_usuelle') {
@@ -1549,6 +1553,7 @@ function toggleDemoMode() {
   filterStatut       = -1;
   filterTel          = 'oui';
   filterExcludeAssoc = false;
+  filterExcludeClub  = false;
   searchQ      = '';
   currentSiret = null;
   _currentRecord = null;
@@ -1716,6 +1721,7 @@ function doLogout() {
   filterStatut       = -1;
   filterTel          = 'oui';
   filterExcludeAssoc = false;
+  filterExcludeClub  = false;
   searchQ            = '';
   currentSiret       = null;
   _currentRecord     = null;
@@ -2237,6 +2243,7 @@ let filterType         = '';
 let filterDae5         = '';   // '' = tout | 'non' = exclure 5e catégorie
 let filterTel          = 'oui'; // 'oui' = avec tel | 'non' = sans tel | '' = tout
 let filterExcludeAssoc = false; // true = masquer les "Association"
+let filterExcludeClub  = false; // true = masquer les "Club..."
 let searchQ        = '';
 let currentSiret   = null;
 let _currentRecord = null;
@@ -2683,17 +2690,23 @@ function setDae5Filter(val) {
   loadList(true);
 }
 
-function setAssocFilter(exclude) {
-  filterExcludeAssoc = exclude;
-  const btnAll  = document.getElementById('assoc-btn-all');
-  const btnExcl = document.getElementById('assoc-btn-excl');
-  if (btnAll)  { btnAll.classList.toggle('on', !exclude); btnAll.style.background = !exclude ? '' : ''; }
-  if (btnExcl) {
-    btnExcl.classList.toggle('on', exclude);
-    btnExcl.style.background   = exclude ? '#7c3aed' : '';
-    btnExcl.style.borderColor  = exclude ? '#7c3aed' : '';
-    btnExcl.style.color        = exclude ? '#fff'    : '';
-  }
+function _applyExclBtnStyle(btn, active) {
+  if (!btn) return;
+  btn.style.background  = active ? '#7c3aed' : '';
+  btn.style.borderColor = active ? '#7c3aed' : '';
+  btn.style.color       = active ? '#fff'    : '';
+}
+function toggleAssocFilter() {
+  filterExcludeAssoc = !filterExcludeAssoc;
+  _applyExclBtnStyle(document.getElementById('assoc-btn-excl'), filterExcludeAssoc);
+  hideDashboard();
+  document.getElementById('mainEmpty').style.display    = 'none';
+  document.getElementById('prospectList').style.display = 'flex';
+  loadList(true);
+}
+function toggleClubFilter() {
+  filterExcludeClub = !filterExcludeClub;
+  _applyExclBtnStyle(document.getElementById('club-btn-excl'), filterExcludeClub);
   hideDashboard();
   document.getElementById('mainEmpty').style.display    = 'none';
   document.getElementById('prospectList').style.display = 'flex';
@@ -2750,6 +2763,7 @@ function buildFilters(statut = filterStatut) {
   if (filterTel === 'oui') f.push(`or=(telephone_crm.not.is.null,telephone_google.not.is.null)`);
   if (filterTel === 'non') f.push(`telephone_crm=is.null`, `telephone_google=is.null`);
   if (filterExcludeAssoc) f.push(`denomination_usuelle=not.ilike.%25association%25`);
+  if (filterExcludeClub)  f.push(`denomination_usuelle=not.ilike.club%25`);
   if (searchQ) f.push(`or=(denomination_usuelle.ilike.%25${encodeURIComponent(searchQ)}%25,commune.ilike.%25${encodeURIComponent(searchQ)}%25)`);
   return f;
 }

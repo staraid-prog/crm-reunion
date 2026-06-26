@@ -1325,30 +1325,30 @@ async function syncAlloCall() {
     return;
   }
 
-  const phone = r.telephone_crm || r.telephone_google;
-  if (!phone) { toast('Aucun numéro pour ce prospect', true); return; }
-  const e164 = phoneToE164(phone);
-  if (!e164) { toast('Numéro non reconnu', true); return; }
+  // Cherche sur tous les numéros (Google = numéro établissement, CRM = contact direct)
+  const syncPhones = [r.telephone_google, r.telephone_crm]
+    .filter(Boolean).map(phoneToE164).filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i);
+  if (!syncPhones.length) { toast('Aucun numéro pour ce prospect', true); return; }
 
   const btn = document.getElementById('allo-sync-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
 
   try {
-    // ── 1. Recherche des appels pour ce numéro ──
-    const searchBody = { contact_number: e164, type: 'CALL', size: 5, sort: 'DATE' };
-    const searchRes = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {
-      method: 'POST',
-      headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(searchBody)
-    });
-    if (!searchRes.ok) {
-      let e = 'Allo API ' + searchRes.status;
-      try { const j = await searchRes.json(); e += ' – ' + (j?.message || j?.error || ''); } catch(_){}
-      throw new Error(e);
-    }
-    const searchJson = await searchRes.json();
-    console.log('[Allo search]', JSON.stringify(searchJson).slice(0, 400));
-    const calls = searchJson.data || [];
+    // ── 1. Recherche des appels sur tous les numéros ──
+    const syncResults = await Promise.all(syncPhones.map(e164 =>
+      fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {
+        method: 'POST',
+        headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_number: e164, type: 'CALL', size: 5, sort: 'DATE' })
+      }).then(res => res.ok ? res.json() : { data: [] })
+        .then(json => { console.log('[Allo search]', JSON.stringify(json).slice(0, 400)); return json.data || []; })
+        .catch(() => [])
+    ));
+    const syncSeen = new Set();
+    const calls = syncResults.flat()
+      .filter(c => { if (syncSeen.has(c.id)) return false; syncSeen.add(c.id); return true; })
+      .sort((a, b) => new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0));
     if (calls.length === 0) { toast('Aucun appel Allo trouvé pour ce numéro', true); return; }
 
     // ── 2. Détail complet du dernier appel (transcription incluse) ──
@@ -1404,26 +1404,34 @@ async function loadAlloHistoryAuto(r) {
   const el = document.getElementById('allo-history');
   if (!el) { console.warn('[Allo] #allo-history introuvable'); return; }
   if (DEMO_MODE) { console.warn('[Allo] DEMO_MODE actif — skip'); return; }
-  const phone = r.telephone_crm || r.telephone_google;
-  if (!phone) { console.warn('[Allo] pas de téléphone pour', r.denomination_usuelle); return; }
-  const e164 = phoneToE164(phone);
-  if (!e164) { console.warn('[Allo] conversion e164 impossible:', phone); return; }
-  console.log('[Allo] recherche pour', e164, '— prospect:', r.denomination_usuelle);
+
+  // Cherche sur tous les numéros disponibles (Google = numéro établissement, CRM = contact direct)
+  const phones = [r.telephone_google, r.telephone_crm]
+    .filter(Boolean).map(phoneToE164).filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i); // dédoublonnage
+  if (!phones.length) { console.warn('[Allo] pas de téléphone pour', r.denomination_usuelle); return; }
+
+  console.log('[Allo] recherche pour', phones, '— prospect:', r.denomination_usuelle);
   el.innerHTML = '<div style="font-size:11px;color:#aaa;padding:4px 0;">⏳ Chargement…</div>';
+
   try {
-    const res = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {
-      method: 'POST',
-      headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact_number: e164, type: 'CALL', size: 5, sort: 'DATE' })
-    });
-    if (!res.ok) {
-      el.innerHTML = `<div style="font-size:11px;color:#d73a49;padding:4px 0;">⚠️ Erreur API Allo (${res.status})</div>`;
-      console.warn('[Allo] search non-ok:', res.status, e164);
-      return;
-    }
-    const json = await res.json();
-    console.log('[Allo] search response:', JSON.stringify(json).slice(0, 300));
-    const calls = json.data || [];
+    // Requêtes parallèles pour chaque numéro
+    const results = await Promise.all(phones.map(e164 =>
+      fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {
+        method: 'POST',
+        headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_number: e164, type: 'CALL', size: 5, sort: 'DATE' })
+      }).then(res => res.ok ? res.json() : { data: [] })
+        .then(json => { console.log('[Allo] search', e164, '→', (json.data||[]).length, 'appels'); return json.data || []; })
+        .catch(() => [])
+    ));
+
+    // Fusion + dédoublonnage par ID + tri chronologique décroissant
+    const seen = new Set();
+    const calls = results.flat()
+      .filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true; })
+      .sort((a, b) => new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0));
+
     if (!calls.length) { el.innerHTML = '<div style="font-size:12px;color:var(--light);padding:5px 0;">Aucun appel enregistré</div>'; return; }
 
     // Fetch détail complet du dernier appel (résumé + transcription à la demande)
@@ -1437,7 +1445,7 @@ async function loadAlloHistoryAuto(r) {
     renderAlloHistory(calls, fullDetail);
   } catch(err) {
     el.innerHTML = `<div style="font-size:11px;color:#d73a49;padding:4px 0;">⚠️ ${err.message || 'Erreur réseau'}</div>`;
-    console.error('[Allo] loadAlloHistoryAuto error:', err, 'e164:', e164);
+    console.error('[Allo] loadAlloHistoryAuto error:', err);
   }
 }
 

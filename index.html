@@ -259,6 +259,7 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 .sc-5{color:#6366f1;background:#eef2ff;}   /* Relance mail */
 .sc-6{color:#16a34a;background:#f0fdf4;}   /* Prospect signé */
 .sc-7{color:#dc2626;background:#fef2f2;}   /* Prospect perdu */
+.sc-8{color:#0369a1;background:#e0f2fe;}   /* Déjà équipé */
 
 /* BANNIÈRE MODE DÉMO */
 #demo-banner{display:none;background:#b45309;color:#fff;font-size:12px;font-weight:700;
@@ -1960,6 +1961,7 @@ async function loadSuiviCommerciaux() {
     { id: 3, short: 'Relance J+5',    color: '#8b5cf6' },
     { id: 4, short: 'Relance J+10',   color: '#f97316' },
     { id: 5, short: 'Relance mail',   color: '#6366f1' },
+    { id: 8, short: 'Déjà équipé',   color: '#0369a1' },
     { id: 6, short: 'Signé',          color: '#16a34a' },
     { id: 7, short: 'Perdu',          color: '#dc2626' },
   ];
@@ -2137,6 +2139,7 @@ const STATUTS = [
   {id:3, label:'Relance J+5',             cls:'sc-3', dot:'#8b5cf6'},
   {id:4, label:'Relance J+10',            cls:'sc-4', dot:'#f97316'},
   {id:5, label:'Relance mail',            cls:'sc-5', dot:'#6366f1'},
+  {id:8, label:'Déjà équipé',            cls:'sc-8', dot:'#0369a1'},
   {id:6, label:'Prospect signé',          cls:'sc-6', dot:'#16a34a'},
   {id:7, label:'Prospect perdu',          cls:'sc-7', dot:'#dc2626'},
 ];
@@ -2910,11 +2913,13 @@ function renderDetail(r) {
   const actionsHtml = isLocked
     ? `<div style="padding:16px;${statut===6
           ? 'background:#f0fdf4;border:1.5px solid #86efac;'
+          : statut===8
+          ? 'background:#e0f2fe;border:1.5px solid #7dd3fc;'
           : 'background:#fef2f2;border:1.5px solid #fca5a5;'}
          border-radius:8px;text-align:center;">
-         <div style="font-size:28px;margin-bottom:6px;">${statut===6?'✅':'❌'}</div>
-         <div style="font-size:13px;font-weight:700;color:${statut===6?'#16a34a':'#dc2626'};">${sInfo.label}</div>
-         <div style="font-size:11px;color:#999;margin-top:4px;">${statut===6?'Contrat signé — félicitations !':'Prospect archivé — aucune action possible'}</div>
+         <div style="font-size:28px;margin-bottom:6px;">${statut===6?'✅':statut===8?'🔵':'❌'}</div>
+         <div style="font-size:13px;font-weight:700;color:${statut===6?'#16a34a':statut===8?'#0369a1':'#dc2626'};">${sInfo.label}</div>
+         <div style="font-size:11px;color:#999;margin-top:4px;">${statut===6?'Contrat signé — félicitations !':statut===8?'Déjà équipé par un concurrent ou en propre.':'Prospect archivé — aucune action possible'}</div>
        </div>`
     : `<button class="act-btn act-devis" onclick="openDevisModal()">
          <span class="act-icon">📄</span>

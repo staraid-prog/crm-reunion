@@ -3617,9 +3617,20 @@ function closeCallModal() {
   _callSiret = null;
 }
 
-/* Raccroche l'appel Allo en cours via le deep link allo://hangup */
+/* Rappel visuel de raccrocher dans Allo (le hangup IPC n'est pas accessible depuis le web) */
 function alloHangup() {
-  try { window.location.href = 'allo://hangup'; } catch(_) {}
+  const banner = document.createElement('div');
+  banner.id = 'allo-hangup-banner';
+  banner.innerHTML = '📵 <strong>Raccrochez dans Allo</strong> pour terminer l\'appel';
+  Object.assign(banner.style, {
+    position:'fixed', top:'18px', left:'50%', transform:'translateX(-50%)',
+    background:'#1e293b', color:'#fff', padding:'12px 24px', borderRadius:'10px',
+    fontSize:'14px', fontWeight:'600', zIndex:'99999', boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+    display:'flex', alignItems:'center', gap:'10px', whiteSpace:'nowrap',
+    animation:'fadeInDown .25s ease'
+  });
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 4000);
 }
 
 function _nowReunion() {

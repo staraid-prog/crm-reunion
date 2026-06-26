@@ -1402,12 +1402,13 @@ async function syncAlloCall() {
 /* Chargement auto à l'ouverture de la fiche (recherche légère, pas de transcription) */
 async function loadAlloHistoryAuto(r) {
   const el = document.getElementById('allo-history');
-  if (!el) return;
-  if (DEMO_MODE) return; // la démo n'a pas de vrais appels
+  if (!el) { console.warn('[Allo] #allo-history introuvable'); return; }
+  if (DEMO_MODE) { console.warn('[Allo] DEMO_MODE actif — skip'); return; }
   const phone = r.telephone_crm || r.telephone_google;
-  if (!phone) return;
+  if (!phone) { console.warn('[Allo] pas de téléphone pour', r.denomination_usuelle); return; }
   const e164 = phoneToE164(phone);
-  if (!e164) return;
+  if (!e164) { console.warn('[Allo] conversion e164 impossible:', phone); return; }
+  console.log('[Allo] recherche pour', e164, '— prospect:', r.denomination_usuelle);
   el.innerHTML = '<div style="font-size:11px;color:#aaa;padding:4px 0;">⏳ Chargement…</div>';
   try {
     const res = await fetch(`${ALLO_API_BASE}/v2/api/conversations/items/search`, {

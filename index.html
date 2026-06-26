@@ -700,6 +700,15 @@ body.demo-mode header{background:#b45309 !important;}
       </div>
     </div>
 
+    <!-- Filtre Association -->
+    <div class="dae5-filter">
+      <div class="dae5-filter-label">🏷️ Dénomination</div>
+      <div class="dae5-btns">
+        <button class="dae5-btn" id="assoc-btn-all" onclick="setAssocFilter(false)">Tout</button>
+        <button class="dae5-btn on" id="assoc-btn-excl" onclick="setAssocFilter(true)" style="background:#7c3aed;border-color:#7c3aed;color:#fff;">🚫 Sans associations</button>
+      </div>
+    </div>
+
   </div><!-- /sidebar -->
 
   <!-- ── CENTRE : dashboard + liste prospects ── -->
@@ -1481,6 +1490,10 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
         (r.commune||'').toLowerCase().includes(q)
       );
     }
+    // denomination_usuelle=not.ilike.%25association%25 → masquer associations
+    if (f === 'denomination_usuelle=not.ilike.%25association%25') {
+      rows = rows.filter(r => !(r.denomination_usuelle||'').toLowerCase().includes('association'));
+    }
   });
 
   if (order === 'denomination_usuelle') {
@@ -1532,9 +1545,10 @@ function toggleDemoMode() {
   }
 
   // Réinitialisation de l'UI
-  filterType   = '';
-  filterStatut = -1;
-  filterTel    = 'oui';
+  filterType         = '';
+  filterStatut       = -1;
+  filterTel          = 'oui';
+  filterExcludeAssoc = false;
   searchQ      = '';
   currentSiret = null;
   _currentRecord = null;
@@ -1696,14 +1710,15 @@ async function doFirstSetup() {
 // Déconnexion
 function doLogout() {
   clearSession();
-  DEMO_MODE     = false;
-  filterMine    = false;
-  filterType    = '';
-  filterStatut  = -1;
-  filterTel     = 'oui';
-  searchQ       = '';
-  currentSiret  = null;
-  _currentRecord = null;
+  DEMO_MODE          = false;
+  filterMine         = false;
+  filterType         = '';
+  filterStatut       = -1;
+  filterTel          = 'oui';
+  filterExcludeAssoc = false;
+  searchQ            = '';
+  currentSiret       = null;
+  _currentRecord     = null;
   document.body.classList.remove('demo-mode');
   document.getElementById('demo-banner').classList.remove('show');
   const _ud = document.getElementById('um-demo'); if (_ud) _ud.textContent = '🧪 Mode Démo';
@@ -2217,10 +2232,11 @@ const DEMO_DATA = [
 ];
 
 /* ─── ÉTAT ──────────────────────────────────────────────── */
-let filterStatut   = -1;
-let filterType     = '';
-let filterDae5     = '';   // '' = tout | 'non' = exclure 5e catégorie
-let filterTel      = 'oui'; // 'oui' = avec tel | 'non' = sans tel | '' = tout
+let filterStatut       = -1;
+let filterType         = '';
+let filterDae5         = '';   // '' = tout | 'non' = exclure 5e catégorie
+let filterTel          = 'oui'; // 'oui' = avec tel | 'non' = sans tel | '' = tout
+let filterExcludeAssoc = false; // true = masquer les "Association"
 let searchQ        = '';
 let currentSiret   = null;
 let _currentRecord = null;
@@ -2667,6 +2683,23 @@ function setDae5Filter(val) {
   loadList(true);
 }
 
+function setAssocFilter(exclude) {
+  filterExcludeAssoc = exclude;
+  const btnAll  = document.getElementById('assoc-btn-all');
+  const btnExcl = document.getElementById('assoc-btn-excl');
+  if (btnAll)  { btnAll.classList.toggle('on', !exclude); btnAll.style.background = !exclude ? '' : ''; }
+  if (btnExcl) {
+    btnExcl.classList.toggle('on', exclude);
+    btnExcl.style.background   = exclude ? '#7c3aed' : '';
+    btnExcl.style.borderColor  = exclude ? '#7c3aed' : '';
+    btnExcl.style.color        = exclude ? '#fff'    : '';
+  }
+  hideDashboard();
+  document.getElementById('mainEmpty').style.display    = 'none';
+  document.getElementById('prospectList').style.display = 'flex';
+  loadList(true);
+}
+
 function setTelFilter(val) {
   filterTel = val;
   document.getElementById('tel-btn-all').classList.toggle('on', val === '');
@@ -2716,6 +2749,7 @@ function buildFilters(statut = filterStatut) {
   if (filterDae5 === 'non') f.push(`dae_5e_categorie=eq.Non`);
   if (filterTel === 'oui') f.push(`or=(telephone_crm.not.is.null,telephone_google.not.is.null)`);
   if (filterTel === 'non') f.push(`telephone_crm=is.null`, `telephone_google=is.null`);
+  if (filterExcludeAssoc) f.push(`denomination_usuelle=not.ilike.%25association%25`);
   if (searchQ) f.push(`or=(denomination_usuelle.ilike.%25${encodeURIComponent(searchQ)}%25,commune.ilike.%25${encodeURIComponent(searchQ)}%25)`);
   return f;
 }

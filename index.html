@@ -1286,6 +1286,55 @@ async function addToAlloDial() {
   }
 }
 
+/* Ajoute un numéro spécifique dans la file Power Dialer Allo */
+async function addToAlloDialPhone(rawPhone, btn) {
+  if (DEMO_MODE) { toast('📲 Ajouté à la file Allo — ouvre ton app pour appeler !'); return; }
+  const e164 = phoneToE164(rawPhone);
+  if (!e164) { toast('Numéro non reconnu : ' + rawPhone, true); return; }
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    const r = _currentRecord || {};
+    const payload = {
+      numbers: [{
+        number:  e164,
+        name:    r.signataire || r.denomination_usuelle || '',
+        company: r.denomination_usuelle || '',
+        emails:  r.email_crm ? [r.email_crm] : [],
+      }]
+    };
+    const uid = getAlloUserId();
+    if (uid) payload.user_id = uid;
+    const res = await fetch(`${ALLO_API_BASE}/v2/api/dialing-queues/current/numbers`, {
+      method:  'POST',
+      headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      let errMsg = 'Allo API ' + res.status;
+      try { const j = await res.json(); errMsg += ' – ' + (j?.message || j?.error || ''); } catch(_){}
+      throw new Error(errMsg);
+    }
+    const json = await res.json();
+    const addedRaw    = json.data?.added   ?? json.added   ?? 0;
+    const skippedRaw  = json.data?.skipped ?? json.skipped ?? [];
+    const addedCount  = Array.isArray(addedRaw)   ? addedRaw.length  : (Number(addedRaw)  || 0);
+    const skippedList = Array.isArray(skippedRaw) ? skippedRaw       : [];
+    if (addedCount > 0) {
+      toast('✅ ' + rawPhone + ' ajouté à la file Allo !');
+    } else if (skippedList.length > 0) {
+      toast('⚠️ Non ajouté : ' + (skippedList[0]?.reason || skippedList[0] || 'inconnu'), true);
+    } else {
+      toast('Réponse Allo inattendue – ' + JSON.stringify(json).slice(0,80), true);
+    }
+  } catch(e) {
+    console.error('Allo dial phone:', e);
+    toast('Erreur Allo : ' + e.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = origText || '📲'; }
+  }
+}
+
 /* Sync le dernier appel Allo pour le prospect courant */
 async function syncAlloCall() {
   const r = _currentRecord;
@@ -3029,11 +3078,25 @@ function renderDetail(r) {
            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mid);background:#f8f9fa;border-radius:5px;padding:5px 10px;">
              <span style="font-weight:700;color:var(--dark);">${esc((c.prenom||'')+' '+(c.nom||'')).trim() || '—'}</span>
              ${c.fonction ? `<span style="color:var(--light);">· ${esc(c.fonction)}</span>` : ''}
-             ${c.telephone ? `<a href="tel:${esc(c.telephone)}" style="margin-left:auto;color:#1a7a45;font-weight:700;text-decoration:none;">📞 ${esc(c.telephone)}</a>` : ''}
+             ${c.telephone ? `
+               <div style="margin-left:auto;display:flex;align-items:center;gap:5px;">
+                 <a href="tel:${esc(c.telephone)}" style="color:#1a7a45;font-weight:700;text-decoration:none;">📞 ${esc(c.telephone)}</a>
+                 <button onclick="addToAlloDialPhone('${esc(c.telephone)}', this)"
+                   title="Ajouter à la file Allo"
+                   style="background:#f0f4ff;color:#3b5bdb;border:1px solid #b0c4f8;border-radius:5px;
+                          padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                   📲
+                 </button>
+               </div>` : ''}
              ${c.mail ? `<a href="mailto:${esc(c.mail)}" style="color:var(--red);font-weight:700;text-decoration:none;${c.telephone?'':'margin-left:auto'}">✉️</a>` : ''}
            </div>`).join('')}
        </div>`
     : '';
+
+  // Affiche telephone_crm séparément si différent du numéro Google
+  const crmE164    = phoneToE164(r.telephone_crm  || '');
+  const googleE164 = phoneToE164(r.telephone_google || '');
+  const showPhoneCrm = r.telephone_crm && crmE164 !== googleE164;
 
   // ── Tunnel statut (étapes 0 à 5 — grille 3 colonnes) ──
   const tunnelHtml = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
@@ -3204,6 +3267,22 @@ function renderDetail(r) {
             🔄
           </button>
         </div>
+        ${showPhoneCrm ? `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <a href="tel:${esc(r.telephone_crm)}"
+             style="display:inline-flex;align-items:center;gap:6px;background:#f0fff4;color:#1a7a45;
+                    font-size:13px;font-weight:700;padding:6px 12px;border-radius:6px;
+                    border:1.5px solid #86efac;text-decoration:none;">
+            📞 ${esc(r.telephone_crm)}
+          </a>
+          <span style="font-size:11px;color:var(--light);">Contact direct</span>
+          <button onclick="addToAlloDialPhone('${esc(r.telephone_crm)}', this)"
+            style="display:inline-flex;align-items:center;gap:5px;background:#f0f4ff;color:#3b5bdb;
+                   font-size:11px;font-weight:700;padding:6px 11px;border-radius:6px;
+                   border:1.5px solid #b0c4f8;cursor:pointer;white-space:nowrap;">
+            📲 File Allo
+          </button>
+        </div>` : ''}
         <div class="call-log-txt" id="call-log-txt">${_buildCallLogHtml(r)}</div>
         <div id="allo-history" style="margin-top:6px;"></div>
         ${r.commercial

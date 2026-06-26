@@ -1415,8 +1415,14 @@ async function loadAlloHistoryAuto(r) {
       headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ contact_number: e164, type: 'CALL', size: 5, sort: 'DATE' })
     });
-    if (!res.ok) { el.innerHTML = ''; return; }
-    const calls = (await res.json()).data || [];
+    if (!res.ok) {
+      el.innerHTML = `<div style="font-size:11px;color:#d73a49;padding:4px 0;">⚠️ Erreur API Allo (${res.status})</div>`;
+      console.warn('[Allo] search non-ok:', res.status, e164);
+      return;
+    }
+    const json = await res.json();
+    console.log('[Allo] search response:', JSON.stringify(json).slice(0, 300));
+    const calls = json.data || [];
     if (!calls.length) { el.innerHTML = '<div style="font-size:12px;color:var(--light);padding:5px 0;">Aucun appel enregistré</div>'; return; }
 
     // Fetch détail complet du dernier appel (résumé + transcription à la demande)
@@ -1428,7 +1434,10 @@ async function loadAlloHistoryAuto(r) {
     } catch(_) {}
 
     renderAlloHistory(calls, fullDetail);
-  } catch(_) { el.innerHTML = ''; }
+  } catch(err) {
+    el.innerHTML = `<div style="font-size:11px;color:#d73a49;padding:4px 0;">⚠️ ${err.message || 'Erreur réseau'}</div>`;
+    console.error('[Allo] loadAlloHistoryAuto error:', err, 'e164:', e164);
+  }
 }
 
 /* Charge la transcription d'un appel au clic */

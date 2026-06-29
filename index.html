@@ -1248,6 +1248,25 @@ function getAlloUserId() {
 }
 
 /* Convertit du Markdown en HTML sécurisé pour les résumés IA */
+/* Extrait un message lisible depuis une réponse d'erreur Allo (gère les objets imbriqués) */
+async function alloErrMsg(res) {
+  let msg = 'Allo API ' + res.status;
+  try {
+    const j = await res.json();
+    // Structure Allo : { error: { message, code } } ou { message } ou { error: "string" }
+    const detail = j?.error?.message || j?.error?.code || j?.message
+                || (typeof j?.error === 'string' ? j.error : null) || '';
+    if (detail) {
+      if (res.status === 403 && detail.includes('DIALING_QUEUE')) {
+        msg = '📲 Scope manquant — ajoute DIALING_QUEUE_READ_WRITE dans Allo > Paramètres > Clés API';
+      } else {
+        msg += ' – ' + detail;
+      }
+    }
+  } catch(_) {}
+  return msg;
+}
+
 function renderMd(text) {
   if (!text) return '';
   if (typeof marked === 'undefined') {
@@ -1309,11 +1328,7 @@ async function addToAlloDial() {
       body:    JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      let errMsg = 'Allo API ' + res.status;
-      try { const errJson = await res.json(); errMsg += ' – ' + (errJson?.message || errJson?.error || ''); } catch(_){}
-      throw new Error(errMsg);
-    }
+    if (!res.ok) { throw new Error(await alloErrMsg(res)); }
     const json = await res.json();
     /* L'API peut renvoyer added comme tableau [{...}] ou comme nombre 1 */
     const addedRaw   = json.data?.added   ?? json.added   ?? 0;
@@ -1361,11 +1376,7 @@ async function addToAlloDialPhone(rawPhone, btn) {
       headers: { 'Authorization': `Api-Key ${ALLO_API_KEY}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify(payload)
     });
-    if (!res.ok) {
-      let errMsg = 'Allo API ' + res.status;
-      try { const j = await res.json(); errMsg += ' – ' + (j?.message || j?.error || ''); } catch(_){}
-      throw new Error(errMsg);
-    }
+    if (!res.ok) { throw new Error(await alloErrMsg(res)); }
     const json = await res.json();
     const addedRaw    = json.data?.added   ?? json.added   ?? 0;
     const skippedRaw  = json.data?.skipped ?? json.skipped ?? [];

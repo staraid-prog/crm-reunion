@@ -3142,7 +3142,7 @@ function renderDetail(r) {
              ${c.fonction ? `<span style="color:var(--light);">· ${esc(c.fonction)}</span>` : ''}
              ${c.telephone ? `
                <div style="margin-left:auto;display:flex;align-items:center;gap:5px;">
-                 <a href="tel:${esc(c.telephone)}" style="color:#1a7a45;font-weight:700;text-decoration:none;">📞 ${esc(c.telephone)}</a>
+                 <a href="tel:${esc(c.telephone)}" onclick="openCallModal('${r.siret}')" style="color:#1a7a45;font-weight:700;text-decoration:none;">📞 ${esc(c.telephone)}</a>
                  <button onclick="addToAlloDialPhone('${esc(c.telephone)}', this)"
                    title="Ajouter à la file Allo"
                    style="background:#f0f4ff;color:#3b5bdb;border:1px solid #b0c4f8;border-radius:5px;
@@ -3339,7 +3339,7 @@ function renderDetail(r) {
         </div>
         ${showPhoneCrm ? `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <a href="tel:${esc(r.telephone_crm)}"
+          <a href="tel:${esc(r.telephone_crm)}" onclick="openCallModal('${r.siret}')"
              style="display:inline-flex;align-items:center;gap:6px;background:#f0fff4;color:#1a7a45;
                     font-size:13px;font-weight:700;padding:6px 12px;border-radius:6px;
                     border:1.5px solid #86efac;text-decoration:none;">

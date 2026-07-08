@@ -1842,7 +1842,7 @@ function checkSession() {
 }
 function saveSession(user) {
   localStorage.setItem('crm_session', JSON.stringify({
-    user, expires: Date.now() + 8 * 60 * 60 * 1000
+    user, expires: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 jours
   }));
 }
 function clearSession() {
@@ -1995,9 +1995,11 @@ async function startup() {
   }
   try {
     const { count } = await dbSelect('crm_users', { countOnly: true });
+    // N'afficher "premier accès" que si on est CERTAIN qu'il n'y a aucun utilisateur
     showLoginScreen(count === 0 ? 'setup' : 'login');
   } catch {
-    showLoginScreen('setup'); // table pas encore créée
+    // Erreur réseau ou Supabase indisponible → afficher login (pas premier accès)
+    showLoginScreen('login');
   }
 }
 

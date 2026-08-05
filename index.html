@@ -107,6 +107,15 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 .erp-filter-head .chev.open{transform:rotate(180deg);}
 .erp-filter-body{display:none;padding:5px 8px 8px;max-height:200px;overflow-y:auto;}
 .erp-filter-body.open{display:block;}
+/* Plan d'action menu */
+.plan-action-section{border-bottom:1px solid var(--border);flex-shrink:0;}
+.plan-action-head{padding:7px 10px;background:var(--grey);font-size:11px;font-weight:700;color:var(--mid);letter-spacing:.3px;text-transform:uppercase;}
+.plan-action-menu{padding:4px 6px;}
+.pa-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 10px;border-radius:5px;border:none;background:none;cursor:pointer;font-size:13px;color:var(--dark);transition:background .12s;}
+.pa-item:hover{background:var(--grey);}
+.pa-item.active{background:#fdf0f1;color:var(--red);font-weight:700;}
+.pa-item .pa-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.pa-item .pa-label{flex:1;}
 .erp-chip{display:flex;align-items:center;gap:7px;width:100%;text-align:left;padding:5px 8px;border-radius:4px;border:none;background:none;cursor:pointer;font-size:12px;color:var(--mid);transition:background .12s;}
 .erp-chip:hover{background:var(--grey);}
 .erp-chip.on{background:var(--red-light);color:var(--red);font-weight:700;}
@@ -705,18 +714,39 @@ body.demo-mode header{background:#b45309 !important;}
     <!-- Filtres statut -->
     <div class="sidebar-filters" id="filterButtons"></div>
 
-    <!-- Filtre type ERP -->
-    <div class="erp-filter">
-      <div class="erp-filter-head" onclick="toggleErpPanel()">
-        <span>🏢 Type d'établissement
-          <span id="erp-active-badge" style="display:none;background:var(--red);color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:4px;"></span>
-        </span>
-        <span class="chev open" id="erp-chev">▼</span>
+    <!-- Plan d'action -->
+    <div class="plan-action-section">
+      <div class="plan-action-head">🎯 Plan d'action</div>
+      <div class="plan-action-menu">
+        <button class="pa-item active" id="pa-grid" onclick="setPlanAction('grid')">
+          <span class="pa-icon">⊞</span><span class="pa-label">Grid view</span>
+        </button>
+        <button class="pa-item" id="pa-appeler" onclick="setPlanAction('appeler')">
+          <span class="pa-icon">📞</span><span class="pa-label">À appeler aujourd'hui</span>
+        </button>
+        <button class="pa-item" id="pa-linkedin" onclick="setPlanAction('linkedin')">
+          <span class="pa-icon">🔗</span><span class="pa-label">À connecter LinkedIn</span>
+        </button>
+        <button class="pa-item" id="pa-top20" onclick="setPlanAction('top20')">
+          <span class="pa-icon">⭐</span><span class="pa-label">TOP 20 par campagne</span>
+        </button>
+        <button class="pa-item" id="pa-campagne" onclick="setPlanAction('campagne')">
+          <span class="pa-icon">📊</span><span class="pa-label">Par campagne</span>
+        </button>
+        <button class="pa-item" id="pa-pipeline" onclick="setPlanAction('pipeline')">
+          <span class="pa-icon">🔥</span><span class="pa-label">Pipeline</span>
+        </button>
       </div>
+    </div>
+
+    <!-- Filtre type ERP : masqué mais fonctionnel -->
+    <div class="erp-filter" style="display:none;">
       <div class="erp-filter-body open" id="erp-filter-body">
         <div class="spinner-wrap"><div class="spinner"></div></div>
       </div>
     </div>
+    <span id="erp-active-badge" style="display:none;"></span>
+    <span id="erp-chev" style="display:none;"></span>
 
     <!-- Filtres Téléphone / 5e DAE / Masquer : masqués -->
     <div id="tel-btn-all" style="display:none"></div>
@@ -2915,6 +2945,41 @@ function clearErpFilter() {
   loadList(true);
 }
 
+let _planAction = 'grid';
+function setPlanAction(view) {
+  _planAction = view;
+  // Mettre à jour l'état actif des boutons
+  ['grid','appeler','linkedin','top20','campagne','pipeline'].forEach(v => {
+    const el = document.getElementById('pa-' + v);
+    if (el) el.classList.toggle('active', v === view);
+  });
+  hideDashboard();
+  document.getElementById('mainEmpty').style.display    = 'none';
+  document.getElementById('prospectList').style.display = 'flex';
+
+  // Réinitialiser les filtres de statut existants
+  filterStatut = null;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+
+  if (view === 'grid') {
+    // Tous les prospects
+    filterStatut = null;
+  } else if (view === 'appeler') {
+    // Prospects à rappeler aujourd'hui ou en retard (date_relance <= aujourd'hui)
+    filterStatut = '__appeler__';
+  } else if (view === 'linkedin') {
+    filterStatut = '__linkedin__';
+  } else if (view === 'top20') {
+    filterStatut = '__top20__';
+  } else if (view === 'campagne') {
+    filterStatut = '__campagne__';
+  } else if (view === 'pipeline') {
+    // Prospects actifs : statuts 1 à 5
+    filterStatut = '__pipeline__';
+  }
+  loadList(true);
+}
+
 function setDae5Filter(val) {
   filterDae5 = val;
   document.getElementById('dae5-btn-all').classList.toggle('on', val === '');
@@ -2970,7 +3035,34 @@ function toggleErpPanel() {
 /* ─── LISTE ─────────────────────────────────────────────── */
 function buildFilters(statut = filterStatut) {
   const f = [];
-  if (statut !== -1) f.push(`statut_crm=eq.${statut}`);
+
+  // ── Vues Plan d'action ──────────────────────────────────
+  if (_planAction === 'appeler') {
+    // Prospects avec date_relance aujourd'hui ou dépassée (statuts actifs 1-5)
+    const today = new Date().toISOString().slice(0, 10);
+    f.push(`statut_crm=in.(1,2,3,4,5)`);
+    f.push(`date_relance=lte.${today}`);
+  } else if (_planAction === 'pipeline') {
+    // Tous les prospects actifs (statuts 1 à 5)
+    f.push(`statut_crm=in.(1,2,3,4,5)`);
+  } else if (_planAction === 'linkedin') {
+    // Prospects sans téléphone (à prospecter via LinkedIn)
+    f.push(`telephone_crm=is.null`);
+    f.push(`telephone_google=is.null`);
+  } else if (_planAction === 'top20') {
+    // Top 20 par score de confiance
+    // (limit géré dans loadList via PAGE=20 temporaire)
+    f.push(`score_confiance_erp=gte.80`);
+  } else if (statut !== -1 && statut !== null) {
+    f.push(`statut_crm=eq.${statut}`);
+  } else if (_planAction === 'campagne') {
+    // Groupé par campagne = filtre mes prospects assignés
+    if (currentUser) {
+      const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
+      f.push(`commercial=eq.${myName}`);
+    }
+  }
+  // grid et autres : pas de filtre statut supplémentaire
 
   if (currentUser && currentUser.role !== 'admin') {
     // ── Commercial ──────────────────────────────────────────

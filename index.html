@@ -3233,7 +3233,7 @@ async function loadList(reset = false) {
       <code style="font-size:11px;word-break:break-all;">${e.message}</code></div>`;
     return;
   }
-  document.getElementById('cnt-all').textContent = fmt(count || 0);
+  // Ne pas écraser cnt-all ici — renderFilters() s'en charge avec le vrai count sans filtre plan d'action
 
   if (reset) container.innerHTML = '';
 

@@ -116,6 +116,16 @@ header input[type=search]:focus{background:rgba(255,255,255,.25);}
 .pa-item.active{background:#fdf0f1;color:var(--red);font-weight:700;}
 .pa-item .pa-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
 .pa-item .pa-label{flex:1;}
+.campagne-grid{display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start;}
+.campagne-tile{display:flex;flex-direction:column;gap:6px;padding:18px 20px;min-width:160px;background:#fff;border:1px solid var(--border);border-radius:12px;cursor:pointer;text-align:left;transition:box-shadow .15s,border-color .15s;}
+.campagne-tile:hover{box-shadow:0 4px 14px rgba(0,0,0,.1);border-color:var(--red);}
+.campagne-tile-icon{font-size:22px;}
+.campagne-tile-name{font-weight:700;font-size:14px;color:var(--dark);}
+.campagne-tile-count{font-size:12px;color:var(--mid);}
+.campagne-back{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--mid);font-size:13px;cursor:pointer;padding:0 0 14px 0;font-weight:600;}
+.campagne-back:hover{color:var(--red);}
+.campagne-title-bar{display:flex;align-items:center;gap:10px;padding:0 0 14px 0;border-bottom:1px solid var(--border);margin-bottom:14px;}
+.campagne-title-bar h2{font-size:16px;font-weight:700;color:var(--dark);margin:0;}
 .erp-chip{display:flex;align-items:center;gap:7px;width:100%;text-align:left;padding:5px 8px;border-radius:4px;border:none;background:none;cursor:pointer;font-size:12px;color:var(--mid);transition:background .12s;}
 .erp-chip:hover{background:var(--grey);}
 .erp-chip.on{background:var(--red-light);color:var(--red);font-weight:700;}
@@ -774,6 +784,7 @@ body.demo-mode header{background:#b45309 !important;}
       <button onclick="clearErpFilter()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:700;padding:2px 6px;" title="Effacer">✕ Effacer</button>
     </div>
     <div class="main-empty" id="mainEmpty" style="display:none;"></div>
+    <div id="campagneSelector" style="display:none;overflow-y:auto;flex:1;padding:20px;"></div>
     <div class="prospect-list" id="prospectList" style="display:none;"></div>
   </div>
 
@@ -1721,6 +1732,13 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
     // date_relance=gte.YYYY-MM-DD
     const mDateGte = f.match(/^date_relance=gte\.(.+)$/);
     if (mDateGte) { const dt = mDateGte[1]; rows = rows.filter(r => r.date_relance && r.date_relance >= dt); return; }
+    // campagne=eq.XXX
+    const mCamp = f.match(/^campagne=eq\.(.+)$/);
+    if (mCamp) { const c = decodeURIComponent(mCamp[1]); rows = rows.filter(r => r.campagne === c); return; }
+    // campagne=not.is.null
+    if (f === 'campagne=not.is.null') { rows = rows.filter(r => r.campagne != null); return; }
+    // campagne=neq.
+    if (f === 'campagne=neq.') { rows = rows.filter(r => r.campagne !== ''); return; }
     // commercial=eq.XXX
     const mComm = f.match(/^commercial=eq\.(.+)$/);
     if (mComm)   { const c = decodeURIComponent(mComm[1]); rows = rows.filter(r => r.commercial === c); return; }
@@ -2407,8 +2425,8 @@ const PAGE = 80;
 
 /* ─── DONNÉES DÉMO ──────────────────────────────────────── */
 const DEMO_DATA = [
-  {siret:'97400001000020',siren:'974000010',denomination_usuelle:'Restaurant Le Lagon',commune:'Saint-Paul',code_postal:'97460',adresse_voie:'87 impasse des Géraniums',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'88',commercial:'',telephone_crm:'0692 45 10 30',email_crm:'contact@lelagon.re',argument_commercial:'ERP de type N — Restaurants, cafés, débits de boissons. Obligation DAE dès 1ère catégorie.',telephone_google:'+262 262 45 90 89',fiche_google_url:'https://maps.google.com/?q=Restaurant+Le+Lagon+Saint-Paul',note_google:'4.3',nb_avis_google:'121',adresse_google:'87 impasse des Géraniums, 97460 Saint-Paul',notes:'',date_heure_appel:'',statut_crm:1,date_relance:'2026-08-05',signataire:'Jean-Pierre Grondin',email_contact:'jp.grondin@lelagon.re',contacts_json:'[{"prenom":"Marie","nom":"Grondin","fonction":"Responsable","telephone":"0692 12 34 56","mail":"marie@lelagon.re"}]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-08-05T08:00:00Z'},
-  {siret:'97400002000027',siren:'974000020',denomination_usuelle:'Ti Marmite Créole',commune:'Petite-Ile',code_postal:'97429',adresse_voie:'78 rue de la Liberté',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'92',commercial:'',telephone_crm:null,email_crm:null,argument_commercial:'ERP de type N — Restaurants, cafés, débits de boissons',telephone_google:null,fiche_google_url:null,note_google:null,nb_avis_google:null,adresse_google:null,notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
+  {siret:'97400001000020',siren:'974000010',denomination_usuelle:'Restaurant Le Lagon',commune:'Saint-Paul',code_postal:'97460',adresse_voie:'87 impasse des Géraniums',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'88',commercial:'',telephone_crm:'0692 45 10 30',email_crm:'contact@lelagon.re',argument_commercial:'ERP de type N — Restaurants, cafés, débits de boissons. Obligation DAE dès 1ère catégorie.',telephone_google:'+262 262 45 90 89',fiche_google_url:'https://maps.google.com/?q=Restaurant+Le+Lagon+Saint-Paul',note_google:'4.3',nb_avis_google:'121',adresse_google:'87 impasse des Géraniums, 97460 Saint-Paul',notes:'',date_heure_appel:'',statut_crm:1,date_relance:'2026-08-05',signataire:'Jean-Pierre Grondin',email_contact:'jp.grondin@lelagon.re',contacts_json:'[{"prenom":"Marie","nom":"Grondin","fonction":"Responsable","telephone":"0692 12 34 56","mail":"marie@lelagon.re"}]',campagne:'Restaurants & Cafés',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-08-05T08:00:00Z'},
+  {siret:'97400002000027',siren:'974000020',denomination_usuelle:'Ti Marmite Créole',commune:'Petite-Ile',code_postal:'97429',adresse_voie:'78 rue de la Liberté',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'92',commercial:'',telephone_crm:null,email_crm:null,argument_commercial:'ERP de type N — Restaurants, cafés, débits de boissons',telephone_google:null,fiche_google_url:null,note_google:null,nb_avis_google:null,adresse_google:null,notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'',email_contact:'',contacts_json:'[]',campagne:'Restaurants & Cafés',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
   {siret:'97400003000034',siren:'974000030',denomination_usuelle:'Chez Marguerite',commune:'Saint-Philippe',code_postal:'97442',adresse_voie:'28 lotissement les Acacias',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'69',commercial:'',telephone_crm:'0692 45 10 30',email_crm:'contact@chez-marguerite.re',argument_commercial:'ERP de type N — Restaurants, cafés, débits de boissons',telephone_google:'0262 99 64 53',fiche_google_url:'https://maps.google.com/?q=Chez+Marguerite+Saint-Philippe',note_google:'3.6',nb_avis_google:'54',adresse_google:'46 chemin des Cannes, 97442 Saint-Philippe',notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'Nathalie Dijoux',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
   {siret:'97400004000041',siren:'974000040',denomination_usuelle:'Le Volcan Or',commune:'Le Port',code_postal:'97420',adresse_voie:'74 boulevard de la République',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'83',commercial:'',telephone_crm:'0692 58 20 80',email_crm:'contact@le-volcan-or.re',argument_commercial:'ERP de type N — Restaurants, cafés, débits de boissons',telephone_google:'0262 47 90 89',fiche_google_url:'https://maps.google.com/?q=Le+Volcan+Or+Le Port',note_google:'3.6',nb_avis_google:'121',adresse_google:'99 rue des Flamboyants, 97420 Le Port',notes:'',date_heure_appel:'',statut_crm:7,date_relance:'',signataire:'Jean Clain',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
   {siret:'97400005000048',siren:'974000050',denomination_usuelle:'Saveurs des Iles',commune:'Le Tampon',code_postal:'97430',adresse_voie:'90 chemin de la Rivière',type_erp:'N',libelle_type_erp:'Restaurants, cafés, débits de boissons',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'77',commercial:'',telephone_crm:'0692 68 91 56',email_crm:'contact@saveurs-des-ile.re',argument_commercial:'ERP de type N — Restaurants, cafés, débits de boissons',telephone_google:'0262 30 57 55',fiche_google_url:'https://maps.google.com/?q=Saveurs+des+Iles+Le Tampon',note_google:'4.4',nb_avis_google:'92',adresse_google:'69 impasse des Géraniums, 97430 Le Tampon',notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'Sophie Grondin',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
@@ -2419,7 +2437,7 @@ const DEMO_DATA = [
   {siret:'97400010000083',siren:'974000100',denomination_usuelle:'Pharmacie du Centre',commune:'Cilaos',code_postal:'97413',adresse_voie:'70 lotissement les Acacias',type_erp:'M',libelle_type_erp:'Commerce de détail, magasins, centres commerciaux',niveau_urgence:'2',dae_obligatoire:'À vérifier',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'70',commercial:'',telephone_crm:null,email_crm:null,argument_commercial:'ERP de type M — Commerce de détail, magasins, centres commerciaux',telephone_google:null,fiche_google_url:null,note_google:null,nb_avis_google:null,adresse_google:null,notes:'',date_heure_appel:'',statut_crm:6,date_relance:'',signataire:'',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
   {siret:'97400011000090',siren:'974000110',denomination_usuelle:'Boutique Créole',commune:'Saint-Joseph',code_postal:'97480',adresse_voie:'31 rue de la Liberté',type_erp:'M',libelle_type_erp:'Commerce de détail, magasins, centres commerciaux',niveau_urgence:'2',dae_obligatoire:'À vérifier',dae_5e_categorie:'Oui',statut_geodae:'Equipé',score_confiance_erp:'79',commercial:'',telephone_crm:null,email_crm:null,argument_commercial:'ERP de type M — Commerce de détail, magasins, centres commerciaux',telephone_google:null,fiche_google_url:null,note_google:null,nb_avis_google:null,adresse_google:null,notes:'',date_heure_appel:'',statut_crm:1,date_relance:'',signataire:'',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
   {siret:'97400012000097',siren:'974000120',denomination_usuelle:'Marché des Laves',commune:'Le Tampon',code_postal:'97430',adresse_voie:'68 avenue des Bougainvilliers',type_erp:'M',libelle_type_erp:'Commerce de détail, magasins, centres commerciaux',niveau_urgence:'2',dae_obligatoire:'À vérifier',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'76',commercial:'',telephone_crm:'0692 78 26 26',email_crm:'contact@marche-des-lave.re',argument_commercial:'ERP de type M — Commerce de détail, magasins, centres commerciaux',telephone_google:'0262 94 70 80',fiche_google_url:'https://maps.google.com/?q=Marché+des+Laves+Le Tampon',note_google:'4.9',nb_avis_google:'107',adresse_google:'92 rue des Flamboyants, 97430 Le Tampon',notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'Pierre Robert',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
-  {siret:'97400013000104',siren:'974000130',denomination_usuelle:'Cabinet Médical',commune:'Bras-Panon',code_postal:'97412',adresse_voie:'71 boulevard de la République',type_erp:'U',libelle_type_erp:'Établissements de santé (cliniques, cabinets médicaux)',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'97',commercial:'',telephone_crm:'0692 67 25 41',email_crm:'contact@cabinet-medical.re',argument_commercial:'ERP de type U — Établissements de santé (cliniques, cabinets médicaux)',telephone_google:'0262 38 18 53',fiche_google_url:'https://maps.google.com/?q=Cabinet+Médical+Bras-Panon',note_google:'3.5',nb_avis_google:'328',adresse_google:'8 boulevard de la République, 97412 Bras-Panon',notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'Sylvie Clain',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
+  {siret:'97400013000104',siren:'974000130',denomination_usuelle:'Cabinet Médical',commune:'Bras-Panon',code_postal:'97412',adresse_voie:'71 boulevard de la République',type_erp:'U',libelle_type_erp:'Établissements de santé (cliniques, cabinets médicaux)',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Non',statut_geodae:'Non équipé',score_confiance_erp:'97',commercial:'',telephone_crm:'0692 67 25 41',email_crm:'contact@cabinet-medical.re',argument_commercial:'ERP de type U — Établissements de santé (cliniques, cabinets médicaux)',telephone_google:'0262 38 18 53',fiche_google_url:'https://maps.google.com/?q=Cabinet+Médical+Bras-Panon',note_google:'3.5',nb_avis_google:'328',adresse_google:'8 boulevard de la République, 97412 Bras-Panon',notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'Sylvie Clain',email_contact:'',contacts_json:'[]',campagne:'Santé & Médical',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
   {siret:'97400014000111',siren:'974000140',denomination_usuelle:'Clinique du Sud',commune:'Le Tampon',code_postal:'97430',adresse_voie:'86 route Nationale',type_erp:'U',libelle_type_erp:'Établissements de santé (cliniques, cabinets médicaux)',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Oui',statut_geodae:'Equipé',score_confiance_erp:'77',commercial:'',telephone_crm:null,email_crm:null,argument_commercial:'ERP de type U — Établissements de santé (cliniques, cabinets médicaux)',telephone_google:null,fiche_google_url:null,note_google:null,nb_avis_google:null,adresse_google:null,notes:'',date_heure_appel:'',statut_crm:0,date_relance:'',signataire:'',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
   {siret:'97400015000118',siren:'974000150',denomination_usuelle:'Centre de Santé',commune:'Saint-André',code_postal:'97440',adresse_voie:'25 rue du Commerce',type_erp:'U',libelle_type_erp:'Établissements de santé (cliniques, cabinets médicaux)',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Oui',statut_geodae:'Non déclaré',score_confiance_erp:'86',commercial:'',telephone_crm:null,email_crm:null,argument_commercial:'ERP de type U — Établissements de santé (cliniques, cabinets médicaux)',telephone_google:null,fiche_google_url:null,note_google:null,nb_avis_google:null,adresse_google:null,notes:'',date_heure_appel:'',statut_crm:2,date_relance:'',signataire:'',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
   {siret:'97400016000125',siren:'974000160',denomination_usuelle:'Polyclinique Réunion',commune:'Sainte-Clotilde',code_postal:'97490',adresse_voie:'14 boulevard de la République',type_erp:'U',libelle_type_erp:'Établissements de santé (cliniques, cabinets médicaux)',niveau_urgence:'1',dae_obligatoire:'Oui',dae_5e_categorie:'Oui',statut_geodae:'Non équipé',score_confiance_erp:'81',commercial:'',telephone_crm:'0692 16 96 93',email_crm:'contact@polyclinique-re.re',argument_commercial:'ERP de type U — Établissements de santé (cliniques, cabinets médicaux)',telephone_google:'0262 92 22 17',fiche_google_url:'https://maps.google.com/?q=Polyclinique+Réunion+Sainte-Clotilde',note_google:'4.3',nb_avis_google:'76',adresse_google:'55 avenue de la Victoire, 97490 Sainte-Clotilde',notes:'',date_heure_appel:'',statut_crm:1,date_relance:'',signataire:'Nathalie Lepinay',email_contact:'',contacts_json:'[]',created_at:'2026-01-15T08:00:00Z',updated_at:'2026-06-15T08:00:00Z'},
@@ -2647,9 +2665,10 @@ function showDashboard() {
   currentSiret   = null;
   _currentRecord = null;
   // Masquer la liste et toolbar
-  document.getElementById('mainToolbar').style.display  = 'none';
-  document.getElementById('mainEmpty').style.display    = 'none';
-  document.getElementById('prospectList').style.display = 'none';
+  document.getElementById('mainToolbar').style.display      = 'none';
+  document.getElementById('mainEmpty').style.display         = 'none';
+  document.getElementById('prospectList').style.display      = 'none';
+  document.getElementById('campagneSelector').style.display  = 'none';
   // Afficher le dashboard
   document.getElementById('dashTabs').style.display = 'flex';
   document.getElementById('dashView').style.display = 'flex';
@@ -2942,6 +2961,64 @@ function clearErpFilter() {
   loadList(true);
 }
 
+let _currentCampagne = null;
+
+async function loadCampagnes() {
+  const sel = document.getElementById('campagneSelector');
+  sel.innerHTML = '<div style="padding:20px;color:var(--mid)">Chargement…</div>';
+  let camps = [];
+  try {
+    if (DEMO_MODE) {
+      const map = {};
+      _demoDb.forEach(p => { if (p.campagne) { map[p.campagne] = (map[p.campagne]||0) + 1; } });
+      camps = Object.entries(map).map(([name, count]) => ({name, count}));
+    } else {
+      const { data } = await dbSelect('prospects', { cols:'campagne', filters:['campagne=not.is.null','campagne=neq.'], limit:5000, order:'campagne' });
+      const map = {};
+      (data||[]).forEach(r => { if (r.campagne) { map[r.campagne] = (map[r.campagne]||0) + 1; } });
+      camps = Object.entries(map).map(([name, count]) => ({name, count}));
+    }
+  } catch(e) {
+    sel.innerHTML = `<div style="padding:20px;color:red">Erreur : ${esc(e.message)}</div>`;
+    return;
+  }
+  if (!camps.length) {
+    sel.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--mid);font-size:14px;">Aucune campagne définie.<br><br>Renseignez le champ <strong>Campagne</strong> sur vos prospects pour les organiser ici.</div>';
+    return;
+  }
+  camps.sort((a,b) => a.name.localeCompare(b.name));
+  sel.innerHTML = `
+    <div style="padding:4px 0 16px;font-size:13px;color:var(--mid);font-weight:600;">${camps.length} campagne${camps.length>1?'s':''}</div>
+    <div class="campagne-grid">
+      ${camps.map(c => `
+        <button class="campagne-tile" onclick="selectCampagne(${JSON.stringify(c.name)})">
+          <div class="campagne-tile-icon">📊</div>
+          <div class="campagne-tile-name">${esc(c.name)}</div>
+          <div class="campagne-tile-count">${c.count} prospect${c.count>1?'s':''}</div>
+        </button>
+      `).join('')}
+    </div>`;
+}
+
+function selectCampagne(name) {
+  _currentCampagne = name;
+  document.getElementById('campagneSelector').style.display = 'none';
+  document.getElementById('prospectList').style.display     = 'flex';
+  // Injecter le breadcrumb dans la toolbar
+  const tb = document.getElementById('mainToolbar');
+  if (tb) {
+    let bc = document.getElementById('campagne-breadcrumb');
+    if (!bc) {
+      bc = document.createElement('div');
+      bc.id = 'campagne-breadcrumb';
+      bc.style.cssText = 'display:flex;align-items:center;gap:8px;padding:0 12px 8px;';
+      tb.prepend(bc);
+    }
+    bc.innerHTML = `<button class="campagne-back" onclick="setPlanAction('campagne')">← Campagnes</button><span style="color:var(--mid);">›</span><span style="font-size:13px;font-weight:700;color:var(--dark);">${esc(name)}</span>`;
+  }
+  loadList(true);
+}
+
 let _planAction = 'grid';
 function setPlanAction(view) {
   _planAction = view;
@@ -2951,27 +3028,36 @@ function setPlanAction(view) {
     if (el) el.classList.toggle('active', v === view);
   });
   hideDashboard();
-  document.getElementById('mainEmpty').style.display    = 'none';
-  document.getElementById('prospectList').style.display = 'flex';
+  document.getElementById('mainEmpty').style.display         = 'none';
+  document.getElementById('campagneSelector').style.display  = 'none';
+  const _bc = document.getElementById('campagne-breadcrumb');
+  if (_bc) _bc.remove();
 
   // Réinitialiser les filtres de statut existants
   filterStatut = null;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
 
+  if (view === 'campagne') {
+    // Afficher le sélecteur de campagnes (pas la liste)
+    filterStatut = '__campagne__';
+    _currentCampagne = null;
+    document.getElementById('prospectList').style.display     = 'none';
+    document.getElementById('campagneSelector').style.display = 'block';
+    loadCampagnes();
+    return;
+  }
+
+  document.getElementById('prospectList').style.display = 'flex';
+
   if (view === 'grid') {
-    // Tous les prospects
     filterStatut = null;
   } else if (view === 'appeler') {
-    // Prospects à rappeler aujourd'hui ou en retard (date_relance <= aujourd'hui)
     filterStatut = '__appeler__';
   } else if (view === 'linkedin') {
     filterStatut = '__linkedin__';
   } else if (view === 'top20') {
     filterStatut = '__top20__';
-  } else if (view === 'campagne') {
-    filterStatut = '__campagne__';
   } else if (view === 'pipeline') {
-    // Prospects actifs : statuts 1 à 5
     filterStatut = '__pipeline__';
   }
   loadList(true);
@@ -3051,10 +3137,11 @@ function buildFilters(statut = filterStatut) {
     // (limit géré dans loadList via PAGE=20 temporaire)
     f.push(`score_confiance_erp=gte.80`);
   } else if (_planAction === 'campagne') {
-    // Groupé par campagne = filtre mes prospects assignés
-    if (currentUser) {
-      const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
-      f.push(`commercial=eq.${myName}`);
+    if (_currentCampagne) {
+      f.push(`campagne=eq.${encodeURIComponent(_currentCampagne)}`);
+    } else {
+      f.push(`campagne=not.is.null`);
+      f.push(`campagne=neq.`);
     }
   } else if (statut !== -1 && statut !== null && statut !== '__campagne__') {
     f.push(`statut_crm=eq.${statut}`);

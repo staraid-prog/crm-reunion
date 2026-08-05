@@ -3050,14 +3050,14 @@ function buildFilters(statut = filterStatut) {
     // Top 20 par score de confiance
     // (limit géré dans loadList via PAGE=20 temporaire)
     f.push(`score_confiance_erp=gte.80`);
-  } else if (statut !== -1 && statut !== null) {
-    f.push(`statut_crm=eq.${statut}`);
   } else if (_planAction === 'campagne') {
     // Groupé par campagne = filtre mes prospects assignés
     if (currentUser) {
       const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
       f.push(`commercial=eq.${myName}`);
     }
+  } else if (statut !== -1 && statut !== null && statut !== '__campagne__') {
+    f.push(`statut_crm=eq.${statut}`);
   }
   // grid et autres : pas de filtre statut supplémentaire
 

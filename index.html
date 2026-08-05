@@ -1780,6 +1780,8 @@ function demoDbSelect({ cols='*', filters=[], order='denomination_usuelle', limi
     rows.sort((a,b) => (a.denomination_usuelle||'').localeCompare(b.denomination_usuelle||'', 'fr'));
   } else if (order === 'date_relance') {
     rows.sort((a,b) => (a.date_relance||'').localeCompare(b.date_relance||''));
+  } else if (order === 'score_confiance_erp.desc') {
+    rows.sort((a,b) => (Number(b.score_confiance_erp)||0) - (Number(a.score_confiance_erp)||0));
   }
 
   const count = rows.length;
@@ -3172,9 +3174,8 @@ function buildFilters(statut = filterStatut) {
     // Prospects à connecter sur LinkedIn (canal indépendant de statut_crm)
     f.push(`linkedin_statut=eq.${encodeURIComponent('À faire')}`);
   } else if (_planAction === 'top20') {
-    // Top 20 par score de confiance
-    // (limit géré dans loadList via PAGE=20 temporaire)
-    f.push(`score_confiance_erp=gte.80`);
+    // Top 20 par score de confiance, sans condition statut_crm
+    f.push(`score_confiance_erp=not.is.null`);
   } else if (_planAction === 'campagne') {
     if (_currentCampagne) {
       f.push(`campagne=eq.${encodeURIComponent(_currentCampagne)}`);
@@ -3210,8 +3211,8 @@ function buildFilters(statut = filterStatut) {
   }
 
   if (filterDae5 === 'non') f.push(`dae_5e_categorie=eq.Non`);
-  // Ne pas appliquer le filtre téléphone en vue LinkedIn (déjà géré par le filtre sans-tél)
-  if (_planAction !== 'linkedin') {
+  // Ne pas appliquer le filtre téléphone en vue LinkedIn/TOP20 (ces vues ont leur propre logique)
+  if (_planAction !== 'linkedin' && _planAction !== 'top20') {
     if (filterTel === 'oui') f.push(`or=(telephone_crm.not.is.null,telephone_google.not.is.null)`);
     if (filterTel === 'non') f.push(`telephone_crm=is.null`, `telephone_google=is.null`);
   }
@@ -3232,9 +3233,13 @@ async function loadList(reset = false) {
   const filters = buildFilters();
   let data, count;
   try {
+    const isTop20 = _planAction === 'top20';
     ({ data, count } = await dbSelect('prospects', {
       cols: 'siret,denomination_usuelle,commune',
-      filters, limit: PAGE, offset
+      filters,
+      order: isTop20 ? 'score_confiance_erp.desc' : 'denomination_usuelle',
+      limit: isTop20 ? 20 : PAGE,
+      offset: isTop20 ? 0 : offset
     }));
   } catch(e) {
     container.innerHTML = `<div style="padding:16px;color:#d73a49;font-size:12px;line-height:1.6;">

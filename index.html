@@ -2600,8 +2600,8 @@ function buildStatsFilters() {
 }
 
 async function loadStats() {
-  const sf = buildStatsFilters();
-  // Ajouter le filtre commercial pour que les stats reflètent l'utilisateur connecté
+  // Filtre commercial uniquement — TOTAL doit refléter tous les prospects de l'utilisateur
+  // sans appliquer les filtres téléphone/type qui réduisent le compte
   const cf = [];
   if (currentUser && currentUser.role !== 'admin') {
     const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
@@ -2611,10 +2611,10 @@ async function loadStats() {
     cf.push(`commercial=eq.${myName}`);
   }
   const [tot, pc, sig, perdu] = await Promise.all([
-    dbSelect('prospects', { countOnly: true, filters: [...cf, ...sf] }),
-    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.1', ...cf, ...sf] }),
-    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.6', ...cf, ...sf] }),
-    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.7', ...cf, ...sf] }),
+    dbSelect('prospects', { countOnly: true, filters: [...cf] }),
+    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.1', ...cf] }),
+    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.6', ...cf] }),
+    dbSelect('prospects', { countOnly: true, filters: ['statut_crm=eq.7', ...cf] }),
   ]);
   totalCount = tot.count;
   document.getElementById('st-total').textContent    = fmt(tot.count);

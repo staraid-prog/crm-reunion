@@ -3169,9 +3169,8 @@ function buildFilters(statut = filterStatut) {
     // Tous les prospects actifs (statuts 1 à 5)
     f.push(`statut_crm=in.(1,2,3,4,5)`);
   } else if (_planAction === 'linkedin') {
-    // Prospects sans téléphone (à prospecter via LinkedIn)
-    f.push(`telephone_crm=is.null`);
-    f.push(`telephone_google=is.null`);
+    // Prospects à connecter sur LinkedIn (canal indépendant de statut_crm)
+    f.push(`linkedin_statut=eq.${encodeURIComponent('À faire')}`);
   } else if (_planAction === 'top20') {
     // Top 20 par score de confiance
     // (limit géré dans loadList via PAGE=20 temporaire)

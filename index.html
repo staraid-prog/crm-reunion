@@ -718,33 +718,14 @@ body.demo-mode header{background:#b45309 !important;}
       </div>
     </div>
 
-    <!-- Filtre Téléphone -->
-    <div class="dae5-filter">
-      <div class="dae5-filter-label">📞 Téléphone</div>
-      <div class="dae5-btns">
-        <button class="dae5-btn tel-btn-all" id="tel-btn-all" onclick="setTelFilter('')">Tout</button>
-        <button class="dae5-btn tel-btn-oui on" id="tel-btn-oui" onclick="setTelFilter('oui')">✅ OUI</button>
-        <button class="dae5-btn tel-btn-non" id="tel-btn-non" onclick="setTelFilter('non')">❌ NON</button>
-      </div>
-    </div>
-
-    <!-- Filtre 5e catégorie DAE -->
-    <div class="dae5-filter">
-      <div class="dae5-filter-label">📋 5e catégorie DAE</div>
-      <div class="dae5-btns">
-        <button class="dae5-btn on" id="dae5-btn-all" onclick="setDae5Filter('')">Tout</button>
-        <button class="dae5-btn" id="dae5-btn-non" onclick="setDae5Filter('non')">Sans 5e cat.</button>
-      </div>
-    </div>
-
-    <!-- Filtre Dénomination (Association / Club) -->
-    <div class="dae5-filter">
-      <div class="dae5-filter-label">🏷️ Masquer</div>
-      <div class="dae5-btns">
-        <button class="dae5-btn on" id="assoc-btn-excl" onclick="toggleAssocFilter()" style="background:#7c3aed;border-color:#7c3aed;color:#fff;">🚫 Associations</button>
-        <button class="dae5-btn" id="club-btn-excl" onclick="toggleClubFilter()">🚫 Clubs</button>
-      </div>
-    </div>
+    <!-- Filtres Téléphone / 5e DAE / Masquer : masqués -->
+    <div id="tel-btn-all" style="display:none"></div>
+    <div id="tel-btn-oui" style="display:none"></div>
+    <div id="tel-btn-non" style="display:none"></div>
+    <div id="dae5-btn-all" style="display:none"></div>
+    <div id="dae5-btn-non" style="display:none"></div>
+    <div id="assoc-btn-excl" style="display:none"></div>
+    <div id="club-btn-excl" style="display:none"></div>
 
   </div><!-- /sidebar -->
 

@@ -1829,7 +1829,7 @@ function toggleDemoMode() {
   // Réinitialisation de l'UI
   filterType         = '';
   filterStatut       = -1;
-  filterTel          = 'oui';
+  filterTel          = '';
   filterExcludeAssoc = false;
   filterExcludeClub  = false;
   searchQ      = '';
@@ -1997,7 +1997,7 @@ function doLogout() {
   filterMine         = false;
   filterType         = '';
   filterStatut       = -1;
-  filterTel          = 'oui';
+  filterTel          = '';
   filterExcludeAssoc = false;
   filterExcludeClub  = false;
   searchQ            = '';
@@ -2523,7 +2523,7 @@ const DEMO_DATA = [
 let filterStatut       = -1;
 let filterType         = '';
 let filterDae5         = '';   // '' = tout | 'non' = exclure 5e catégorie
-let filterTel          = 'oui'; // 'oui' = avec tel | 'non' = sans tel | '' = tout
+let filterTel          = ''; // 'oui' = avec tel | 'non' = sans tel | '' = tout
 let filterExcludeAssoc = false; // true = masquer les "Association"
 let filterExcludeClub  = false; // true = masquer les "Club..."
 let searchQ        = '';

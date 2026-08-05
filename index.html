@@ -2858,7 +2858,7 @@ function renderFilters() {
       <span class="cnt" id="cnt-${s.id}">…</span></button>`;
   });
   document.getElementById('filterButtons').innerHTML = html;
-  // Compte "mes prospects"
+  // Compte "mes prospects" (tous statuts, juste mon nom)
   if (currentUser) {
     const myF = [`commercial=eq.${encodeURIComponent(currentUser.prenom+' '+currentUser.nom)}`];
     dbSelect('prospects', { countOnly: true, filters: myF }).then(({ count }) => {
@@ -2866,11 +2866,17 @@ function renderFilters() {
       if (el) el.textContent = fmt(count);
     });
   }
-  STATUTS.forEach(async s => {
-    const filters = buildFilters(s.id);
-    const { count } = await dbSelect('prospects', { countOnly: true, filters });
-    const el = document.getElementById(`cnt-${s.id}`);
+  // Compte "Tous" (sans filtre statut, avec filtres commerciaux actifs)
+  dbSelect('prospects', { countOnly: true, filters: buildStatutCountFilters(null) }).then(({ count }) => {
+    const el = document.getElementById('cnt-all');
     if (el) el.textContent = fmt(count);
+  });
+  // Compte réel par statut (indépendant du plan d'action actif)
+  STATUTS.forEach(s => {
+    dbSelect('prospects', { countOnly: true, filters: buildStatutCountFilters(s.id) }).then(({ count }) => {
+      const el = document.getElementById(`cnt-${s.id}`);
+      if (el) el.textContent = fmt(count);
+    });
   });
 }
 
@@ -3113,6 +3119,33 @@ function toggleErpPanel() {
   const chev = document.getElementById('erp-chev');
   body.classList.toggle('open');
   chev.classList.toggle('open');
+}
+
+/* ─── COUNTS SIDEBAR (indépendants du plan d'action) ────── */
+function buildStatutCountFilters(statutId) {
+  const f = [];
+  if (statutId !== null && statutId !== -1) f.push(`statut_crm=eq.${statutId}`);
+  if (currentUser && currentUser.role !== 'admin') {
+    const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
+    if (filterType) {
+      f.push(`or=(commercial.eq.%22${myName}%22,and(commercial.is.null,libelle_type_erp.eq.%22${encodeURIComponent(filterType)}%22))`);
+    } else {
+      f.push(`commercial=eq.${myName}`);
+    }
+  } else if (currentUser) {
+    if (filterType) f.push(`libelle_type_erp=eq.${encodeURIComponent(filterType)}`);
+    if (filterMine) {
+      const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
+      f.push(`commercial=eq.${myName}`);
+    }
+  }
+  if (filterDae5 === 'non') f.push(`dae_5e_categorie=eq.Non`);
+  if (filterTel === 'oui') f.push(`or=(telephone_crm.not.is.null,telephone_google.not.is.null)`);
+  if (filterTel === 'non') f.push(`telephone_crm=is.null`, `telephone_google=is.null`);
+  if (filterExcludeAssoc) f.push(`denomination_usuelle=not.ilike.%25association%25`);
+  if (filterExcludeClub)  f.push(`denomination_usuelle=not.ilike.club%25`);
+  if (searchQ) f.push(`or=(denomination_usuelle.ilike.%25${encodeURIComponent(searchQ)}%25,commune.ilike.%25${encodeURIComponent(searchQ)}%25)`);
+  return f;
 }
 
 /* ─── LISTE ─────────────────────────────────────────────── */

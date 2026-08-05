@@ -2991,7 +2991,7 @@ async function loadCampagnes() {
     <div style="padding:4px 0 16px;font-size:13px;color:var(--mid);font-weight:600;">${camps.length} campagne${camps.length>1?'s':''}</div>
     <div class="campagne-grid">
       ${camps.map(c => `
-        <button class="campagne-tile" onclick="selectCampagne(${JSON.stringify(c.name)})">
+        <button class="campagne-tile" data-camp="${esc(c.name)}" onclick="selectCampagne(this.dataset.camp)">
           <div class="campagne-tile-icon">📊</div>
           <div class="campagne-tile-name">${esc(c.name)}</div>
           <div class="campagne-tile-count">${c.count} prospect${c.count>1?'s':''}</div>

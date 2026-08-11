@@ -3184,6 +3184,7 @@ function toggleErpPanel() {
 function buildStatutCountFilters(statutId) {
   const f = [];
   if (statutId !== null && statutId !== -1) f.push(`statut_crm=eq.${statutId}`);
+  else if (statutId === -1) f.push(`statut_crm=is.null`);
   if (currentUser && currentUser.role !== 'admin') {
     const myName = encodeURIComponent(currentUser.prenom + ' ' + currentUser.nom);
     if (filterType) {
@@ -3233,8 +3234,10 @@ function buildFilters(statut = filterStatut) {
     }
   } else if (statut !== -1 && statut !== null && statut !== '__campagne__') {
     f.push(`statut_crm=eq.${statut}`);
+  } else if (_planAction === 'grid') {
+    // Vue "Tous" : uniquement les nouveaux prospects non encore traités
+    f.push(`statut_crm=is.null`);
   }
-  // grid et autres : pas de filtre statut supplémentaire
 
   if (currentUser && currentUser.role !== 'admin') {
     // ── Commercial ──────────────────────────────────────────

@@ -3525,7 +3525,7 @@ function renderDetail(r) {
           <a class="phone-big" href="tel:${esc(r.telephone_google)}" onclick="openCallModal('${r.siret}')">
             📞 ${esc(r.telephone_google || '—')}
           </a>
-          <a class="google-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener">🔍 Fiche Google</a>
+          ${r.fiche_google_url ? `<a class="google-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener">🔍 Fiche Google</a>` : ''}
           <button class="btn-contact" onclick="openContact()">
             👤 Contact
             ${extraBadge}

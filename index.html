@@ -1573,10 +1573,56 @@ async function loadAlloHistoryAuto(r) {
     } catch(_) {}
 
     renderAlloHistory(calls, fullDetail);
+    autoSaveAlloSummaries(r, calls, fullDetail);
   } catch(err) {
     el.innerHTML = `<div style="font-size:11px;color:#d73a49;padding:4px 0;">⚠️ ${err.message || 'Erreur réseau'}</div>`;
     console.error('[Allo] loadAlloHistoryAuto error:', err);
   }
+}
+
+async function autoSaveAlloSummaries(r, calls, fullDetail) {
+  if (DEMO_MODE || !r || !r.siret) return;
+
+  // Collecte les appels avec un résumé
+  const toSave = [];
+  calls.slice(0, 5).forEach((c, i) => {
+    const d = (i === 0 && fullDetail) ? fullDetail : c;
+    const summary = typeof d.summary === 'string' ? d.summary : (d.summary?.content || '');
+    if (!summary || !d.id) return;
+    const rawD = d.date || d.created_at || d.started_at || c.date || c.created_at;
+    const dt = rawD ? new Date(rawD) : null;
+    const dateStr = (dt && !isNaN(dt))
+      ? dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})
+      : 'Date inconnue';
+    const sec = d.duration || 0;
+    const duree = sec >= 60 ? Math.floor(sec/60)+'min '+(sec%60)+'s' : (sec ? sec+'s' : '—');
+    toSave.push({ id: d.id, dateStr, duree, summary });
+  });
+  if (!toSave.length) return;
+
+  // Récupère les notes actuelles
+  const { data } = await dbSelect('prospects', { cols: 'notes', filters: [`siret=eq.${r.siret}`], limit: 1 });
+  const currentNotes = (data && data[0]) ? (data[0].notes || '') : '';
+
+  // Filtre ceux déjà sauvegardés (marqueur [allo:ID])
+  const newEntries = toSave.filter(s => !currentNotes.includes(`[allo:${s.id}]`));
+  if (!newEntries.length) return;
+
+  const toAppend = newEntries.map(s =>
+    `\n\n---\nAPPEL ${s.dateStr} (${s.duree}) [allo:${s.id}]\n${s.summary}`
+  ).join('');
+
+  await fetch(`${SUPA_URL}/prospects?siret=eq.${encodeURIComponent(r.siret)}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ notes: currentNotes + toAppend })
+  });
+  console.log(`[Allo] ${newEntries.length} résumé(s) auto-sauvegardé(s) pour ${r.denomination_usuelle}`);
 }
 
 /* Charge la transcription d'un appel au clic */

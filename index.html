@@ -187,6 +187,19 @@ header input[type=search]:focus{background:#fff;border-color:var(--red);box-shad
 .detail-header h2{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800;letter-spacing:-.2px;}
 .detail-header .sub{font-size:11px;opacity:.75;margin-top:2px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
+/* FICHE — carte société */
+.company-card{position:relative;}
+.cc-avatar{width:60px;height:60px;border-radius:16px;background:linear-gradient(135deg,var(--red),#d63a4e);color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(171,30,46,.3);margin-bottom:12px;}
+.cc-name{font-size:17px;font-weight:800;letter-spacing:-.3px;color:var(--dark);line-height:1.25;margin-bottom:8px;}
+.cc-edit{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:99px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#2563eb;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit;}
+.cc-edit:hover{background:#dbeafe;transform:scale(1.06);}
+.cc-row{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--dark);margin:8px 0;line-height:1.45;}
+.cc-row .cci{flex-shrink:0;width:18px;text-align:center;opacity:.55;font-size:13px;}
+.cc-row a{color:#2563eb;text-decoration:none;font-weight:600;}
+.cc-row a:hover{text-decoration:underline;}
+.cc-row .ccl{color:var(--light);font-weight:600;}
+.cc-badges{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 2px;}
+
 /* FICHE — mini dashboard */
 .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:10px;padding:10px 12px 14px;align-items:start;}
 .detail-grid .dcol{display:flex;flex-direction:column;gap:10px;min-width:0;}
@@ -532,10 +545,10 @@ body.demo-mode header{background:#fffbeb !important;border-bottom-color:#fde68a;
   .mob-back{
     display:flex!important;
     align-items:center;gap:6px;
-    background:rgba(0,0,0,.18);border:none;color:#fff;
+    background:var(--surface);border:1.5px solid var(--border);color:var(--dark);
     font-size:13px;font-weight:700;cursor:pointer;
-    padding:7px 13px;border-radius:9px;margin-bottom:8px;
-    white-space:nowrap;font-family:inherit;
+    padding:7px 13px;border-radius:9px;
+    white-space:nowrap;font-family:inherit;box-shadow:var(--sh-sm);
   }
 
   .detail-header{padding:12px 14px;}
@@ -3772,23 +3785,16 @@ function renderDetail(r) {
   // Mémoriser la position de scroll avant de réécrire
   const _scrollY = detail.querySelector('.detail-body')?.scrollTop || 0;
 
-  detail.innerHTML = `
-    <!-- EN-TÊTE compact -->
-    <div class="detail-header">
-      <button class="mob-back" onclick="closeMobileDetail()">← Retour</button>
-      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-        <h2 style="flex:1;min-width:0;">${esc(r.denomination_usuelle)}</h2>
-        <span class="tag ${sInfo.cls}" style="flex-shrink:0;">${statut !== null ? sInfo.label : 'Nouveau'}</span>
-      </div>
-      <div class="sub">${esc(r.type_erp||'')} — ${esc(r.libelle_type_erp||'')} · ${esc(r.commune||'')} ${esc(r.code_postal||'')}
-        ${r.dae_5e_categorie ? ` · 📋 5e cat. : ${esc(r.dae_5e_categorie)}` : ''}
-        ${r.commercial ? ` · 👤 ${esc(r.commercial)}` : ''}</div>
-    </div>
+  const adresseFull = [r.adresse_voie, r.code_postal, r.commune].filter(Boolean).join(' ');
+  const mapsUrl = adresseFull ? `https://maps.google.com/?q=${encodeURIComponent(adresseFull + ' La Réunion')}` : '';
+  const initiale = (r.denomination_usuelle || '?').trim().charAt(0).toUpperCase();
 
+  detail.innerHTML = `
     <div class="detail-body">
 
       <!-- BARRE D'ACTIONS -->
       <div class="action-bar">
+        <button class="mob-back" onclick="closeMobileDetail()">← Retour</button>
         <a class="phone-big" style="font-size:14px;padding:8px 14px;" href="tel:${esc(r.telephone_google)}" onclick="openCallModal('${r.siret}')">
           📞 ${esc(r.telephone_google || r.telephone_crm || '—')}
         </a>
@@ -3814,7 +3820,53 @@ function renderDetail(r) {
 
       <div class="detail-grid">
 
-        <!-- COLONNE GAUCHE : activité -->
+        <!-- COLONNE 1 : identité société -->
+        <div class="dcol">
+          <div class="dsec company-card">
+            <button class="cc-edit" onclick="openContact()" title="Modifier la fiche">✏️</button>
+            <div class="cc-avatar">${esc(initiale)}</div>
+            <div class="cc-name">${esc(r.denomination_usuelle)}</div>
+            <span class="tag ${sInfo.cls}">${statut !== null ? sInfo.label : 'Nouveau prospect'}</span>
+
+            <div style="height:10px;"></div>
+
+            ${adresseFull ? `
+            <div class="cc-row"><span class="cci">📍</span>
+              <a href="${esc(mapsUrl)}" target="_blank" rel="noopener">${esc(adresseFull)}</a>
+            </div>` : ''}
+            <div class="cc-row"><span class="cci">👤</span>
+              <span><span class="ccl">Responsable</span> &nbsp;${r.commercial ? `<strong>${esc(r.commercial)}</strong>` : '<em style="color:var(--light);">non assigné</em>'}</span>
+            </div>
+            ${r.signataire ? `
+            <div class="cc-row"><span class="cci">🖊️</span>
+              <span><span class="ccl">Signataire</span> &nbsp;<strong>${esc(r.signataire)}</strong>${r.fonction ? ` <span style="color:var(--light);">· ${esc(r.fonction)}</span>` : ''}</span>
+            </div>` : ''}
+            ${r.email_crm ? `
+            <div class="cc-row"><span class="cci">✉️</span>
+              <a href="mailto:${esc(r.email_crm)}">${esc(r.email_crm)}</a>
+            </div>` : ''}
+            <div class="cc-row"><span class="cci">🏛️</span>
+              <span><span class="ccl">SIRET</span> &nbsp;<span style="font-family:monospace;font-size:12px;">${esc(r.siret||'—')}</span></span>
+            </div>
+            ${r.libelle_type_erp ? `
+            <div class="cc-row"><span class="cci">🏢</span>
+              <span>ERP type <strong>${esc(r.type_erp||'—')}</strong> — ${esc(r.libelle_type_erp)}</span>
+            </div>` : ''}
+            ${(r.note_google && r.fiche_google_url) ? `
+            <div class="cc-row"><span class="cci">⭐</span>
+              <a href="${esc(googleUrl)}" target="_blank" rel="noopener">${esc(r.note_google)} / 5 ${r.nb_avis_google ? `(${esc(r.nb_avis_google)} avis)` : ''} — Fiche Google</a>
+            </div>` : ''}
+
+            <div class="cc-badges">
+              ${r.dae_5e_categorie ? `<span class="tag" style="background:#fef3c7;color:#b45309;">📋 5e cat. : ${esc(r.dae_5e_categorie)}</span>` : ''}
+              ${r.dae_obligatoire ? `<span class="tag" style="background:#fee2e2;color:#b91c1c;">🚨 DAE : ${esc(r.dae_obligatoire)}</span>` : ''}
+              ${r.statut_geodae ? `<span class="tag" style="background:#e0f2fe;color:#0369a1;">🗺️ ${esc(r.statut_geodae)}</span>` : ''}
+              ${r.campagne ? `<span class="tag" style="background:#ede9fe;color:#7c3aed;">📣 ${esc(r.campagne)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- COLONNE 2 : activité -->
         <div class="dcol">
 
           <!-- CONTACT & APPELS -->

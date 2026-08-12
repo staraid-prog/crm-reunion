@@ -183,9 +183,21 @@ header input[type=search]:focus{background:#fff;border-color:var(--red);box-shad
 .empty-state h3{font-size:16px;color:var(--mid);}
 .empty-state p{font-size:13px;}
 
-.detail-header{padding:16px 20px;background:linear-gradient(135deg,var(--red),#c22b3d);color:#fff;flex-shrink:0;}
-.detail-header h2{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800;letter-spacing:-.2px;}
-.detail-header .sub{font-size:11.5px;opacity:.75;margin-top:3px;font-weight:500;}
+.detail-header{padding:12px 16px;background:linear-gradient(135deg,var(--red),#c22b3d);color:#fff;flex-shrink:0;}
+.detail-header h2{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800;letter-spacing:-.2px;}
+.detail-header .sub{font-size:11px;opacity:.75;margin-top:2px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* FICHE — mini dashboard */
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:10px;padding:10px 12px 14px;align-items:start;}
+.detail-grid .dcol{display:flex;flex-direction:column;gap:10px;min-width:0;}
+.detail-grid .dsec{margin:0;padding:12px 14px;}
+.detail-grid .dsec h3{margin-bottom:8px;}
+.action-bar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 0;align-items:center;}
+.abar-btn{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:7px 11px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);color:var(--mid);cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .15s;font-family:inherit;}
+.abar-btn:hover{transform:translateY(-1px);box-shadow:var(--sh-sm);}
+.act-btn.sm{padding:9px 12px;font-size:12px;border-radius:10px;gap:8px;}
+.act-btn.sm .act-icon{font-size:15px;}
+.act-2col{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
 
 .detail-body{flex:1;overflow-y:auto;}
 .detail-body::-webkit-scrollbar{width:4px;}
@@ -3628,77 +3640,58 @@ function renderDetail(r) {
     ? `<div style="margin-top:8px;"><span class="tag ${sInfo.cls}" style="padding:5px 12px;font-size:12px;">🔒 ${sInfo.label}</span></div>`
     : '';
 
-  // ── Boutons actions ──
+  // ── Boutons actions (compacts, côte à côte) ──
   const actionsHtml = isLocked
-    ? `<div style="padding:16px;${statut===6
+    ? `<div style="padding:14px;${statut===6
           ? 'background:#f0fdf4;border:1.5px solid #86efac;'
           : statut===8
           ? 'background:#e0f2fe;border:1.5px solid #7dd3fc;'
           : 'background:#fef2f2;border:1.5px solid #fca5a5;'}
-         border-radius:8px;text-align:center;">
-         <div style="font-size:28px;margin-bottom:6px;">${statut===6?'✅':statut===8?'🔵':'❌'}</div>
+         border-radius:12px;text-align:center;">
+         <div style="font-size:24px;margin-bottom:4px;">${statut===6?'✅':statut===8?'🔵':'❌'}</div>
          <div style="font-size:13px;font-weight:700;color:${statut===6?'#16a34a':statut===8?'#0369a1':'#dc2626'};">${sInfo.label}</div>
-         <div style="font-size:11px;color:#999;margin-top:4px;">${statut===6?'Contrat signé — félicitations !':statut===8?'Déjà équipé par un concurrent ou en propre.':'Prospect archivé — aucune action possible'}</div>
+         <div style="font-size:11px;color:#999;margin-top:3px;">${statut===6?'Contrat signé — félicitations !':statut===8?'Déjà équipé par un concurrent ou en propre.':'Prospect archivé — aucune action possible'}</div>
        </div>`
-    : `<button class="act-btn act-devis" onclick="openDevisModal()">
-         <span class="act-icon">📄</span>
-         <div class="act-body">
-           <div>Générer le devis</div>
-           <div class="act-sub">89€ HT/mois — aperçu + téléchargement PDF</div>
-         </div>
-         <span class="act-arr">›</span>
-       </button>
-       <button class="act-btn act-contrat" onclick="openContratModal()">
-         <span class="act-icon">📋</span>
-         <div class="act-body">
-           <div>Générer le contrat</div>
-           <div class="act-sub">Contrat STAR aid pré-rempli — PDF prêt à signer</div>
-         </div>
-         <span class="act-arr">›</span>
-       </button>
-       `;
+    : `<div class="act-2col">
+         <button class="act-btn sm act-devis" onclick="openDevisModal()" title="89€ HT/mois — aperçu + PDF">
+           <span class="act-icon">📄</span>
+           <div class="act-body"><div>Devis</div></div>
+         </button>
+         <button class="act-btn sm act-contrat" onclick="openContratModal()" title="Contrat STAR aid pré-rempli — PDF">
+           <span class="act-icon">📋</span>
+           <div class="act-body"><div>Contrat</div></div>
+         </button>
+       </div>`;
 
-  // ── Suivi commercial (Relancer / Signé / Perdu) ──
+  // ── Suivi commercial (grille compacte) ──
   const relancerBtn = (statut === 2 || statut === 3) ? (() => {
     const nextStatut = statut === 2 ? 3 : 4;
     const nextLabel  = statut === 2 ? 'J+5' : 'J+10';
-    return `<button class="act-btn" onclick="passerEnRelance(${nextStatut})"
+    return `<button class="act-btn sm" onclick="passerEnRelance(${nextStatut})" title="Passer en Relance ${nextLabel}"
                style="background:#f0f9ff;color:#0369a1;border-color:#7dd3fc;">
              <span class="act-icon">🔄</span>
-             <div class="act-body">
-               <div>Relancer</div>
-               <div class="act-sub">Passer en Relance ${nextLabel}</div>
-             </div>
+             <div class="act-body"><div>Relancer ${nextLabel}</div></div>
            </button>`;
   })() : '';
 
   const suiviHtml = isLocked ? '' :
-    `<div class="dsec" style="border:none;padding-top:4px;">
+    `<div class="dsec">
        <h3>📊 Suivi commercial</h3>
-       <div class="act-group" style="margin-top:4px;">
+       <div class="act-2col">
          ${relancerBtn}
-         <button class="act-btn" onclick="setProspectSigne()"
+         <button class="act-btn sm" onclick="setProspectSigne()" title="Contrat signé — verrouille la fiche"
                  style="background:#f0fdf4;color:#16a34a;border-color:#86efac;">
            <span class="act-icon">✅</span>
-           <div class="act-body">
-             <div>Signé</div>
-             <div class="act-sub">Contrat signé — verrouille définitivement la fiche</div>
-           </div>
+           <div class="act-body"><div>Signé</div></div>
          </button>
-         <button class="act-btn" onclick="setProspectDejaEquipe()"
+         <button class="act-btn sm" onclick="setProspectDejaEquipe()" title="Équipé par un concurrent ou en propre"
                  style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;">
            <span class="act-icon">🏥</span>
-           <div class="act-body">
-             <div>Déjà équipé</div>
-             <div class="act-sub">Équipé par un concurrent ou en propre</div>
-           </div>
+           <div class="act-body"><div>Déjà équipé</div></div>
          </button>
-         <button class="act-btn act-perdu" onclick="setProspectPerdu()">
+         <button class="act-btn sm act-perdu" onclick="setProspectPerdu()" title="Refus définitif — irréversible">
            <span class="act-icon">❌</span>
-           <div class="act-body">
-             <div>Perdu</div>
-             <div class="act-sub">Refus définitif — action irréversible</div>
-           </div>
+           <div class="act-body"><div>Perdu</div></div>
          </button>
        </div>
      </div>`;
@@ -3750,140 +3743,126 @@ function renderDetail(r) {
   const _scrollY = detail.querySelector('.detail-body')?.scrollTop || 0;
 
   detail.innerHTML = `
-    <!-- EN-TÊTE -->
+    <!-- EN-TÊTE compact -->
     <div class="detail-header">
       <button class="mob-back" onclick="closeMobileDetail()">← Retour</button>
-      <h2>${esc(r.denomination_usuelle)}</h2>
-      <div class="sub">${esc(r.type_erp||'')} — ${esc(r.libelle_type_erp||'')}
-        <br>${esc(r.commune||'')} ${esc(r.code_postal||'')}</div>
-      ${r.dae_5e_categorie ? `
-      <div style="margin-top:6px;">
-        <span style="display:inline-block;background:#fff3e0;color:#b45309;border:1px solid #fcd34d;
-                     border-radius:4px;font-size:11px;font-weight:700;padding:3px 9px;">
-          📋 5e catégorie : ${esc(r.dae_5e_categorie)}
-        </span>
-      </div>` : ''}
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+        <h2 style="flex:1;min-width:0;">${esc(r.denomination_usuelle)}</h2>
+        <span class="tag ${sInfo.cls}" style="flex-shrink:0;">${statut !== null ? sInfo.label : 'Nouveau'}</span>
+      </div>
+      <div class="sub">${esc(r.type_erp||'')} — ${esc(r.libelle_type_erp||'')} · ${esc(r.commune||'')} ${esc(r.code_postal||'')}
+        ${r.dae_5e_categorie ? ` · 📋 5e cat. : ${esc(r.dae_5e_categorie)}` : ''}
+        ${r.commercial ? ` · 👤 ${esc(r.commercial)}` : ''}</div>
     </div>
 
     <div class="detail-body">
 
-      <!-- TÉLÉPHONE + GOOGLE -->
-      <div class="dsec">
-        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-          <a class="phone-big" href="tel:${esc(r.telephone_google)}" onclick="openCallModal('${r.siret}')">
-            📞 ${esc(r.telephone_google || '—')}
-          </a>
-          ${r.fiche_google_url
-            ? `<a class="google-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener">🔍 Fiche Google</a>`
-            : `<span class="google-btn" style="opacity:.4;cursor:default;" title="Fiche Google non disponible">🔍 Fiche Google</span>`}
-          <button class="btn-contact" onclick="openContact()">
-            👤 Contact
-            ${extraBadge}
-          </button>
-          <button id="allo-dial-btn" onclick="addToAlloDial()"
-            style="display:inline-flex;align-items:center;gap:6px;background:#f0f4ff;color:#3b5bdb;
-                   font-size:12px;font-weight:700;padding:9px 14px;border-radius:6px;
-                   border:1.5px solid #b0c4f8;cursor:pointer;transition:background .15s;white-space:nowrap;">
-            📲 File Allo
-          </button>
-          <button id="allo-sync-btn" onclick="syncAlloCall()"
-            style="display:inline-flex;align-items:center;gap:6px;background:#f8f9fa;color:#6b7280;
-                   font-size:11px;font-weight:700;padding:7px 10px;border-radius:6px;
-                   border:1.5px solid #e5e7eb;cursor:pointer;white-space:nowrap;">
-            🔄
-          </button>
-          <button onclick="openRelanceModal()"
-            style="display:inline-flex;align-items:center;gap:6px;background:#fef9ec;color:#b45309;
-                   font-size:12px;font-weight:700;padding:9px 14px;border-radius:6px;
-                   border:1.5px solid #fcd34d;cursor:pointer;white-space:nowrap;">
-            📅 Planifier relance
-          </button>
-        </div>
+      <!-- BARRE D'ACTIONS -->
+      <div class="action-bar">
+        <a class="phone-big" style="font-size:14px;padding:8px 14px;" href="tel:${esc(r.telephone_google)}" onclick="openCallModal('${r.siret}')">
+          📞 ${esc(r.telephone_google || r.telephone_crm || '—')}
+        </a>
         ${(r.date_relance && r.date_relance >= todayISO()) ? `
-        <div style="display:inline-flex;align-items:center;gap:6px;background:#fef9ec;border:1px solid #fcd34d;
-                    border-radius:6px;padding:5px 10px;font-size:12px;color:#92400e;font-weight:600;margin-bottom:8px;">
-          ⏰ Relance prévue : ${fmtDateLabel(r.date_relance)}
-        </div>` : ''}
-        ${showPhoneCrm ? `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <a href="tel:${esc(r.telephone_crm)}" onclick="openCallModal('${r.siret}')"
-             style="display:inline-flex;align-items:center;gap:6px;background:#f0fff4;color:#1a7a45;
-                    font-size:13px;font-weight:700;padding:6px 12px;border-radius:6px;
-                    border:1.5px solid #86efac;text-decoration:none;">
-            📞 ${esc(r.telephone_crm)}
-          </a>
-          <span style="font-size:11px;color:var(--light);">Contact direct</span>
-          <button onclick="addToAlloDialPhone('${esc(r.telephone_crm)}', this)"
-            style="display:inline-flex;align-items:center;gap:5px;background:#f0f4ff;color:#3b5bdb;
-                   font-size:11px;font-weight:700;padding:6px 11px;border-radius:6px;
-                   border:1.5px solid #b0c4f8;cursor:pointer;white-space:nowrap;">
-            📲 File Allo
-          </button>
-        </div>` : ''}
-        <div class="call-log-txt" id="call-log-txt">${_buildCallLogHtml(r)}</div>
-        <div id="allo-history" style="margin-top:6px;"></div>
-        ${r.commercial
-          ? `<div style="font-size:11px;color:var(--mid);margin-top:5px;">
-               👤 Assigné à : <strong style="color:var(--dark);">${esc(r.commercial)}</strong>
-             </div>`
-          : ''}
-        ${extraContactsHtml}
-      </div>
-
-      <!-- STATUT COMMERCIAL -->
-      <div class="dsec">
-        <h3>📊 Statut commercial</h3>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          ${tunnelHtml}
-        </div>
-        ${lockedBadge}
-      </div>
-
-      <!-- ARGUMENT COMMERCIAL -->
-      ${r.argument_commercial ? `
-      <div class="dsec">
-        <h3>💡 Argument commercial</h3>
-        <div class="arg-box">${esc(r.argument_commercial)}</div>
-      </div>` : ''}
-
-      <!-- NOTES -->
-      <div class="dsec">
-        <h3>📝 Notes</h3>
-        <textarea id="notesArea"
-          style="width:100%;min-height:130px;font-size:13px;padding:10px 12px;
-                 border:1.5px solid var(--border);border-radius:6px;
-                 font-family:Arial;resize:vertical;outline:none;display:block;"
-          placeholder="Objections, remarques, points clés…">${esc(r.notes||'')}</textarea>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-          <span class="save-feedback" id="saveFeedback">✅ Notes enregistrées !</span>
-          <button class="btn btn-red btn-sm" onclick="saveRecord('${r.siret}')">
-            ✔ Enregistrer les notes
-          </button>
-        </div>
-      </div>
-
-      <!-- ACTIONS -->
-      <div class="dsec" style="border:none;">
-        <h3>⚡ Actions commerciales</h3>
-        <div class="act-group" style="margin-top:4px;">
-          ${actionsHtml}
-        </div>
-        ${offerBtnHtml}
-      </div>
-
-      ${suiviHtml}
-
-      <!-- SUPPRIMER -->
-      <div class="dsec" style="border:none;padding-top:0;padding-bottom:18px;">
-        <button onclick="deleteProspect()"
-          style="width:100%;padding:9px 14px;border-radius:6px;border:1.5px dashed #fca5a5;
-                 background:#fff5f5;color:#b91c1c;font-size:12px;font-weight:700;cursor:pointer;
-                 display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;"
-          onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='#fff5f5'">
-          🗑️ Supprimer ce prospect
-          ${DEMO_MODE ? '<span style="font-size:10px;opacity:.7;font-weight:400;">(démo — sans impact réel)</span>' : ''}
+        <button class="abar-btn" onclick="openRelanceModal()" title="Modifier la relance"
+                style="background:#fef9ec;color:#92400e;border-color:#fcd34d;">
+          ⏰ ${fmtDateLabel(r.date_relance)}
+        </button>` : `
+        <button class="abar-btn" onclick="openRelanceModal()" style="background:#fef9ec;color:#b45309;border-color:#fcd34d;">
+          📅 Planifier relance
+        </button>`}
+        <button class="abar-btn" onclick="openContact()" style="color:#2563eb;border-color:#bfdbfe;background:#eff6ff;">
+          👤 Contact ${extraBadge}
         </button>
+        <button id="allo-dial-btn" class="abar-btn" onclick="addToAlloDial()" style="color:#3b5bdb;border-color:#b0c4f8;background:#f0f4ff;">
+          📲 File Allo
+        </button>
+        ${r.fiche_google_url
+          ? `<a class="abar-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener" style="color:var(--red);border-color:#f3c2c8;">🔍 Google</a>`
+          : ''}
+        <button id="allo-sync-btn" class="abar-btn" onclick="syncAlloCall()" title="Synchroniser les appels Allo">🔄</button>
       </div>
+
+      <div class="detail-grid">
+
+        <!-- COLONNE GAUCHE : activité -->
+        <div class="dcol">
+
+          <!-- CONTACT & APPELS -->
+          <div class="dsec">
+            <h3>📞 Contacts & appels</h3>
+            ${showPhoneCrm ? `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+              <a href="tel:${esc(r.telephone_crm)}" onclick="openCallModal('${r.siret}')"
+                 style="display:inline-flex;align-items:center;gap:6px;background:#ecfdf3;color:#15803d;
+                        font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:9px;
+                        border:1.5px solid #bbf7d0;text-decoration:none;">
+                📞 ${esc(r.telephone_crm)}
+              </a>
+              <span style="font-size:10.5px;color:var(--light);">Contact direct</span>
+              <button onclick="addToAlloDialPhone('${esc(r.telephone_crm)}', this)" class="abar-btn"
+                style="color:#3b5bdb;border-color:#b0c4f8;background:#f0f4ff;padding:5px 9px;font-size:10.5px;">
+                📲
+              </button>
+            </div>` : ''}
+            ${extraContactsHtml}
+            <div class="call-log-txt" id="call-log-txt">${_buildCallLogHtml(r)}</div>
+            <div id="allo-history" style="margin-top:6px;"></div>
+          </div>
+
+          <!-- NOTES -->
+          <div class="dsec">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <h3 style="margin-bottom:0;">📝 Notes</h3>
+              <button class="btn btn-red btn-sm" onclick="saveRecord('${r.siret}')">✔ Enregistrer</button>
+            </div>
+            <textarea id="notesArea"
+              style="width:100%;min-height:90px;font-size:12.5px;padding:9px 11px;
+                     border:1.5px solid var(--border);border-radius:10px;
+                     font-family:inherit;resize:vertical;outline:none;display:block;line-height:1.5;"
+              placeholder="Objections, remarques, points clés…">${esc(r.notes||'')}</textarea>
+            <span class="save-feedback" id="saveFeedback">✅ Notes enregistrées !</span>
+          </div>
+
+        </div>
+
+        <!-- COLONNE DROITE : pilotage -->
+        <div class="dcol">
+
+          <!-- STATUT -->
+          <div class="dsec">
+            <h3>📊 Statut commercial</h3>
+            ${tunnelHtml}
+            ${lockedBadge}
+          </div>
+
+          ${suiviHtml}
+
+          <!-- ACTIONS -->
+          <div class="dsec">
+            <h3>⚡ Documents & offre</h3>
+            ${actionsHtml}
+            ${offerBtnHtml}
+          </div>
+
+          <!-- ARGUMENT COMMERCIAL -->
+          ${r.argument_commercial ? `
+          <div class="dsec">
+            <h3>💡 Argument commercial</h3>
+            <div class="arg-box" style="font-size:12px;padding:10px 12px;">${esc(r.argument_commercial)}</div>
+          </div>` : ''}
+
+          <!-- SUPPRIMER -->
+          <button onclick="deleteProspect()"
+            style="width:100%;padding:8px 14px;border-radius:10px;border:1.5px dashed #fecaca;
+                   background:transparent;color:#b91c1c;font-size:11.5px;font-weight:700;cursor:pointer;
+                   display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;font-family:inherit;"
+            onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='transparent'">
+            🗑️ Supprimer ce prospect
+            ${DEMO_MODE ? '<span style="font-size:10px;opacity:.7;font-weight:400;">(démo — sans impact réel)</span>' : ''}
+          </button>
+
+        </div>
+      </div><!-- /detail-grid -->
 
     </div><!-- /detail-body -->
   `;

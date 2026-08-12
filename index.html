@@ -3717,9 +3717,16 @@ function renderDetail(r) {
            </button>`;
   })() : '';
 
+  const hasRelance = r.date_relance && r.date_relance >= todayISO();
   const suiviHtml = isLocked ? '' :
     `<div class="dsec">
-       <h3>📊 Suivi commercial</h3>
+       <h3>⚡ Actions</h3>
+       <button class="act-btn sm" onclick="openRelanceModal()" style="width:100%;margin-bottom:6px;background:#fef9ec;color:#b45309;border-color:#fcd34d;"
+               title="${hasRelance ? 'Modifier la relance planifiée' : 'Choisir une date de relance'}">
+         <span class="act-icon">${hasRelance ? '⏰' : '📅'}</span>
+         <div class="act-body"><div>${hasRelance ? 'Relance : ' + fmtDateLabel(r.date_relance) : 'Planifier une relance'}</div></div>
+         <span class="act-arr">›</span>
+       </button>
        <div class="act-2col">
          ${relancerBtn}
          <button class="act-btn sm" onclick="setProspectSigne()" title="Contrat signé — verrouille la fiche"
@@ -3795,17 +3802,6 @@ function renderDetail(r) {
       <!-- BARRE D'ACTIONS -->
       <div class="action-bar">
         <button class="mob-back" onclick="closeMobileDetail()">← Retour</button>
-        <a class="phone-big" style="font-size:14px;padding:8px 14px;" href="tel:${esc(r.telephone_google)}" onclick="openCallModal('${r.siret}')">
-          📞 ${esc(r.telephone_google || r.telephone_crm || '—')}
-        </a>
-        ${(r.date_relance && r.date_relance >= todayISO()) ? `
-        <button class="abar-btn" onclick="openRelanceModal()" title="Modifier la relance"
-                style="background:#fef9ec;color:#92400e;border-color:#fcd34d;">
-          ⏰ ${fmtDateLabel(r.date_relance)}
-        </button>` : `
-        <button class="abar-btn" onclick="openRelanceModal()" style="background:#fef9ec;color:#b45309;border-color:#fcd34d;">
-          📅 Planifier relance
-        </button>`}
         <button class="abar-btn" onclick="openContact()" style="color:#2563eb;border-color:#bfdbfe;background:#eff6ff;">
           👤 Contact ${extraBadge}
         </button>
@@ -3827,6 +3823,26 @@ function renderDetail(r) {
             <div class="cc-avatar">${esc(initiale)}</div>
             <div class="cc-name">${esc(r.denomination_usuelle)}</div>
             <span class="tag ${sInfo.cls}">${statut !== null ? sInfo.label : 'Nouveau prospect'}</span>
+
+            ${(r.telephone_google || r.telephone_crm) ? `
+            <a class="phone-big" style="font-size:14.5px;padding:10px 14px;width:100%;justify-content:center;margin-top:12px;"
+               href="tel:${esc(r.telephone_google || r.telephone_crm)}" onclick="openCallModal('${r.siret}')">
+              📞 ${esc(r.telephone_google || r.telephone_crm)}
+            </a>` : ''}
+            ${showPhoneCrm ? `
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+              <a href="tel:${esc(r.telephone_crm)}" onclick="openCallModal('${r.siret}')"
+                 style="display:inline-flex;align-items:center;gap:6px;background:#ecfdf3;color:#15803d;
+                        font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:9px;
+                        border:1.5px solid #bbf7d0;text-decoration:none;">
+                📞 ${esc(r.telephone_crm)}
+              </a>
+              <span style="font-size:10.5px;color:var(--light);">Contact direct</span>
+              <button onclick="addToAlloDialPhone('${esc(r.telephone_crm)}', this)" class="abar-btn"
+                style="color:#3b5bdb;border-color:#b0c4f8;background:#f0f4ff;padding:5px 9px;font-size:10.5px;">
+                📲
+              </button>
+            </div>` : ''}
 
             <div style="height:10px;"></div>
 
@@ -3863,30 +3879,23 @@ function renderDetail(r) {
               ${r.statut_geodae ? `<span class="tag" style="background:#e0f2fe;color:#0369a1;">🗺️ ${esc(r.statut_geodae)}</span>` : ''}
               ${r.campagne ? `<span class="tag" style="background:#ede9fe;color:#7c3aed;">📣 ${esc(r.campagne)}</span>` : ''}
             </div>
+
+            ${extraContacts.length ? `
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--grey);">
+              <div style="font-size:10px;font-weight:800;color:var(--light);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">
+                👥 Contacts
+              </div>
+              ${extraContactsHtml}
+            </div>` : ''}
           </div>
         </div>
 
         <!-- COLONNE 2 : activité -->
         <div class="dcol">
 
-          <!-- CONTACT & APPELS -->
+          <!-- APPELS & HISTORIQUE -->
           <div class="dsec">
-            <h3>📞 Contacts & appels</h3>
-            ${showPhoneCrm ? `
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-              <a href="tel:${esc(r.telephone_crm)}" onclick="openCallModal('${r.siret}')"
-                 style="display:inline-flex;align-items:center;gap:6px;background:#ecfdf3;color:#15803d;
-                        font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:9px;
-                        border:1.5px solid #bbf7d0;text-decoration:none;">
-                📞 ${esc(r.telephone_crm)}
-              </a>
-              <span style="font-size:10.5px;color:var(--light);">Contact direct</span>
-              <button onclick="addToAlloDialPhone('${esc(r.telephone_crm)}', this)" class="abar-btn"
-                style="color:#3b5bdb;border-color:#b0c4f8;background:#f0f4ff;padding:5px 9px;font-size:10.5px;">
-                📲
-              </button>
-            </div>` : ''}
-            ${extraContactsHtml}
+            <h3>📞 Appels & historique</h3>
             <div class="call-log-txt" id="call-log-txt">${_buildCallLogHtml(r)}</div>
             <div id="allo-history" style="margin-top:6px;"></div>
           </div>
@@ -3922,7 +3931,7 @@ function renderDetail(r) {
 
           <!-- ACTIONS -->
           <div class="dsec">
-            <h3>⚡ Documents & offre</h3>
+            <h3>📄 Documents & offre</h3>
             ${actionsHtml}
             ${offerBtnHtml}
           </div>

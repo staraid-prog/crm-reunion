@@ -99,6 +99,7 @@ header input[type=search]:focus{background:#fff;border-color:var(--red);box-shad
   #sidebar.open{box-shadow:none;}
   #sidebarBackdrop{display:none!important;}
   .menu-btn{display:none;}
+  .dash-header-btn{display:none;} /* le menu fixe a déjà son bouton Dashboard */
 }
 .sidebar-stats{padding:12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
@@ -773,7 +774,7 @@ body.demo-mode header{background:#fffbeb !important;border-bottom-color:#fde68a;
 <header>
   <button class="menu-btn" onclick="toggleSidebar()" id="menuBtn" title="Filtres & statuts">☰</button>
   <div class="logo">CRM Réunion <em>STAR aid</em></div>
-  <button class="btn btn-outline btn-sm" onclick="showDashboard()"
+  <button class="btn btn-outline btn-sm dash-header-btn" onclick="showDashboard()"
           title="Retour au dashboard">📊 <span class="btn-text">Dashboard</span></button>
   <div class="spacer"></div>
   <button class="btn btn-outline btn-sm mob-search-btn" onclick="toggleMobileSearch()" title="Rechercher" style="display:none;">🔍</button>

@@ -2944,7 +2944,7 @@ function renderFilters() {
       <span class="cnt" id="cnt-mine">…</span></button>`;
   }
   html += `<button class="filter-btn ${filterStatut===-1?'active':''}" onclick="setFilter(-1)">
-    <span class="dot" style="background:#ccc"></span><span class="fc">Tous</span>
+    <span class="dot" style="background:#ccc"></span><span class="fc">📥 À traiter</span>
     <span class="cnt" id="cnt-all">—</span></button>`;
   STATUTS.forEach(s => {
     html += `<button class="filter-btn ${filterStatut===s.id?'active':''}" onclick="setFilter(${s.id})">
@@ -2961,8 +2961,8 @@ function renderFilters() {
       if (el) el.textContent = fmt(count);
     });
   }
-  // Compte "Tous" (sans filtre statut, avec filtres commerciaux actifs)
-  dbSelect('prospects', { countOnly: true, filters: buildStatutCountFilters(null) }).then(({ count }) => {
+  // Compte "À traiter" (prospects sans statut = jamais traités)
+  dbSelect('prospects', { countOnly: true, filters: buildStatutCountFilters(-1) }).then(({ count }) => {
     const el = document.getElementById('cnt-all');
     if (el) el.textContent = fmt(count);
   });
@@ -2986,8 +2986,14 @@ function toggleFilterMine() {
 
 function setFilter(id) {
   filterStatut = id;
+  // Sortir du plan d'action actif : les filtres statut priment
+  _planAction = 'grid';
+  document.querySelectorAll('.pa-item').forEach(b => b.classList.remove('active'));
+  const _bc = document.getElementById('campagne-breadcrumb');
+  if (_bc) _bc.remove();
   hideDashboard();
   document.getElementById('mainEmpty').style.display    = 'none';
+  document.getElementById('campagneSelector').style.display = 'none';
   document.getElementById('prospectList').style.display = 'flex';
   renderFilters();
   loadList(true);

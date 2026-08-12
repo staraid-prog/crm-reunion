@@ -743,6 +743,9 @@ body.demo-mode header{background:#b45309 !important;}
         <button class="pa-item" id="pa-pipeline" onclick="setPlanAction('pipeline')">
           <span class="pa-icon">🔥</span><span class="pa-label">Pipeline</span>
         </button>
+        <button class="pa-item" id="pa-relances" onclick="setPlanAction('relances')">
+          <span class="pa-icon">⏰</span><span class="pa-label">Relances programmées</span>
+        </button>
       </div>
     </div>
 
@@ -886,6 +889,36 @@ body.demo-mode header{background:#b45309 !important;}
     </div>
     <div class="modal-foot">
       <button class="btn btn-grey" onclick="closeCallModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL — PLANIFIER UNE RELANCE
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="relanceModal">
+  <div class="modal-box" style="width:360px;">
+    <div class="modal-head">
+      <h3>📅 Planifier une relance</h3>
+      <button class="cls" onclick="closeRelanceModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 18px;">
+      <div id="relance-current" style="display:none;background:#fef9ec;border:1.5px solid #fcd34d;
+           border-radius:6px;padding:8px 12px;font-size:12px;color:#92400e;margin-bottom:14px;"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+        <button class="btn btn-grey" style="font-size:12px;padding:7px 10px;" onclick="setRelanceQuick(1)">Demain</button>
+        <button class="btn btn-grey" style="font-size:12px;padding:7px 10px;" onclick="setRelanceQuick(2)">+2 jours</button>
+        <button class="btn btn-grey" style="font-size:12px;padding:7px 10px;" onclick="setRelanceQuick(7)">+1 semaine</button>
+        <button class="btn btn-grey" style="font-size:12px;padding:7px 10px;" onclick="setRelanceQuick(14)">+2 semaines</button>
+      </div>
+      <label style="font-size:11px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.4px;">Ou choisir une date</label>
+      <input type="date" id="relance-date-input"
+        style="width:100%;margin-top:6px;padding:10px 12px;font-size:14px;border:1.5px solid var(--border);
+               border-radius:6px;outline:none;font-family:Arial;">
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-grey" onclick="closeRelanceModal()">Annuler</button>
+      <button class="btn btn-red" onclick="saveRelance()">✔ Planifier</button>
     </div>
   </div>
 </div>
@@ -2767,20 +2800,23 @@ async function renderDashToday(container) {
 
   const { data } = await dbSelect('prospects', {
     cols:    'siret,denomination_usuelle,commune,statut_crm',
-    filters: [`date_relance=eq.${today}`, 'statut_crm=in.(2,3,4)', ...myF],
+    filters: [`date_relance=eq.${today}`, `or=(statut_crm.not.in.(6,7),statut_crm.is.null)`, ...myF],
     limit:   300,
     order:   'denomination_usuelle'
   });
   const rows = data || [];
 
-  // Grouper par statut
-  const groups = { 2:[], 3:[], 4:[] };
-  rows.forEach(r => { if (groups[r.statut_crm]) groups[r.statut_crm].push(r); });
+  // Grouper par statut (les relances manuelles hors statut 2/3/4 vont dans "manual")
+  const groups = { 2:[], 3:[], 4:[], manual:[] };
+  rows.forEach(r => {
+    if (groups[r.statut_crm]) groups[r.statut_crm].push(r);
+    else groups.manual.push(r);
+  });
 
   const todayLabel = fmtDateLabel(today);
-  const LABELS = { 2:'Relance J+2', 3:'Relance J+5', 4:'Relance J+10' };
-  const DOTS   = { 2:'#06b6d4',     3:'#8b5cf6',     4:'#f97316'      };
-  const CLS    = { 2:'j2',          3:'j5',           4:'j10'          };
+  const LABELS = { 2:'Relance J+2', 3:'Relance J+5', 4:'Relance J+10', manual:'Relance programmée' };
+  const DOTS   = { 2:'#06b6d4',     3:'#8b5cf6',     4:'#f97316',      manual:'#b45309'           };
+  const CLS    = { 2:'j2',          3:'j5',           4:'j10',          manual:''                  };
 
   let html = `<div style="padding:8px 0 4px;">
     <div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;
@@ -2793,7 +2829,7 @@ async function renderDashToday(container) {
       <div style="font-size:12px;margin-top:5px;color:var(--light);">Tout est à jour pour aujourd'hui !</div>
     </div>`;
   } else {
-    [2, 3, 4].forEach(s => {
+    ['manual', 2, 3, 4].forEach(s => {
       if (!groups[s].length) return;
       html += `<div style="margin-bottom:16px;">
         <div class="dash-section-title">
@@ -2822,7 +2858,7 @@ async function renderDashCalendar(container) {
 
   const { data } = await dbSelect('prospects', {
     cols:    'siret,denomination_usuelle,commune,statut_crm,date_relance',
-    filters: ['statut_crm=in.(2,3,4)', ...myF],
+    filters: ['or=(statut_crm.in.(2,3,4),and(date_relance.not.is.null,statut_crm.not.in.(6,7)),and(date_relance.not.is.null,statut_crm.is.null))', ...myF],
     limit:   500,
     order:   'denomination_usuelle'
   });
@@ -2842,7 +2878,7 @@ async function renderDashCalendar(container) {
 
   // Prospects sans date OU avec date passée/aujourd'hui (mauvais backfill) → recalculer correctement
   const joursMap = { 2: 2, 3: 5, 4: 10 };
-  const needsRecalc = rows.filter(r => !r.date_relance || !/^\d{4}-\d{2}-\d{2}$/.test(r.date_relance) || r.date_relance <= today);
+  const needsRecalc = rows.filter(r => [2,3,4].includes(r.statut_crm) && (!r.date_relance || !/^\d{4}-\d{2}-\d{2}$/.test(r.date_relance) || r.date_relance <= today));
   if (needsRecalc.length > 0) {
     needsRecalc.forEach(r => {
       const jours = joursMap[r.statut_crm] || 2;
@@ -3088,7 +3124,7 @@ let _planAction = 'grid';
 function setPlanAction(view) {
   _planAction = view;
   // Mettre à jour l'état actif des boutons
-  ['grid','appeler','linkedin','top20','campagne','pipeline'].forEach(v => {
+  ['grid','appeler','linkedin','top20','campagne','pipeline','relances'].forEach(v => {
     const el = document.getElementById('pa-' + v);
     if (el) el.classList.toggle('active', v === view);
   });
@@ -3124,6 +3160,8 @@ function setPlanAction(view) {
     filterStatut = '__top20__';
   } else if (view === 'pipeline') {
     filterStatut = '__pipeline__';
+  } else if (view === 'relances') {
+    filterStatut = '__relances__';
   }
   loadList(true);
 }
@@ -3225,6 +3263,10 @@ function buildFilters(statut = filterStatut) {
   } else if (_planAction === 'top20') {
     // Top 20 par score de confiance, sans condition statut_crm
     f.push(`score_confiance_erp=not.is.null`);
+  } else if (_planAction === 'relances') {
+    // Toutes les relances programmées (aujourd'hui et à venir)
+    f.push(`date_relance=not.is.null`);
+    f.push(`or=(statut_crm.not.in.(6,7),statut_crm.is.null)`);
   } else if (_planAction === 'campagne') {
     if (_currentCampagne) {
       f.push(`campagne=eq.${encodeURIComponent(_currentCampagne)}`);
@@ -3285,10 +3327,11 @@ async function loadList(reset = false) {
   let data, count;
   try {
     const isTop20 = _planAction === 'top20';
+    const isRelances = _planAction === 'relances';
     ({ data, count } = await dbSelect('prospects', {
-      cols: 'siret,denomination_usuelle,commune',
+      cols: isRelances ? 'siret,denomination_usuelle,commune,date_relance' : 'siret,denomination_usuelle,commune',
       filters,
-      order: isTop20 ? 'score_confiance_erp.desc' : 'denomination_usuelle',
+      order: isTop20 ? 'score_confiance_erp.desc' : (isRelances ? 'date_relance' : 'denomination_usuelle'),
       limit: isTop20 ? 20 : PAGE,
       offset: isTop20 ? 0 : offset
     }));
@@ -3307,13 +3350,25 @@ async function loadList(reset = false) {
     return;
   }
 
+  const _today = todayISO();
   data.forEach(r => {
     const div = document.createElement('div');
     div.className = 'prospect-item' + (r.siret === currentSiret ? ' active' : '');
+    let relanceBadge = '';
+    if (_planAction === 'relances' && r.date_relance) {
+      const isPast  = r.date_relance < _today;
+      const isToday = r.date_relance === _today;
+      const color = isPast ? '#dc2626' : isToday ? '#b45309' : '#6b7280';
+      const bg    = isPast ? '#fef2f2' : isToday ? '#fef9ec' : '#f8f9fa';
+      relanceBadge = `<div style="font-size:10px;font-weight:700;color:${color};background:${bg};
+        display:inline-block;border-radius:4px;padding:1px 6px;margin-top:3px;">
+        ${isPast ? '⚠️ ' : isToday ? '📅 ' : '⏰ '}${fmtDateLabel(r.date_relance)}</div>`;
+    }
     div.innerHTML = `
       <div class="pi-body">
         <div class="pi-name">${esc(r.denomination_usuelle)}</div>
         <div class="pi-meta">${esc(r.commune||'—')}</div>
+        ${relanceBadge}
       </div>
       <span class="pi-arrow">›</span>`;
     div.onclick = () => selectProspect(r.siret, div);
@@ -3595,7 +3650,18 @@ function renderDetail(r) {
                    border:1.5px solid #e5e7eb;cursor:pointer;white-space:nowrap;">
             🔄
           </button>
+          <button onclick="openRelanceModal()"
+            style="display:inline-flex;align-items:center;gap:6px;background:#fef9ec;color:#b45309;
+                   font-size:12px;font-weight:700;padding:9px 14px;border-radius:6px;
+                   border:1.5px solid #fcd34d;cursor:pointer;white-space:nowrap;">
+            📅 Planifier relance
+          </button>
         </div>
+        ${(r.date_relance && r.date_relance >= todayISO()) ? `
+        <div style="display:inline-flex;align-items:center;gap:6px;background:#fef9ec;border:1px solid #fcd34d;
+                    border-radius:6px;padding:5px 10px;font-size:12px;color:#92400e;font-weight:600;margin-bottom:8px;">
+          ⏰ Relance prévue : ${fmtDateLabel(r.date_relance)}
+        </div>` : ''}
         ${showPhoneCrm ? `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
           <a href="tel:${esc(r.telephone_crm)}" onclick="openCallModal('${r.siret}')"
@@ -3944,6 +4010,44 @@ function openCallModal(siret) {
 function closeCallModal() {
   document.getElementById('callModal').classList.add('hidden');
   _callSiret = null;
+}
+
+/* ─── PLANIFIER UNE RELANCE ─────────────────────────────── */
+function openRelanceModal() {
+  const r = _currentRecord;
+  if (!r) return;
+  const input = document.getElementById('relance-date-input');
+  input.min = todayISO();
+  input.value = (r.date_relance && r.date_relance >= todayISO()) ? r.date_relance : '';
+  const cur = document.getElementById('relance-current');
+  if (r.date_relance) {
+    cur.style.display = 'block';
+    cur.innerHTML = `⏰ Relance actuelle : <strong>${fmtDateLabel(r.date_relance)}</strong>`;
+  } else {
+    cur.style.display = 'none';
+  }
+  document.getElementById('relanceModal').classList.remove('hidden');
+}
+
+function closeRelanceModal() {
+  document.getElementById('relanceModal').classList.add('hidden');
+}
+
+function setRelanceQuick(jours) {
+  document.getElementById('relance-date-input').value = calcRelanceDate(jours);
+}
+
+async function saveRelance() {
+  const r = _currentRecord;
+  if (!r) return;
+  const date = document.getElementById('relance-date-input').value;
+  if (!date) { toast('Choisissez une date de relance', true); return; }
+  const ok = await dbUpdate('prospects', r.siret, { date_relance: date });
+  if (!ok) { toast('Erreur lors de l\'enregistrement', true); return; }
+  r.date_relance = date;
+  closeRelanceModal();
+  toast(`📅 Relance planifiée : ${fmtDateLabel(date)}`);
+  selectProspect(r.siret, null);
 }
 
 /* Rappel visuel de raccrocher dans Allo (le hangup IPC n'est pas accessible depuis le web) */
@@ -5840,6 +5944,7 @@ function toast(msg, err = false) {
 document.addEventListener('click', e => {
   const modals = [
     { id:'callModal',     close: closeCallModal    },
+    { id:'relanceModal',  close: closeRelanceModal },
     { id:'contactModal',  close: closeContact      },
     { id:'confirmModal',  close: cancelConfirm     },
     { id:'mailModal',     close: closeMailModal    },

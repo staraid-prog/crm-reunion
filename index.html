@@ -199,6 +199,18 @@ header input[type=search]:focus{background:#fff;border-color:var(--red);box-shad
 .cc-row a:hover{text-decoration:underline;}
 .cc-row .ccl{color:var(--light);font-weight:600;}
 .cc-badges{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 2px;}
+/* Contacts accordéon */
+.ct-acc{background:var(--inset);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;overflow:hidden;cursor:pointer;transition:all .15s;}
+.ct-acc:hover{border-color:#c9d2dc;}
+.ct-acc.open{background:#fff;border-color:#f3c2c8;box-shadow:var(--sh-sm);}
+.ct-acc-head{display:flex;align-items:center;gap:7px;padding:9px 12px;user-select:none;}
+.ct-acc-head .ctn{font-weight:700;font-size:12.5px;color:var(--dark);}
+.ct-acc-head .ctf{font-size:11.5px;color:var(--light);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ct-acc-head .ctc{font-size:10px;color:var(--light);transition:transform .18s;flex-shrink:0;}
+.ct-acc.open .ct-acc-head .ctc{transform:rotate(180deg);}
+.ct-acc-body{display:none;padding:2px 12px 11px;border-top:1px dashed var(--border);}
+.ct-acc.open .ct-acc-body{display:block;}
+.ct-acc-row{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:9px;}
 
 /* FICHE — mini dashboard */
 .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:10px;padding:10px 12px 14px;align-items:start;}
@@ -3652,25 +3664,44 @@ function renderDetail(r) {
   const showPhoneCrm = r.telephone_crm && r.telephone_google && crmE164 !== googleE164;
 
   const extraContactsHtml = extraContacts.length > 0
-    ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
+    ? `<div style="margin-top:8px;">
          ${extraContacts.map(c => {
            // Numéro identique à celui de la société → on ne le répète pas
            const isDup = c.telephone && phoneToE164(c.telephone) === mainE164;
+           const hasDetails = (c.telephone && !isDup) || c.mail || isDup;
            return `
-           <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mid);background:#f8f9fa;border-radius:5px;padding:5px 10px;">
-             <span style="font-weight:700;color:var(--dark);">${esc((c.prenom||'')+' '+(c.nom||'')).trim() || '—'}</span>
-             ${c.fonction ? `<span style="color:var(--light);">· ${esc(c.fonction)}</span>` : ''}
-             ${(c.telephone && !isDup) ? `
-               <div style="margin-left:auto;display:flex;align-items:center;gap:5px;">
-                 <a href="tel:${esc(c.telephone)}" onclick="openCallModal('${r.siret}')" style="color:#1a7a45;font-weight:700;text-decoration:none;">📞 ${esc(c.telephone)}</a>
-                 <button onclick="addToAlloDialPhone('${esc(c.telephone)}', this)"
+           <div class="ct-acc" onclick="this.classList.toggle('open')">
+             <div class="ct-acc-head">
+               <span class="ctn">${esc((c.prenom||'')+' '+(c.nom||'')).trim() || '—'}</span>
+               <span class="ctf">${c.fonction ? '· ' + esc(c.fonction) : ''}</span>
+               <span class="ctc">▾</span>
+             </div>
+             <div class="ct-acc-body">
+               ${(c.telephone && !isDup) ? `
+               <div class="ct-acc-row">
+                 <a href="tel:${esc(c.telephone)}" onclick="event.stopPropagation();openCallModal('${r.siret}')"
+                    style="display:inline-flex;align-items:center;gap:6px;background:#ecfdf3;color:#15803d;
+                           font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;
+                           border:1.5px solid #bbf7d0;text-decoration:none;">
+                   📞 ${esc(c.telephone)}
+                 </a>
+                 <button onclick="event.stopPropagation();addToAlloDialPhone('${esc(c.telephone)}', this)"
                    title="Pousser ce numéro vers Allo"
-                   style="background:#f0f4ff;color:#3b5bdb;border:1px solid #b0c4f8;border-radius:5px;
-                          padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                   style="background:#f0f4ff;color:#3b5bdb;border:1px solid #b0c4f8;border-radius:8px;
+                          padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;">
                    📲
                  </button>
-               </div>` : isDup ? `<span style="margin-left:auto;font-size:10.5px;color:var(--light);font-style:italic;">n° société</span>` : ''}
-             ${c.mail ? `<a href="mailto:${esc(c.mail)}" style="color:var(--red);font-weight:700;text-decoration:none;${(c.telephone && !isDup)?'':'margin-left:auto'}">✉️</a>` : ''}
+               </div>` : isDup ? `
+               <div class="ct-acc-row" style="color:var(--light);font-style:italic;font-size:11px;">
+                 📞 Même numéro que la société
+               </div>` : ''}
+               ${c.mail ? `
+               <div class="ct-acc-row">
+                 <a href="mailto:${esc(c.mail)}" onclick="event.stopPropagation()"
+                    style="color:#2563eb;font-weight:600;text-decoration:none;font-size:12px;">✉️ ${esc(c.mail)}</a>
+               </div>` : ''}
+               ${!hasDetails ? `<div class="ct-acc-row" style="color:var(--light);font-style:italic;font-size:11px;">Aucune coordonnée — ✏️ pour compléter</div>` : ''}
+             </div>
            </div>`;
          }).join('')}
        </div>`
@@ -3809,9 +3840,6 @@ function renderDetail(r) {
       <!-- BARRE D'ACTIONS -->
       <div class="action-bar">
         <button class="mob-back" onclick="closeMobileDetail()">← Retour</button>
-        <button class="abar-btn" onclick="openContact()" style="color:#2563eb;border-color:#bfdbfe;background:#eff6ff;">
-          👤 Contact ${extraBadge}
-        </button>
         ${r.fiche_google_url
           ? `<a class="abar-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener" style="color:var(--red);border-color:#f3c2c8;">🔍 Google</a>`
           : ''}
@@ -4041,18 +4069,8 @@ async function saveContact() {
   if (ok) {
     if (_currentRecord) Object.assign(_currentRecord, updates);
     _additionalContacts = cleanedContacts;
-    const h2 = document.querySelector('.detail-header h2');
-    if (h2) h2.textContent = updates.denomination_usuelle;
-    // Mettre à jour le badge dans la fiche
-    const badge = document.getElementById('contact-extra-badge');
-    if (badge) {
-      if (cleanedContacts.length > 0) {
-        badge.textContent = '+' + cleanedContacts.length;
-        badge.style.display = 'inline';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
+    // Re-rendre la fiche : carte société + contacts à jour
+    if (_currentRecord) renderDetail(_currentRecord);
     toast(`Contact enregistré ✓${cleanedContacts.length > 0 ? ' — ' + cleanedContacts.length + ' contact(s) supp.' : ''}`);
     closeContact();
   } else {

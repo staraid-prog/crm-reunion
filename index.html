@@ -217,7 +217,8 @@ header input[type=search]:focus{background:#fff;border-color:var(--red);box-shad
 .ct-acc.open{background:#fff;border-color:#f3c2c8;box-shadow:var(--sh-sm);}
 .ct-acc-head{display:flex;align-items:center;gap:7px;padding:9px 12px;user-select:none;}
 .ct-acc-head .ctn{font-weight:700;font-size:12.5px;color:var(--dark);}
-.ct-acc-head .ctf{font-size:11.5px;color:var(--light);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ct-acc-head .ctf{font-size:10.5px;font-weight:700;color:#4f46e5;background:#e0e7ff;border-radius:99px;padding:2px 9px;flex-shrink:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;}
+.ct-acc-head .ct-spacer{flex:1;}
 .ct-acc-head .ctc{font-size:10px;color:var(--light);transition:transform .18s;flex-shrink:0;}
 .ct-acc.open .ct-acc-head .ctc{transform:rotate(180deg);}
 .ct-acc-body{display:none;padding:2px 12px 11px;border-top:1px dashed var(--border);}
@@ -3688,7 +3689,8 @@ function renderDetail(r) {
            <div class="ct-acc" onclick="this.classList.toggle('open')">
              <div class="ct-acc-head">
                <span class="ctn">${esc((c.prenom||'')+' '+(c.nom||'')).trim() || '—'}</span>
-               <span class="ctf">${c.fonction ? '· ' + esc(c.fonction) : ''}</span>
+               ${c.fonction ? `<span class="ctf">${esc(c.fonction)}</span>` : ''}
+               <span class="ct-spacer"></span>
                <span class="ctc">▾</span>
              </div>
              <div class="ct-acc-body">

@@ -3180,6 +3180,7 @@ function renderFilters() {
 
 function toggleFilterMine() {
   filterMine = !filterMine;
+  closeSidebar();
   hideDashboard();
   document.getElementById('mainEmpty').style.display    = 'none';
   document.getElementById('prospectList').style.display = 'flex';
@@ -3189,6 +3190,7 @@ function toggleFilterMine() {
 
 function setFilter(id) {
   filterStatut = id;
+  closeSidebar();
   // Sortir du plan d'action actif : les filtres statut priment
   _planAction = 'grid';
   document.querySelectorAll('.pa-item').forEach(b => b.classList.remove('active'));
@@ -3332,6 +3334,7 @@ function selectCampagne(name) {
 let _planAction = 'grid';
 function setPlanAction(view) {
   _planAction = view;
+  closeSidebar();
   // Mettre à jour l'état actif des boutons
   ['grid','appeler','linkedin','top20','campagne','pipeline','relances'].forEach(v => {
     const el = document.getElementById('pa-' + v);

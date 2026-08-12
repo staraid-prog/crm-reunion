@@ -89,6 +89,17 @@ header input[type=search]:focus{background:#fff;border-color:var(--red);box-shad
   z-index:299;cursor:pointer;
 }
 #sidebarBackdrop.show{display:block;}
+/* ── Desktop : menu fixe intégré au layout (plus de tiroir) ── */
+@media (min-width:901px){
+  #sidebar{
+    position:static;transform:none;transition:none;
+    height:auto;width:265px;flex-shrink:0;
+    box-shadow:none;border-right:1px solid var(--border);
+  }
+  #sidebar.open{box-shadow:none;}
+  #sidebarBackdrop{display:none!important;}
+  .menu-btn{display:none;}
+}
 .sidebar-stats{padding:12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .stat-box{background:var(--grey);border:1px solid transparent;border-radius:var(--r-md);padding:10px 8px;text-align:center;cursor:pointer;transition:all .15s;}

@@ -4020,9 +4020,18 @@ function openRelanceModal() {
   input.min = todayISO();
   input.value = (r.date_relance && r.date_relance >= todayISO()) ? r.date_relance : '';
   const cur = document.getElementById('relance-current');
-  if (r.date_relance) {
+  if (r.date_relance && r.date_relance < todayISO()) {
     cur.style.display = 'block';
-    cur.innerHTML = `⏰ Relance actuelle : <strong>${fmtDateLabel(r.date_relance)}</strong>`;
+    cur.style.background = '#fef2f2';
+    cur.style.borderColor = '#fca5a5';
+    cur.style.color = '#b91c1c';
+    cur.innerHTML = `⚠️ Relance dépassée : <strong>${fmtDateLabel(r.date_relance)}</strong> — planifiez une nouvelle date`;
+  } else if (r.date_relance) {
+    cur.style.display = 'block';
+    cur.style.background = '#fef9ec';
+    cur.style.borderColor = '#fcd34d';
+    cur.style.color = '#92400e';
+    cur.innerHTML = `⏰ Relance prévue : <strong>${fmtDateLabel(r.date_relance)}</strong>`;
   } else {
     cur.style.display = 'none';
   }

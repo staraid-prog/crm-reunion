@@ -3643,31 +3643,38 @@ function renderDetail(r) {
     ? `<span id="contact-extra-badge" style="background:var(--red);color:#fff;border-radius:8px;padding:1px 7px;font-size:10px;margin-left:4px;">+${extraContacts.length}</span>`
     : `<span id="contact-extra-badge" style="display:none;background:var(--red);color:#fff;border-radius:8px;padding:1px 7px;font-size:10px;margin-left:4px;"></span>`;
 
+  // ── Numéros : dédupliqués sur toute la fiche ──
+  const crmE164    = phoneToE164(r.telephone_crm  || '');
+  const googleE164 = phoneToE164(r.telephone_google || '');
+  const mainPhone  = r.telephone_google || r.telephone_crm || '';
+  const mainE164   = phoneToE164(mainPhone);
+  // "Contact direct" seulement si les DEUX numéros existent et diffèrent
+  const showPhoneCrm = r.telephone_crm && r.telephone_google && crmE164 !== googleE164;
+
   const extraContactsHtml = extraContacts.length > 0
     ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
-         ${extraContacts.map(c => `
+         ${extraContacts.map(c => {
+           // Numéro identique à celui de la société → on ne le répète pas
+           const isDup = c.telephone && phoneToE164(c.telephone) === mainE164;
+           return `
            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mid);background:#f8f9fa;border-radius:5px;padding:5px 10px;">
              <span style="font-weight:700;color:var(--dark);">${esc((c.prenom||'')+' '+(c.nom||'')).trim() || '—'}</span>
              ${c.fonction ? `<span style="color:var(--light);">· ${esc(c.fonction)}</span>` : ''}
-             ${c.telephone ? `
+             ${(c.telephone && !isDup) ? `
                <div style="margin-left:auto;display:flex;align-items:center;gap:5px;">
                  <a href="tel:${esc(c.telephone)}" onclick="openCallModal('${r.siret}')" style="color:#1a7a45;font-weight:700;text-decoration:none;">📞 ${esc(c.telephone)}</a>
                  <button onclick="addToAlloDialPhone('${esc(c.telephone)}', this)"
-                   title="Ajouter à la file Allo"
+                   title="Pousser ce numéro vers Allo"
                    style="background:#f0f4ff;color:#3b5bdb;border:1px solid #b0c4f8;border-radius:5px;
                           padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
                    📲
                  </button>
-               </div>` : ''}
-             ${c.mail ? `<a href="mailto:${esc(c.mail)}" style="color:var(--red);font-weight:700;text-decoration:none;${c.telephone?'':'margin-left:auto'}">✉️</a>` : ''}
-           </div>`).join('')}
+               </div>` : isDup ? `<span style="margin-left:auto;font-size:10.5px;color:var(--light);font-style:italic;">n° société</span>` : ''}
+             ${c.mail ? `<a href="mailto:${esc(c.mail)}" style="color:var(--red);font-weight:700;text-decoration:none;${(c.telephone && !isDup)?'':'margin-left:auto'}">✉️</a>` : ''}
+           </div>`;
+         }).join('')}
        </div>`
     : '';
-
-  // Affiche telephone_crm séparément si différent du numéro Google
-  const crmE164    = phoneToE164(r.telephone_crm  || '');
-  const googleE164 = phoneToE164(r.telephone_google || '');
-  const showPhoneCrm = r.telephone_crm && crmE164 !== googleE164;
 
   // ── Tunnel statut (étapes 0 à 5 — grille 3 colonnes) ──
   const tunnelHtml = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
@@ -3805,9 +3812,6 @@ function renderDetail(r) {
         <button class="abar-btn" onclick="openContact()" style="color:#2563eb;border-color:#bfdbfe;background:#eff6ff;">
           👤 Contact ${extraBadge}
         </button>
-        <button id="allo-dial-btn" class="abar-btn" onclick="addToAlloDial()" style="color:#3b5bdb;border-color:#b0c4f8;background:#f0f4ff;">
-          📲 File Allo
-        </button>
         ${r.fiche_google_url
           ? `<a class="abar-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener" style="color:var(--red);border-color:#f3c2c8;">🔍 Google</a>`
           : ''}
@@ -3824,11 +3828,19 @@ function renderDetail(r) {
             <div class="cc-name">${esc(r.denomination_usuelle)}</div>
             <span class="tag ${sInfo.cls}">${statut !== null ? sInfo.label : 'Nouveau prospect'}</span>
 
-            ${(r.telephone_google || r.telephone_crm) ? `
-            <a class="phone-big" style="font-size:14.5px;padding:10px 14px;width:100%;justify-content:center;margin-top:12px;"
-               href="tel:${esc(r.telephone_google || r.telephone_crm)}" onclick="openCallModal('${r.siret}')">
-              📞 ${esc(r.telephone_google || r.telephone_crm)}
-            </a>` : ''}
+            ${mainPhone ? `
+            <div style="display:flex;gap:6px;margin-top:12px;">
+              <a class="phone-big" style="font-size:14.5px;padding:10px 14px;flex:1;justify-content:center;"
+                 href="tel:${esc(mainPhone)}" onclick="openCallModal('${r.siret}')">
+                📞 ${esc(mainPhone)}
+              </a>
+              <button id="allo-dial-btn" onclick="addToAlloDialPhone('${esc(mainPhone)}', this)"
+                title="Pousser le n° société vers Allo"
+                style="flex-shrink:0;width:44px;border-radius:var(--r-md);background:#f0f4ff;color:#3b5bdb;
+                       border:1.5px solid #b0c4f8;font-size:16px;cursor:pointer;font-family:inherit;">
+                📲
+              </button>
+            </div>` : ''}
             ${showPhoneCrm ? `
             <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
               <a href="tel:${esc(r.telephone_crm)}" onclick="openCallModal('${r.siret}')"

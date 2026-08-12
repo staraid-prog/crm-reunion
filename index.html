@@ -3815,7 +3815,6 @@ function renderDetail(r) {
         ${r.fiche_google_url
           ? `<a class="abar-btn" href="${esc(googleUrl)}" target="_blank" rel="noopener" style="color:var(--red);border-color:#f3c2c8;">🔍 Google</a>`
           : ''}
-        <button id="allo-sync-btn" class="abar-btn" onclick="syncAlloCall()" title="Synchroniser les appels Allo">🔄</button>
       </div>
 
       <div class="detail-grid">
@@ -3907,7 +3906,14 @@ function renderDetail(r) {
 
           <!-- APPELS & HISTORIQUE -->
           <div class="dsec">
-            <h3>📞 Appels & historique</h3>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <h3 style="margin-bottom:0;padding-bottom:0;border-bottom:none;">📞 Appels & historique</h3>
+              <button id="allo-sync-btn" class="abar-btn" onclick="syncAlloCall()"
+                      title="Synchroniser manuellement les appels et résumés Allo"
+                      style="padding:5px 10px;font-size:11px;">
+                🔄 Synchroniser
+              </button>
+            </div>
             <div class="call-log-txt" id="call-log-txt">${_buildCallLogHtml(r)}</div>
             <div id="allo-history" style="margin-top:6px;"></div>
           </div>

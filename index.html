@@ -1124,7 +1124,7 @@ body.demo-mode header{background:#fffbeb !important;border-bottom-color:#fde68a;
     <div class="modal-body">
       <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 14px;
                   font-size:12px;color:#1e40af;margin-bottom:14px;line-height:1.5;">
-        📧 Envoie directement le mail <strong>"Audit défibrillateur offert"</strong> (mail designé STAR aid)
+        📧 Envoie directement le mail <strong>"Proposition d'audit gratuit"</strong>
         au contact sélectionné. Le prospect passe en Relance J+2.
       </div>
       <label style="font-size:11px;font-weight:800;color:var(--mid);text-transform:uppercase;letter-spacing:.4px;">À qui l'adresser ?</label>
@@ -5261,86 +5261,51 @@ function sendContratByGmail() {
 }
 
 /* ─── OFFRE COMMERCIALE — MODAL + ENVOI ─────────────────── */
-/* ─── EMAIL AUDIT GRATUIT ───────────────────────────────── */
-const AUDIT_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAMgAAABHAQMAAAB4cJrQAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAArlJREFUeNrdlE9rXUUYxn8z55BzFjXnLC+pNAfsukRESCSYEyrdKnTTbvQuu1AQF6JUmwkWddWWfgAbwY/Q1oIhndYuLgi9yabEhXoao96NOmpr56aTebu4N8kVG5cVfXczD8/wPn8YeMw4oNDsN/85xPFP868onWRyH6Sx7QYVALIAid/BE/lNPIUYYE4KilhIk5CIzeShBObkJ+MQ6eryUyAFpnJSNDUlKKiYzT6SJjOJ+EJEIjER4xKfiQ6hP1PlsPhSCSi1tW0g7W2hp2MN1LBBD9A9LORLYgZbj+8anDY0UBqsRuqBmj4ByC0OZFfpwQqAABiAQ9D8xTcPJfihOxaACwAxDt6BWXA6B5h+nNc/AtAZ5L8qh/YQZYE3gcx9x7VRTm8aYBPwB+TdM4PbdwC9NQaqAY7063RqlCPzw4Ytw6nivdFMOwZtNQte/U491PIxoAn1bjFvjrZTEyE1fT5rBGXYGEEGqvm2YhGaPU4KFQhnt8GWWAXALShTgHxgXQOmGJ5AD/k1Oc7IMIUNqDTAU0qDxbcjfqc7tb6gGkAqNgkEQkUFzmB0Djy9s7+Hkhp8W6FvjVkAg0NwxHFlILTG0N+3DNNQ0gezhCxGDzHzLnW/7lVh6S7sdKchCXuyx4FCLDAnf49fRYDM8/+bA/v+LgFogTLqA6hIUGcTIOXBpWI1njk2e/rLr7qdV90f3e7p7sudtYUieea5idezFzZ++GVlc3n9Z//1xW/W1tLlo180moUyrW6wHay9Zum5Kct1X+WI5tzM5yq6+KyZN4y3y/Vs5m1WDrf+1CdXzE0hZ3v+jZr4yknD/edRW9zX5+9Nvo92evUSS/Ze73ynv/oJL4Ze1NQuctQnH/LWemoMl2s9kb8Wael47sb15ipjV9p3Fx7ePhEOtmeOP7DNxJ0n5bSS/ZBHbl8hWAWIeqgAAAAASUVORK5CYII=';
-
-function buildAuditEmailHtml(greetingName) {
+/* ─── EMAIL AUDIT GRATUIT (texte simple) ───────────────── */
+function buildAuditEmailText(greetingName) {
   const senderName  = currentUser ? (currentUser.prenom + ' ' + (currentUser.nom || '').toUpperCase()) : 'Mathieu MICHON';
   const senderEmail = getSenderEmail();
-  const bonjour = greetingName ? `Bonjour ${esc(greetingName)},` : 'Bonjour,';
-  const check = (txt, last) => `<tr>
-    <td width="22" valign="top" style="font-family:Arial,sans-serif;font-size:14px;color:#C9302C;font-weight:900;line-height:1.5;">&#10003;</td>
-    <td style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#1C1C1E;${last ? '' : 'padding-bottom:10px;'}">${txt}</td>
-  </tr>`;
-  return `<!DOCTYPE html>
-<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STAR aid : proposition d'audit gratuit de vos défibrillateurs</title>
-<style>
-  body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
-  img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}
-  body{margin:0;padding:0;width:100%!important;background:#FFFFFF;}
-  a{color:#C9302C;}
-  @media only screen and (max-width:620px){
-    .container{width:100%!important;}
-    .px{padding-left:22px!important;padding-right:22px!important;}
-    .h1{font-size:22px!important;}
-  }
-</style></head><body>
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#FFFFFF;">Suite à notre échange, STAR aid vous propose un audit gratuit de vos défibrillateurs.</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;"><tr><td align="center" style="padding:20px 10px;">
-<table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#FFFFFF;border-radius:6px;overflow:hidden;">
-  <tr><td style="background:#A6262A;padding:11px 30px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="left" valign="middle"><img src="data:image/png;base64,${AUDIT_LOGO_B64}" alt="STAR aid" width="132" style="width:132px;height:auto;display:block;"></td>
-      <td align="right" valign="middle" style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;opacity:.9;line-height:1.4;">Prévention &amp; défibrillateurs<br>La Réunion</td>
-    </tr></table>
-  </td></tr>
-  <tr><td class="px" style="padding:26px 30px 4px;">
-    <div class="h1" style="font-family:Arial,sans-serif;font-size:25px;font-weight:800;line-height:1.25;color:#1C1C1E;">Votre <span style="color:#C9302C;">audit défibrillateur</span> offert</div>
-  </td></tr>
-  <tr><td class="px" style="padding:14px 30px 4px;">
-    <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1C1C1E;">${bonjour}</div>
-    <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1C1C1E;margin-top:12px;">STAR aid est spécialiste du défibrillateur et de la prévention des risques à La Réunion depuis 2012. Nous accompagnons les entreprises et les établissements recevant du public dans leur mise en conformité réglementaire en matière de DAE.</div>
-    <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1C1C1E;margin-top:12px;">Suite à notre échange téléphonique, je vous propose un <b>audit gratuit de vos défibrillateurs</b>, sans engagement.</div>
-  </td></tr>
-  <tr><td class="px" style="padding:20px 30px 6px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FAF7F4;border-radius:14px;border-left:5px solid #C9302C;">
-      <tr><td style="padding:20px 22px;">
-        <div style="font-family:Arial,sans-serif;font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#C9302C;margin-bottom:14px;">L'objectif de l'audit</div>
-        <div style="font-family:Arial,sans-serif;font-size:14.5px;line-height:1.55;color:#1C1C1E;">Contrôler l'ensemble de votre dispositif (appareil, composants, consommables et environnement) et vérifier sa conformité complète&nbsp;:</div>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;">
-          ${check("Présence, implantation et conformité de la <b>signalétique</b> réglementaire")}
-          ${check("Présence, implantation et état de l'<b>armoire de rangement</b> du DAE, le cas échéant")}
-          ${check("Conformité de l'<b>implantation</b> de l'appareil : visibilité, accessibilité, délai d'accès")}
-          ${check("Fonctionnement des <b>dispositifs d'autotest</b> et contrôle de l'absence d'anomalie apparente")}
-          ${check("Test de <b>délivrance du choc</b> par simulateur, à titre indicatif, lorsque les conditions techniques le permettent")}
-          ${check("Dates de <b>péremption des électrodes</b>")}
-          ${check("État de charge ou âge de la <b>batterie / des piles</b>")}
-          ${check("Présence d'un <b>kit de préparation à la RCP</b>")}
-          ${check("Remise d'un <b>rapport d'intervention</b> avec nos préconisations à l'issue de la visite", true)}
-        </table>
-      </td></tr>
-    </table>
-  </td></tr>
-  <tr><td class="px" style="padding:20px 30px 4px;">
-    <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1C1C1E;">Je reste à votre disposition pour convenir ensemble d'un <b>rendez-vous</b>, à la date qui vous conviendra le mieux.</div>
-    <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1C1C1E;margin-top:12px;">Au plaisir d'avoir votre retour.</div>
-  </td></tr>
-  <tr><td class="px" style="padding:24px 30px 8px;">
-    <div style="font-family:Arial,sans-serif;font-size:15px;color:#1C1C1E;">Cordialement,</div>
-    <div style="font-family:Arial,sans-serif;font-size:15px;font-weight:800;color:#1C1C1E;margin-top:14px;">${esc(senderName)}</div>
-    <div style="font-family:Arial,sans-serif;font-size:13.5px;color:#6B6B70;line-height:1.6;margin-top:2px;">
-      Conseiller en prévention · STAR aid<br>
-      Téléphone : <a href="tel:+262692918950" style="color:#C9302C;text-decoration:none;">0692 918 950</a><br>
-      Email : <a href="mailto:${esc(senderEmail)}" style="color:#C9302C;text-decoration:none;">${esc(senderEmail)}</a><br>
-      Site internet : <a href="https://www.star-aid.fr" style="color:#C9302C;text-decoration:none;">www.star-aid.fr</a>
-    </div>
-  </td></tr>
-  <tr><td style="background:#A6262A;padding:16px 30px;" align="center">
-    <div style="font-family:Arial,sans-serif;font-size:11px;color:#FFFFFF;line-height:1.6;">STAR aid · spécialiste du défibrillateur depuis 2012<br>France, La Réunion, Mayotte, Guadeloupe · <a href="https://www.star-aid.fr" style="color:#FFFFFF;">www.star-aid.fr</a></div>
-  </td></tr>
-</table>
-</td></tr></table></body></html>`;
+  const bonjour = greetingName ? `Bonjour ${greetingName},` : 'Bonjour,';
+  const SEP = '------------------------------------------------------------';
+  return `${bonjour}
+
+STAR aid est spécialiste du défibrillateur et de la prévention des risques à La Réunion depuis 2012. Nous accompagnons les entreprises et les établissements recevant du public dans leur mise en conformité réglementaire en matière de DAE.
+
+Suite à notre échange téléphonique, je vous propose un AUDIT GRATUIT de vos défibrillateurs, sans engagement.
+
+${SEP}
+L'OBJECTIF DE L'AUDIT
+${SEP}
+
+Contrôler l'ensemble de votre dispositif (appareil, composants, consommables et environnement) et vérifier sa conformité complète :
+
+  • Présence, implantation et conformité de la signalétique réglementaire
+  • Présence, implantation et état de l'armoire de rangement du DAE, le cas échéant
+  • Conformité de l'implantation de l'appareil : visibilité, accessibilité, délai d'accès
+  • Fonctionnement des dispositifs d'autotest et contrôle de l'absence d'anomalie apparente
+  • Test de délivrance du choc par simulateur, à titre indicatif, lorsque les conditions techniques le permettent
+  • Dates de péremption des électrodes
+  • État de charge ou âge de la batterie et des piles
+  • Présence d'un kit de préparation à la RCP
+  • Remise d'un rapport d'intervention avec nos préconisations à l'issue de la visite
+
+${SEP}
+
+Je reste à votre disposition pour convenir ensemble d'un rendez-vous, à la date qui vous conviendra le mieux.
+
+Au plaisir d'avoir votre retour.
+
+Cordialement,
+
+${senderName}
+Conseiller en prévention — STAR aid
+Téléphone : 0692 918 950
+Email : ${senderEmail}
+Site internet : www.star-aid.fr
+
+${SEP}
+STAR aid — spécialiste du défibrillateur depuis 2012
+France, La Réunion, Mayotte, Guadeloupe — www.star-aid.fr`;
 }
 
 let _auditRcpts = [];
@@ -5391,16 +5356,17 @@ async function doSendAudit() {
   // "Bonjour Prénom Nom," si contact nommé, sinon "Bonjour,"
   const isNamed  = rcpt.name && !rcpt.name.includes('@') && rcpt.name !== r.denomination_usuelle;
   const greeting = isNamed ? rcpt.name : '';
-  const subject  = `STAR aid : proposition d'audit gratuit de vos défibrillateurs`;
-  const html     = buildAuditEmailHtml(greeting);
+  const subject  = `Proposition d'audit gratuit de vos défibrillateurs`;
+  const body     = buildAuditEmailText(greeting);
 
   closeAuditModal();
   toast('📤 Envoi de l\'audit en cours…');
   try {
+    // type 'message' : passe par la route email texte déjà en place dans Make
     const res = await fetch(getWebhook(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'audit', from: getSenderEmail(), to: rcpt.email, subject, body: html, html: true })
+      body: JSON.stringify({ type: 'message', from: getSenderEmail(), to: rcpt.email, subject, body, attachments: [] })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     toast('✅ Audit proposé à ' + rcpt.email);

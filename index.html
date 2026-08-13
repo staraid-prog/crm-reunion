@@ -5266,30 +5266,31 @@ function buildAuditEmailText(greetingName) {
   const senderName  = currentUser ? (currentUser.prenom + ' ' + (currentUser.nom || '').toUpperCase()) : 'Mathieu MICHON';
   const senderEmail = getSenderEmail();
   const bonjour = greetingName ? `Bonjour ${greetingName},` : 'Bonjour,';
-  const SEP = '------------------------------------------------------------';
   return `${bonjour}
 
 STAR aid est spécialiste du défibrillateur et de la prévention des risques à La Réunion depuis 2012. Nous accompagnons les entreprises et les établissements recevant du public dans leur mise en conformité réglementaire en matière de DAE.
 
 Suite à notre échange téléphonique, je vous propose un AUDIT GRATUIT de vos défibrillateurs, sans engagement.
 
-${SEP}
-L'OBJECTIF DE L'AUDIT
-${SEP}
-
-Contrôler l'ensemble de votre dispositif (appareil, composants, consommables et environnement) et vérifier sa conformité complète :
+L'objectif de l'audit : contrôler l'ensemble de votre dispositif (appareil, composants, consommables et environnement) et vérifier sa conformité complète :
 
   • Présence, implantation et conformité de la signalétique réglementaire
-  • Présence, implantation et état de l'armoire de rangement du DAE, le cas échéant
-  • Conformité de l'implantation de l'appareil : visibilité, accessibilité, délai d'accès
-  • Fonctionnement des dispositifs d'autotest et contrôle de l'absence d'anomalie apparente
-  • Test de délivrance du choc par simulateur, à titre indicatif, lorsque les conditions techniques le permettent
-  • Dates de péremption des électrodes
-  • État de charge ou âge de la batterie et des piles
-  • Présence d'un kit de préparation à la RCP
-  • Remise d'un rapport d'intervention avec nos préconisations à l'issue de la visite
 
-${SEP}
+  • Présence, implantation et état de l'armoire de rangement du DAE, le cas échéant
+
+  • Conformité de l'implantation de l'appareil : visibilité, accessibilité, délai d'accès
+
+  • Fonctionnement des dispositifs d'autotest et contrôle de l'absence d'anomalie apparente
+
+  • Test de délivrance du choc par simulateur, à titre indicatif, lorsque les conditions techniques le permettent
+
+  • Dates de péremption des électrodes
+
+  • État de charge ou âge de la batterie et des piles
+
+  • Présence d'un kit de préparation à la RCP
+
+  • Remise d'un rapport d'intervention avec nos préconisations à l'issue de la visite
 
 Je reste à votre disposition pour convenir ensemble d'un rendez-vous, à la date qui vous conviendra le mieux.
 
@@ -5301,11 +5302,7 @@ ${senderName}
 Conseiller en prévention — STAR aid
 Téléphone : 0692 918 950
 Email : ${senderEmail}
-Site internet : www.star-aid.fr
-
-${SEP}
-STAR aid — spécialiste du défibrillateur depuis 2012
-France, La Réunion, Mayotte, Guadeloupe — www.star-aid.fr`;
+Site internet : www.star-aid.fr`;
 }
 
 let _auditRcpts = [];

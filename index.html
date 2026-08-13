@@ -494,6 +494,23 @@ body.demo-mode header{background:#fffbeb !important;border-bottom-color:#fde68a;
 .cal-card.j10{border-left-color:#f97316;background:#fff8f3;}
 .cal-card-name{font-size:12px;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-card-tag{font-size:10px;color:var(--light);margin-top:2px;}
+/* ── Calendrier de sélection (relance) ── */
+.rcal{background:var(--inset);border:1px solid var(--border);border-radius:14px;padding:12px;user-select:none;}
+.rcal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.rcal-title{font-weight:800;font-size:13.5px;color:var(--dark);text-transform:capitalize;}
+.rcal-nav{width:30px;height:30px;border-radius:99px;border:1px solid var(--border);background:#fff;color:var(--dark);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .12s;font-family:inherit;line-height:1;}
+.rcal-nav:hover{background:var(--red-light);border-color:#f3c2c8;color:var(--red);}
+.rcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.rcal-dow{font-size:9.5px;font-weight:800;color:var(--light);text-align:center;padding:5px 0 3px;text-transform:uppercase;letter-spacing:.3px;}
+.rcal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;border-radius:99px;cursor:pointer;border:1.5px solid transparent;background:none;color:var(--dark);font-family:inherit;transition:all .12s;padding:0;min-height:32px;}
+.rcal-day:hover{background:#fff;box-shadow:var(--sh-sm);}
+.rcal-day.out{color:#c7ccd3;font-weight:500;}
+.rcal-day.past{color:#d5d9de;cursor:default;pointer-events:none;}
+.rcal-day.today{border-color:var(--red);color:var(--red);font-weight:800;}
+.rcal-day.sel{background:var(--red);color:#fff;font-weight:800;box-shadow:0 2px 10px rgba(171,30,46,.35);border-color:var(--red);}
+.rcal-selected{margin-top:10px;text-align:center;font-size:12.5px;color:var(--mid);background:#fef9ec;border:1.5px solid #fcd34d;border-radius:10px;padding:8px 12px;font-weight:600;color:#92400e;}
+.rcal-selected.empty{background:var(--inset);border-style:dashed;border-color:var(--border);color:var(--light);font-style:italic;}
+
 /* Navigation semaine */
 .cal-nav{display:flex;align-items:center;gap:10px;padding:2px 0 12px;}
 .cal-nav-btn{width:34px;height:34px;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--dark);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;box-shadow:var(--sh-sm);font-family:inherit;line-height:1;}
@@ -1042,9 +1059,8 @@ body.demo-mode header{background:#fffbeb !important;border-bottom-color:#fde68a;
         <button class="btn btn-grey" style="font-size:12px;padding:7px 10px;" onclick="setRelanceQuick(14)">+2 semaines</button>
       </div>
       <label style="font-size:11px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.4px;">Ou choisir une date</label>
-      <input type="date" id="relance-date-input"
-        style="width:100%;margin-top:6px;padding:10px 12px;font-size:14px;border:1.5px solid var(--border);
-               border-radius:6px;outline:none;font-family:Arial;">
+      <div id="rel-cal" class="rcal" style="margin-top:8px;"></div>
+      <div id="rel-selected" class="rcal-selected empty">Sélectionnez une date</div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-grey" onclick="closeRelanceModal()">Annuler</button>
@@ -4278,12 +4294,79 @@ function closeCallModal() {
 }
 
 /* ─── PLANIFIER UNE RELANCE ─────────────────────────────── */
+/* ── Calendrier custom du modal relance ── */
+let _relDate  = '';   // date ISO sélectionnée
+let _relMonth = null; // 1er jour du mois affiché
+
+function _relIso(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+function relCalNav(delta) {
+  _relMonth.setMonth(_relMonth.getMonth() + delta);
+  renderRelCal();
+}
+
+function relCalPick(iso) {
+  _relDate = iso;
+  const [y, m] = iso.split('-').map(Number);
+  _relMonth = new Date(y, m - 1, 1);
+  renderRelCal();
+}
+
+function renderRelCal() {
+  const el = document.getElementById('rel-cal');
+  if (!el || !_relMonth) return;
+  const today = todayISO();
+  const y = _relMonth.getFullYear(), m = _relMonth.getMonth();
+  const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+  let html = `<div class="rcal-head">
+    <button class="rcal-nav" onclick="relCalNav(-1)" title="Mois précédent">‹</button>
+    <div class="rcal-title">${MOIS[m]} ${y}</div>
+    <button class="rcal-nav" onclick="relCalNav(1)" title="Mois suivant">›</button>
+  </div>
+  <div class="rcal-grid">
+    ${['Lu','Ma','Me','Je','Ve','Sa','Di'].map(d => `<div class="rcal-dow">${d}</div>`).join('')}`;
+
+  const first = new Date(y, m, 1);
+  const offset = (first.getDay() + 6) % 7; // semaine qui commence lundi
+  const start = new Date(y, m, 1 - offset);
+  const nbRows = Math.ceil((offset + new Date(y, m + 1, 0).getDate()) / 7);
+  for (let i = 0; i < nbRows * 7; i++) {
+    const dt  = new Date(start);
+    dt.setDate(start.getDate() + i);
+    const iso = _relIso(dt);
+    const cls = ['rcal-day',
+      dt.getMonth() !== m ? 'out'   : '',
+      iso < today         ? 'past'  : '',
+      iso === today       ? 'today' : '',
+      iso === _relDate    ? 'sel'   : ''].filter(Boolean).join(' ');
+    html += `<button class="${cls}" onclick="relCalPick('${iso}')">${dt.getDate()}</button>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+
+  const sel = document.getElementById('rel-selected');
+  if (sel) {
+    if (_relDate) {
+      sel.className = 'rcal-selected';
+      sel.innerHTML = `📅 Relance le <strong>${fmtDateLabel(_relDate)}</strong>`;
+    } else {
+      sel.className = 'rcal-selected empty';
+      sel.textContent = 'Sélectionnez une date';
+    }
+  }
+}
+
 function openRelanceModal() {
   const r = _currentRecord;
   if (!r) return;
-  const input = document.getElementById('relance-date-input');
-  input.min = todayISO();
-  input.value = (r.date_relance && r.date_relance >= todayISO()) ? r.date_relance : '';
+  _relDate = (r.date_relance && r.date_relance >= todayISO()) ? r.date_relance : '';
+  const base = _relDate || todayISO();
+  const [by, bm] = base.split('-').map(Number);
+  _relMonth = new Date(by, bm - 1, 1);
+  renderRelCal();
   const cur = document.getElementById('relance-current');
   if (r.date_relance && r.date_relance < todayISO()) {
     cur.style.display = 'block';
@@ -4308,13 +4391,13 @@ function closeRelanceModal() {
 }
 
 function setRelanceQuick(jours) {
-  document.getElementById('relance-date-input').value = calcRelanceDate(jours);
+  relCalPick(calcRelanceDate(jours));
 }
 
 async function saveRelance() {
   const r = _currentRecord;
   if (!r) return;
-  const date = document.getElementById('relance-date-input').value;
+  const date = _relDate;
   if (!date) { toast('Choisissez une date de relance', true); return; }
   const ok = await dbUpdate('prospects', r.siret, { date_relance: date });
   if (!ok) { toast('Erreur lors de l\'enregistrement', true); return; }

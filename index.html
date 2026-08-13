@@ -1865,10 +1865,17 @@ function renderAlloHistory(calls, fullDetail) {
   const LABEL = { ANSWERED:'Répondu', VOICEMAIL:'Messagerie', TRANSFERRED:'Transféré' };
   let html = '';
 
-  calls.slice(0, 5).forEach((c, i) => {
-    const d   = (i === 0 && fullDetail) ? fullDetail : c;
-    const rawD = d.date || d.created_at || d.started_at || d.start_time
-              || c.date || c.created_at || c.started_at;
+  // Fusionner le détail complet si disponible, puis masquer les appels sans résumé IA
+  // (appels de quelques secondes, faux numéros… → aucun intérêt commercial)
+  const enriched = calls.map(c => (fullDetail && c.id === fullDetail.id) ? fullDetail : c);
+  const visibles = enriched.filter(d => {
+    const s = typeof d.summary === 'string' ? d.summary : (d.summary?.content || '');
+    return s && s.trim();
+  });
+
+  visibles.slice(0, 5).forEach((d, i) => {
+    const c = d;
+    const rawD = d.date || d.created_at || d.started_at || d.start_time;
     const dt  = rawD ? new Date(rawD) : null;
     const dateStr = (dt && !isNaN(dt))
       ? dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})

@@ -494,6 +494,20 @@ body.demo-mode header{background:#fffbeb !important;border-bottom-color:#fde68a;
 .cal-card.j10{border-left-color:#f97316;background:#fff8f3;}
 .cal-card-name{font-size:12px;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-card-tag{font-size:10px;color:var(--light);margin-top:2px;}
+/* ── Historique d'appels (cards accordéon) ── */
+.allo-call{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px;background:#fff;}
+.allo-call-head{display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--inset);cursor:pointer;user-select:none;transition:background .12s;}
+.allo-call-head:hover{background:var(--grey);}
+.allo-call-head .acv{font-size:10px;color:var(--light);transition:transform .18s;flex-shrink:0;margin-left:4px;}
+.allo-call.open .allo-call-head .acv{transform:rotate(180deg);}
+.allo-call-body{display:none;}
+.allo-call.open .allo-call-body{display:block;}
+.allo-call.latest{border-color:#bbf7d0;box-shadow:var(--sh-sm);}
+.allo-call.latest .allo-call-head{background:#f0fdf6;}
+.allo-latest-tag{font-size:9px;font-weight:800;background:#16a34a;color:#fff;border-radius:99px;padding:2px 8px;text-transform:uppercase;letter-spacing:.4px;}
+.allo-excerpt{padding:10px 12px;border-top:1px solid var(--grey);}
+.allo-hist-label{font-size:10px;font-weight:800;color:var(--light);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;}
+
 /* ── Calendrier de sélection (relance) ── */
 .rcal{background:var(--inset);border:1px solid var(--border);border-radius:14px;padding:12px;user-select:none;}
 .rcal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
@@ -1831,6 +1845,19 @@ async function loadAlloTranscript(callId, containerId) {
   } catch(_) { el.innerHTML = '<div style="font-size:11px;color:#d73a49;padding:6px;">Erreur</div>'; }
 }
 
+// Extrait court d'un résumé IA : tout ce qui précède la section "Détails" (sinon les ~500 premiers caractères)
+function _summaryExcerpt(summary) {
+  if (!summary) return '';
+  const idx = summary.search(/\n\s*(#+\s*)?(\*\*)?D[ée]tails(\*\*)?\s*\n/i);
+  let ex = (idx > 40) ? summary.slice(0, idx) : summary;
+  if (ex.length > 550) ex = ex.slice(0, 550) + '…';
+  return ex;
+}
+
+function toggleAlloCall(head) {
+  head.parentElement.classList.toggle('open');
+}
+
 function renderAlloHistory(calls, fullDetail) {
   const el = document.getElementById('allo-history');
   if (!el) return;
@@ -1853,28 +1880,43 @@ function renderAlloHistory(calls, fullDetail) {
     const summary = typeof d.summary === 'string' ? d.summary : (d.summary?.content || '');
     const rec = d.recording_url || '';
     const uid = 'ac' + i + '_' + (d.id||'x').slice(-6);
+    const isLatest = i === 0;
+    const excerpt  = isLatest ? _summaryExcerpt(summary) : '';
+    const hasMore  = isLatest && summary && excerpt !== summary;
 
-    html += `<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:8px;">
-      <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:#f9fafb;">
-        <span style="font-size:13px;">${icon}</span>
-        <span style="font-size:12px;font-weight:700;color:#111;flex:1;">${label}</span>
-        <span style="font-size:11px;color:#6b7280;">${dateStr}</span>
-        <span style="font-size:11px;color:#9ca3af;margin-left:4px;">⏱ ${duree}</span>
-        ${rec ? `<a href="${rec}" target="_blank" title="🎧 Écouter l'enregistrement"
-          style="margin-left:6px;font-size:13px;text-decoration:none;">🎧</a>` : ''}
-      </div>
-      ${summary ? `<div style="padding:8px 10px;background:#fff;border-top:1px solid #f3f4f6;">
-        <div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">📋 Résumé IA</div>
+    if (i === 1) html += `<div class="allo-hist-label">📂 Appels précédents</div>`;
+
+    const bodyContent = `
+      ${summary ? `<div style="padding:10px 12px;background:#fff;border-top:1px solid var(--grey);">
+        <div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">📋 Résumé IA${isLatest && hasMore ? ' — complet' : ''}</div>
         ${renderMd(summary)}
-      </div>` : ''}
+      </div>` : `<div style="padding:10px 12px;font-size:11.5px;color:var(--light);font-style:italic;">Pas de résumé pour cet appel</div>`}
       ${d.id ? `<div>
-        <div onclick="var box=document.getElementById('${uid}');if(box.dataset.loaded){box.style.display=box.style.display==='none'?'block':'none';}else{box.dataset.loaded='1';loadAlloTranscript('${d.id}','${uid}');}"
-          style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;cursor:pointer;background:#fafafa;border-top:1px solid #f3f4f6;user-select:none;">
+        <div onclick="event.stopPropagation();var box=document.getElementById('${uid}');if(box.dataset.loaded){box.style.display=box.style.display==='none'?'block':'none';}else{box.dataset.loaded='1';loadAlloTranscript('${d.id}','${uid}');}"
+          style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;cursor:pointer;background:var(--inset);border-top:1px solid var(--grey);user-select:none;">
           <span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">🎙️ Transcription</span>
           <span style="font-size:10px;color:#9ca3af;">▼ Voir</span>
         </div>
-        <div id="${uid}" style="display:none;padding:8px 10px;background:#fff;max-height:260px;overflow-y:auto;"></div>
+        <div id="${uid}" style="display:none;padding:8px 12px;background:#fff;max-height:260px;overflow-y:auto;"></div>
+      </div>` : ''}`;
+
+    html += `<div class="allo-call${isLatest ? ' latest' : ''}">
+      <div class="allo-call-head" onclick="toggleAlloCall(this)">
+        <span style="font-size:13px;">${icon}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--dark);">${label}</span>
+        ${isLatest ? '<span class="allo-latest-tag">Dernier échange</span>' : ''}
+        <span style="flex:1;"></span>
+        <span style="font-size:11px;color:#6b7280;">${dateStr}</span>
+        <span style="font-size:11px;color:#9ca3af;">⏱ ${duree}</span>
+        ${rec ? `<a href="${rec}" target="_blank" onclick="event.stopPropagation()" title="🎧 Écouter l'enregistrement"
+          style="font-size:13px;text-decoration:none;">🎧</a>` : ''}
+        <span class="acv">▾</span>
+      </div>
+      ${isLatest && excerpt ? `<div class="allo-excerpt">${renderMd(excerpt)}
+        ${hasMore ? `<div onclick="toggleAlloCall(this.closest('.allo-call').querySelector('.allo-call-head'))"
+             style="font-size:10.5px;font-weight:700;color:#2563eb;cursor:pointer;margin-top:6px;">▾ Voir les détails complets</div>` : ''}
       </div>` : ''}
+      <div class="allo-call-body">${bodyContent}</div>
     </div>`;
   });
 

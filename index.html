@@ -4067,7 +4067,7 @@ function renderDetail(r) {
           <!-- APPELS & HISTORIQUE -->
           <div class="dsec">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <h3 style="margin-bottom:0;padding-bottom:0;border-bottom:none;">📞 Appels & historique</h3>
+              <h3 style="margin-bottom:0;padding-bottom:0;border-bottom:none;">🕘 Historique des actions</h3>
               <button id="allo-sync-btn" class="abar-btn" onclick="syncAlloCall()"
                       title="Synchroniser manuellement les appels et résumés Allo"
                       style="padding:5px 10px;font-size:11px;">
@@ -4498,9 +4498,14 @@ async function saveRelance() {
   if (!r) return;
   const date = _relDate;
   if (!date) { toast('Choisissez une date de relance', true); return; }
-  const ok = await dbUpdate('prospects', r.siret, { date_relance: date });
+  // Journaliser dans l'historique d'actions
+  const appelsArr = _parseAppels(r.appels_json);
+  appelsArr.push({ d: _nowReunion(), t: 'relance', date });
+  const appelsJson = JSON.stringify(appelsArr);
+  const ok = await _saveWithAppels(r.siret, { date_relance: date }, appelsJson);
   if (!ok) { toast('Erreur lors de l\'enregistrement', true); return; }
   r.date_relance = date;
+  r.appels_json  = appelsJson;
   closeRelanceModal();
   toast(`📅 Relance planifiée : ${fmtDateLabel(date)}`);
   selectProspect(r.siret, null);
@@ -4539,23 +4544,22 @@ function _buildCallLogHtml(r) {
   const appels = _parseAppels(r.appels_json);
 
   if (appels.length > 0) {
+    // Timeline des actions : plus récent en haut
     let callNum = 0;
-    return appels.map(a => {
-      if (a.t === 'offre') {
-        return `<div style="line-height:1.9;">📧&nbsp;`
-          + `<span style="color:var(--mid);">Offre commerciale&nbsp;:&nbsp;</span>`
-          + `<span style="color:#2563eb;font-weight:700;">${esc(a.d)}</span>`
-          + `</div>`;
-      }
+    const rows = appels.map(a => {
+      if (a.t === 'offre')   return { icon:'📧', label:'Offre commerciale envoyée' + (a.to ? ' → ' + a.to : ''), color:'#2563eb', d:a.d };
+      if (a.t === 'audit')   return { icon:'🩺', label:'Audit gratuit proposé' + (a.to ? ' → ' + a.to : ''), color:'#0d9488', d:a.d };
+      if (a.t === 'relance') return { icon:'📅', label:'Relance planifiée' + (a.date ? ' pour le ' + fmtDateLabel(a.date) : ''), color:'#b45309', d:a.d };
       callNum++;
       const isMsg = a.t === 'msg';
-      return `<div style="line-height:1.9;">`
-        + `${isMsg ? '📵' : '📞'}&nbsp;`
-        + `<span style="color:var(--mid);">Appel ${callNum}&nbsp;:&nbsp;</span>`
-        + `<span style="color:var(--green);font-weight:700;">${esc(a.d)}</span>`
-        + (isMsg ? `&nbsp;<span style="color:#b45309;font-weight:600;">Messagerie</span>` : '')
-        + `</div>`;
-    }).join('');
+      return { icon: isMsg ? '📵' : '📞', label: 'Appel ' + callNum + (isMsg ? ' — messagerie' : ''), color: isMsg ? '#b45309' : '#15803d', d:a.d };
+    });
+    return rows.reverse().map(x => `
+      <div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px dashed var(--grey);font-size:11.5px;">
+        <span style="flex-shrink:0;">${x.icon}</span>
+        <span style="flex:1;min-width:0;font-weight:700;color:${x.color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(x.label)}</span>
+        <span style="flex-shrink:0;color:var(--light);font-weight:500;">${esc(x.d)}</span>
+      </div>`).join('');
   }
 
   // Fallback ancien format (avant appels_json)
@@ -5368,17 +5372,21 @@ async function doSendAudit() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     toast('✅ Audit proposé à ' + rcpt.email);
 
-    // Traçabilité : note + passage en Relance J+2 si prospect pas encore engagé
+    // Traçabilité : entrée dans l'historique d'actions + note + Relance J+2 si prospect pas encore engagé
     const now = _nowReunion();
+    const appelsArr = _parseAppels(r.appels_json);
+    appelsArr.push({ d: now, t: 'audit', to: rcpt.email });
+    const appelsJson = JSON.stringify(appelsArr);
     const newNotes = (r.notes || '') + `\n\n---\n📧 AUDIT GRATUIT proposé le ${now} → ${rcpt.email}`;
     const updates = { notes: newNotes };
     if (r.statut_crm == null || r.statut_crm <= 1) {
       updates.statut_crm   = 2;
       updates.date_relance = calcRelanceDate(2);
     }
-    const ok = await dbUpdate('prospects', r.siret, updates);
+    const ok = await _saveWithAppels(r.siret, updates, appelsJson);
     if (ok) {
       Object.assign(_currentRecord, updates);
+      _currentRecord.appels_json = appelsJson;
       renderDetail(_currentRecord);
       renderFilters();
     }

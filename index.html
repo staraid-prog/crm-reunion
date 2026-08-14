@@ -1114,6 +1114,79 @@ body.demo-mode header{background:#fffbeb !important;border-bottom-color:#fde68a;
 <!-- ═══════════════════════════════════════════════════
      MODAL — MAIL
 ════════════════════════════════════════════════════ -->
+<!-- MODAL CONTRAT LIBRE (depuis le dashboard) -->
+<div class="modal-overlay hidden" id="contratLibreModal">
+  <div class="modal-box" style="width:520px;">
+    <div class="modal-head">
+      <h3>📋 Générer un contrat</h3>
+      <button class="cls" onclick="closeContratLibre()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12.5px;color:var(--mid);margin-bottom:14px;">
+        Saisissez les informations du client — le contrat 2026 sera pré-rempli avec.
+      </div>
+      <div class="mrow">
+        <label>Établissement *</label>
+        <input id="cl-etab" type="text" placeholder="Raison sociale du client">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="mrow">
+          <label>Représentant légal</label>
+          <input id="cl-rep" type="text" placeholder="Prénom Nom">
+        </div>
+        <div class="mrow">
+          <label>Fonction</label>
+          <input id="cl-fonction" type="text" placeholder="Gérant, Président…">
+        </div>
+      </div>
+      <div class="mrow">
+        <label>SIRET</label>
+        <input id="cl-siret" type="text" placeholder="14 chiffres">
+      </div>
+      <div class="mrow">
+        <label>Adresse</label>
+        <input id="cl-adresse" type="text" placeholder="Numéro et rue">
+      </div>
+      <div style="display:grid;grid-template-columns:130px 1fr;gap:12px;">
+        <div class="mrow">
+          <label>Code postal</label>
+          <input id="cl-cp" type="text" placeholder="97xxx">
+        </div>
+        <div class="mrow">
+          <label>Ville</label>
+          <input id="cl-villeclient" type="text" placeholder="Commune">
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:8px;">Prix mensuel HT / appareil</label>
+        <div style="display:flex;gap:10px;">
+          <button class="cl-prix-btn ct-prix-btn sel" data-prix="79" onclick="selectContratLibrePrix(79)">
+            79 €<span class="ct-prix-label" style="color:inherit;">soit 85,72 € TTC — tarif 2026</span>
+          </button>
+          <button class="cl-prix-btn ct-prix-btn" data-prix="89" onclick="selectContratLibrePrix(89)">
+            89 €<span class="ct-prix-label" style="color:inherit;">soit 96,57 € TTC</span>
+          </button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="mrow" style="margin-bottom:0;">
+          <label>Ville de signature</label>
+          <input id="cl-villesign" type="text" placeholder="Saint-Paul" value="Saint-Paul">
+        </div>
+        <div class="mrow" style="margin-bottom:0;">
+          <label>Date</label>
+          <input id="cl-date" type="text" placeholder="JJ/MM/AAAA">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-grey" onclick="closeContratLibre()">Annuler</button>
+      <button class="btn btn-green" onclick="genContratLibre(true)">⬇️ Télécharger</button>
+      <button class="btn btn-red" onclick="genContratLibre(false)">👁 Aperçu PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL AUDIT GRATUIT -->
 <div class="modal-overlay hidden" id="auditModal">
   <div class="modal-box" style="width:440px;">
@@ -3048,9 +3121,14 @@ async function renderDashToday(container) {
   const heure = new Date().getHours();
   const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
 
-  let html = `<div class="dash-hello">
-    <h1>${salut}${prenom ? ' ' + esc(prenom) : ''} 👋</h1>
-    <p>${todayLabel} — ${rows.length ? `<strong style="color:var(--red);">${rows.length} relance${rows.length>1?'s':''} à faire aujourd'hui</strong>` : 'aucune relance prévue aujourd\'hui'}</p>
+  let html = `<div class="dash-hello" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div>
+      <h1>${salut}${prenom ? ' ' + esc(prenom) : ''} 👋</h1>
+      <p>${todayLabel} — ${rows.length ? `<strong style="color:var(--red);">${rows.length} relance${rows.length>1?'s':''} à faire aujourd'hui</strong>` : 'aucune relance prévue aujourd\'hui'}</p>
+    </div>
+    <button class="btn btn-red" onclick="openContratLibre()" style="flex-shrink:0;">
+      📋 Générer un contrat
+    </button>
   </div>`;
 
   // ── KPI cards ──
@@ -5255,6 +5333,57 @@ function previewContrat() {
   toast('✅ Contrat généré et validé');
 }
 
+/* ─── CONTRAT LIBRE (depuis le dashboard) ───────────────── */
+function openContratLibre() {
+  document.getElementById('cl-date').value = new Date().toLocaleDateString('fr-FR', { timeZone: 'Indian/Reunion' });
+  document.getElementById('contratLibreModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('cl-etab').focus(), 60);
+}
+
+function closeContratLibre() {
+  document.getElementById('contratLibreModal').classList.add('hidden');
+}
+
+function selectContratLibrePrix(prix) {
+  document.querySelectorAll('.cl-prix-btn').forEach(b => b.classList.remove('sel'));
+  const btn = document.querySelector(`.cl-prix-btn[data-prix="${prix}"]`);
+  if (btn) btn.classList.add('sel');
+}
+
+function genContratLibre(download) {
+  const etab = document.getElementById('cl-etab').value.trim();
+  if (!etab) { toast('Renseignez au moins l\'établissement', true); return; }
+  // Faux enregistrement prospect construit depuis le formulaire
+  const r = {
+    denomination_usuelle: etab,
+    signataire:   document.getElementById('cl-rep').value.trim(),
+    fonction:     document.getElementById('cl-fonction').value.trim(),
+    siret:        document.getElementById('cl-siret').value.trim(),
+    adresse_voie: document.getElementById('cl-adresse').value.trim(),
+    code_postal:  document.getElementById('cl-cp').value.trim(),
+    commune:      document.getElementById('cl-villeclient').value.trim(),
+  };
+  const ville = document.getElementById('cl-villesign').value.trim() || 'Saint-Paul';
+  const date  = document.getElementById('cl-date').value.trim() || new Date().toLocaleDateString('fr-FR');
+  const prix  = parseInt(document.querySelector('.cl-prix-btn.sel')?.dataset.prix || '79');
+  const doc   = buildContratPdf(r, date, ville, prix);
+  const filename = `Contrat_StarAid_${etab.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
+
+  if (download) {
+    doc.save(filename);
+    toast('✅ Contrat téléchargé : ' + filename);
+  } else {
+    const url = doc.output('bloburl');
+    _pdfUrl  = url;
+    _pdfName = filename;
+    document.getElementById('pdf-modal-title').textContent = '📋 Contrat — ' + etab;
+    document.getElementById('pdf-iframe').src = url;
+    document.getElementById('pdf-send-btn').onclick = null;
+    document.getElementById('pdfModal').classList.remove('hidden');
+  }
+  closeContratLibre();
+}
+
 function sendContratByGmail() {
   const r = _currentRecord;
   if (!r) return;
@@ -5928,10 +6057,26 @@ function buildContratPdf(r, dateSign, villeSign, prix = 79) {
   y += 5;
   doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
 
-  // Champs à remplir → fond jaune avec pointillés
-  paraYellow('représentée par……………………………………………………………………………………………………………………………………………………………………');
-  paraYellow('de nationalité ………………………………………………………………    Fonction………………………………………………………………………………………');
-  paraYellow('Sise ………………………………………………………………………………………………………………………………………………………………………………');
+  // Champs pré-remplis si connus, sinon fond jaune avec pointillés
+  const adrFull = [r.adresse_voie, r.code_postal, r.commune].filter(Boolean).join(', ');
+  function fieldLine(label, value) {
+    if (value) {
+      checkNewPage(6);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GREY);
+      doc.text(label, 14, y);
+      const lw = doc.getTextWidth(label);
+      doc.setFont('helvetica','bold'); doc.setTextColor(...DARK);
+      doc.text(String(value), 14 + lw, y);
+      doc.setFont('helvetica','normal'); doc.setTextColor(...GREY);
+      y += 5;
+    } else {
+      paraYellow(label + '……………………………………………………………………………………………………………………………………');
+    }
+  }
+  fieldLine('représentée par ', r.signataire);
+  fieldLine('Fonction ', r.fonction);
+  fieldLine('N° SIRET ', r.siret);
+  fieldLine('Sise ', adrFull);
   para('(Ci-après dénommé « LOCATAIRE »)');
   gap(4);
 
@@ -6540,6 +6685,7 @@ document.addEventListener('click', e => {
     { id:'confirmModal',  close: cancelConfirm     },
     { id:'mailModal',     close: closeMailModal    },
     { id:'auditModal',    close: closeAuditModal   },
+    { id:'contratLibreModal', close: closeContratLibre },
     { id:'offerModal',    close: closeOfferModal   },
     { id:'devisModal',    close: closeDevisModal   },
     { id:'contratModal',  close: closeContratModal },
